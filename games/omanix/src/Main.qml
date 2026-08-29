@@ -17,13 +17,15 @@ ApplicationWindow {
     Material.background: theme.background
 
     readonly property bool inGame: game.phase !== "start"
-    readonly property bool overlayShown: game.phase === "levelcomplete" || game.phase === "gameover"
-                                         || game.paused || confirmLoader.active
+    // Whether the player had paused before asking to leave, so cancelling
+    // returns to the pause overlay rather than straight into play.
+    property bool pausedBeforeLeaving: false
 
     // Leaving mid-game throws the run away, so it is confirmed; the game
     // holds still while the question is up.
     function leaveGame() {
         if (game.phase === "playing") {
+            pausedBeforeLeaving = game.paused;
             game.pause();
             confirmLoader.active = true;
         } else {
@@ -94,7 +96,8 @@ ApplicationWindow {
             }
             onRejected: {
                 confirmLoader.active = false;
-                game.resume();
+                if (!win.pausedBeforeLeaving)
+                    game.resume();
                 win.refocus();
             }
         }

@@ -101,7 +101,6 @@ FocusScope {
             Item {
                 id: popups
                 anchors.fill: view
-                clip: false
             }
 
             Component {
