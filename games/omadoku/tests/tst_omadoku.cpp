@@ -1,6 +1,7 @@
 #include <QCoreApplication>
 #include <QtTest>
 
+#include "boardtests.h"
 #include "generatortests.h"
 #include "gradertests.h"
 #include "solvertests.h"
@@ -18,5 +19,7 @@ int main(int argc, char *argv[]) {
     status |= QTest::qExec(&generator, argc, argv);
     GraderTests grader;
     status |= QTest::qExec(&grader, argc, argv);
+    BoardTests board;
+    status |= QTest::qExec(&board, argc, argv);
     return status;
 }
