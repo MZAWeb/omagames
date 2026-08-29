@@ -47,7 +47,8 @@ public:
     QString difficulty() const;
     QString difficultyLabel() const;
     static QVariantList difficulties();
-    // "highlight" | "note" | "fill"
+    // What a digit does when no modifier overrides it: "highlight" | "note" |
+    // "fill". Applies to the keypad and to the plain number keys alike.
     QString padMode() const;
     void setPadMode(const QString &padMode);
     bool checkAsYouGo() const { return m_board.checkAsYouGo(); }
@@ -68,13 +69,14 @@ public:
     Q_INVOKABLE void resumeSavedGame();
     Q_INVOKABLE void select(int index);
     Q_INVOKABLE void moveSelection(int deltaRow, int deltaColumn);
-    // Entry (Ctrl+digit), notes (Shift+digit) and highlighting (plain digit)
-    // are separate actions; the digit pad picks one of them by its mode.
+    // The one entry point for a digit, from the keypad or the number row:
+    // `overrideMode` is a mode id when a modifier asked for a specific action
+    // (Ctrl fills, Shift notes, Alt highlights) and empty to follow padMode.
+    Q_INVOKABLE void pressDigit(int digit, const QString &overrideMode = QString());
     Q_INVOKABLE void enterValue(int digit);
     Q_INVOKABLE void toggleNote(int digit);
     Q_INVOKABLE void toggleHighlight(int digit);
     Q_INVOKABLE void clearHighlight();
-    Q_INVOKABLE void pressPad(int digit);
     Q_INVOKABLE void cyclePadMode();
     Q_INVOKABLE void erase();
     Q_INVOKABLE void undo();
@@ -102,6 +104,7 @@ private:
     // and Ctrl meanings of the number row.
     enum class PadMode { Highlight, Note, Fill };
 
+    static PadMode modeFromId(const QString &id, PadMode fallback);
     void applyChange(const std::vector<int> &changed);
     void setScreen(Screen screen);
     void setHighlightDigit(int digit);
@@ -119,6 +122,6 @@ private:
     int m_selectedIndex = -1;
     int m_highlightDigit = -1;
     int m_elapsedSeconds = 0;
-    PadMode m_padMode = PadMode::Fill;
+    PadMode m_padMode = PadMode::Highlight;
     bool m_hasSavedGame = false;
 };

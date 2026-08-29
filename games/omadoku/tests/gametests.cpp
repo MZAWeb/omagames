@@ -123,39 +123,69 @@ void GameTests::exposesDifficultiesWithLabels() {
     game.newGame(QStringLiteral("nonsense"));  // an unknown id lands on Easy
     QCOMPARE(game.difficulty(), QStringLiteral("easy"));
 
-    game.setPadMode(QStringLiteral("nonsense"));  // and an unknown mode on Fill
-    QCOMPARE(game.padMode(), QStringLiteral("fill"));
+    game.setPadMode(QStringLiteral("nonsense"));  // and an unknown mode on Highlight
+    QCOMPARE(game.padMode(), QStringLiteral("highlight"));
 }
 
-void GameTests::padModeDispatchesClicks() {
+void GameTests::padModeDecidesWhatADigitDoes() {
     SudokuGame game;
     game.newGame(QStringLiteral("easy"));
     const int cell = game.selectedIndex();
-    QCOMPARE(game.padMode(), QStringLiteral("fill"));
+    QCOMPARE(game.padMode(), QStringLiteral("highlight"));  // the default
 
-    game.pressPad(4);
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 4);
-
-    game.setPadMode(QStringLiteral("note"));
-    game.erase();
-    game.pressPad(3);
-    game.pressPad(8);
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), (1 << 2) | (1 << 7));
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 0);
-    game.pressPad(3);  // toggles back off
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), 1 << 7);
-    QCOMPARE(game.highlightDigit(), -1);
-
-    game.setPadMode(QStringLiteral("highlight"));
-    game.pressPad(6);
+    game.pressDigit(6);
     QCOMPARE(game.highlightDigit(), 6);
     QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 0);
+    game.pressDigit(6);  // the same digit again clears it
+    QCOMPARE(game.highlightDigit(), -1);
 
-    // Without a selection there is nowhere to write, so the pad highlights.
+    game.setPadMode(QStringLiteral("note"));
+    game.pressDigit(3);
+    game.pressDigit(8);
+    QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), (1 << 2) | (1 << 7));
+    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 0);
+    game.pressDigit(3);  // toggles back off
+    QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), 1 << 7);
+
     game.setPadMode(QStringLiteral("fill"));
+    game.pressDigit(4);
+    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 4);
+    QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), 0);
+
+    // Without a selection there is nowhere to write, so any digit highlights.
     game.select(-1);
-    game.pressPad(2);
+    game.pressDigit(2);
     QCOMPARE(game.highlightDigit(), 2);
+    game.pressDigit(2, QStringLiteral("fill"));
+    QCOMPARE(game.highlightDigit(), -1);
+}
+
+void GameTests::modifierOverridesBeatTheMode() {
+    SudokuGame game;
+    game.newGame(QStringLiteral("easy"));
+    const int cell = game.selectedIndex();
+
+    // Highlight is selected, yet Ctrl fills and Shift notes.
+    QCOMPARE(game.padMode(), QStringLiteral("highlight"));
+    game.pressDigit(5, QStringLiteral("fill"));
+    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 5);
+    game.pressDigit(5, QStringLiteral("fill"));  // same value again is a no-op
+    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 5);
+
+    game.erase();
+    game.pressDigit(7, QStringLiteral("note"));
+    QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), 1 << 6);
+    QCOMPARE(game.highlightDigit(), -1);  // no override touched the highlight
+
+    // ...and with Fill selected, Alt still only highlights.
+    game.setPadMode(QStringLiteral("fill"));
+    game.pressDigit(9, QStringLiteral("highlight"));
+    QCOMPARE(game.highlightDigit(), 9);
+    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 0);
+
+    // An unknown override means "no opinion": the mode decides.
+    game.pressDigit(2, QStringLiteral("nonsense"));
+    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 2);
 }
 
 void GameTests::padModeCyclesAndPersists() {
@@ -163,14 +193,14 @@ void GameTests::padModeCyclesAndPersists() {
         SudokuGame game;
         QSignalSpy spy(&game, &SudokuGame::padModeChanged);
         game.newGame(QStringLiteral("easy"));
-        QCOMPARE(game.padMode(), QStringLiteral("fill"));  // the default
+        QCOMPARE(game.padMode(), QStringLiteral("highlight"));  // the default
 
-        game.cyclePadMode();
-        QCOMPARE(game.padMode(), QStringLiteral("highlight"));
         game.cyclePadMode();
         QCOMPARE(game.padMode(), QStringLiteral("note"));
         game.cyclePadMode();
         QCOMPARE(game.padMode(), QStringLiteral("fill"));
+        game.cyclePadMode();
+        QCOMPARE(game.padMode(), QStringLiteral("highlight"));
         QCOMPARE(spy.count(), 3);
 
         game.setPadMode(QStringLiteral("note"));
@@ -179,31 +209,6 @@ void GameTests::padModeCyclesAndPersists() {
     }
     SudokuGame restarted;
     QCOMPARE(restarted.padMode(), QStringLiteral("note"));
-}
-
-void GameTests::ctrlAndShiftPathsIgnoreThePadMode() {
-    SudokuGame game;
-    game.newGame(QStringLiteral("easy"));
-    const int cell = game.selectedIndex();
-
-    // Shift+digit pencils a note even while the pad is in Fill mode...
-    QCOMPARE(game.padMode(), QStringLiteral("fill"));
-    game.toggleNote(7);
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), 1 << 6);
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 0);
-
-    // ...and Ctrl+digit writes a value while it is in Note mode.
-    game.setPadMode(QStringLiteral("note"));
-    game.enterValue(3);
-    QCOMPARE(game.padMode(), QStringLiteral("note"));
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 3);
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), 0);
-
-    // ...and a plain digit only ever highlights.
-    game.setPadMode(QStringLiteral("highlight"));
-    game.toggleHighlight(5);
-    QCOMPARE(game.highlightDigit(), 5);
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 3);
 }
 
 void GameTests::highlightTogglesAndSwitchesDigits() {
@@ -234,21 +239,6 @@ void GameTests::highlightTogglesAndSwitchesDigits() {
     game.toggleHighlight(2);
     game.backToStart();
     QCOMPARE(game.highlightDigit(), -1);
-}
-
-void GameTests::padHighlightsWhenNothingIsSelected() {
-    SudokuGame game;
-    game.newGame(QStringLiteral("easy"));
-    const int cell = game.selectedIndex();
-
-    game.select(-1);
-    game.pressPad(6);
-    QCOMPARE(game.highlightDigit(), 6);
-
-    game.select(cell);
-    game.pressPad(6);  // with a selection the pad enters instead
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 6);
-    QCOMPARE(game.highlightDigit(), 6);
 }
 
 void GameTests::undoRestartAndEraseGoThroughTheBoard() {

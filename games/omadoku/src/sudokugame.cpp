@@ -87,6 +87,18 @@ QVariantList SudokuGame::difficulties() {
     return list;
 }
 
+// Unknown ids only reach here from a stale setting or an empty override, so
+// they mean "no opinion" rather than an error.
+SudokuGame::PadMode SudokuGame::modeFromId(const QString &id, PadMode fallback) {
+    if (id == kHighlightId)
+        return PadMode::Highlight;
+    if (id == kNoteId)
+        return PadMode::Note;
+    if (id == kFillId)
+        return PadMode::Fill;
+    return fallback;
+}
+
 QString SudokuGame::padMode() const {
     switch (m_padMode) {
     case PadMode::Highlight:
@@ -132,9 +144,7 @@ QVariantList SudokuGame::digitCounts() const {
 }
 
 void SudokuGame::setPadMode(const QString &padMode) {
-    const PadMode mode = padMode == kHighlightId ? PadMode::Highlight
-        : padMode == kNoteId                     ? PadMode::Note
-                                                 : PadMode::Fill;
+    const PadMode mode = modeFromId(padMode, PadMode::Highlight);
     if (m_padMode == mode)
         return;
     m_padMode = mode;
@@ -233,12 +243,13 @@ void SudokuGame::clearHighlight() {
     setHighlightDigit(-1);
 }
 
-void SudokuGame::pressPad(int digit) {
-    // With no cell to write into, the pad can only light a digit up, whatever
-    // the mode says.
-    if (m_padMode == PadMode::Highlight || m_screen != Screen::Playing || m_selectedIndex < 0)
+void SudokuGame::pressDigit(int digit, const QString &overrideMode) {
+    const PadMode mode = modeFromId(overrideMode, m_padMode);
+    // With no cell to write into, a digit can only light itself up, whatever
+    // the mode or the modifier asked for.
+    if (mode == PadMode::Highlight || m_screen != Screen::Playing || m_selectedIndex < 0)
         toggleHighlight(digit);
-    else if (m_padMode == PadMode::Note)
+    else if (mode == PadMode::Note)
         toggleNote(digit);
     else
         enterValue(digit);
@@ -332,10 +343,7 @@ void SudokuGame::loadSettings() {
     m_board.setCheckAsYouGo(settings.value(kCheckKey, true).toBool());
     // Anything unrecognised (including the int this key held before the modes
     // got names) falls back to the default.
-    const QString padMode = settings.value(kPadModeKey).toString();
-    m_padMode = padMode == kHighlightId ? PadMode::Highlight
-        : padMode == kNoteId            ? PadMode::Note
-                                        : PadMode::Fill;
+    m_padMode = modeFromId(settings.value(kPadModeKey).toString(), PadMode::Highlight);
 
     const QJsonObject json =
         QJsonDocument::fromJson(settings.value(kStateKey).toString().toUtf8()).object();
