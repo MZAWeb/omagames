@@ -28,15 +28,19 @@ with the `−`/`+` buttons in the header.
 
 ## Keyboard
 
+Everything is reachable without a mouse; each button shows its key as a badge.
+
 | Key | Action |
 |---|---|
 | `Enter` / `Space` | Deal / next round |
 | `H` `S` `D` `P` | Hit / Stand / Double / Split |
 | `↑` `↓` or `+` `-` | Bet ±10 |
 | `M` | Bet max |
+| `B` | Type a bet (`Enter` deals, `Escape` reverts) |
+| `[` `]` | Fewer / more table mates (between rounds) |
 | `Ctrl+N` | New game (asks for confirmation) |
+| `Y` / `Enter`, `N` / `Escape` | Confirm / cancel a dialog |
 | `Ctrl+Q` | Quit |
-| `Escape` | Leave the bet field / close a dialog |
 
 ## Build, test, run
 
