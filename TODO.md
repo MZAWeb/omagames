@@ -6,6 +6,7 @@
 - [ ] Extra hard almost always lands on Y-wing (swordfish 1/80); add XY-chain / uniqueness to widen the top band
 
 ## Black Omack
+- [ ] Seat overlap at 4 mates: the two left arc slots collide (seat 2 covers seat 1's total, visible in screenshots/blackomack.png); re-space slots per mate count
 - [ ] House Table follow-ups from the design: bet presets, Tab regions, paged roster at the hard minimum, sounds/table talk, card travel animations
 - [ ] Insurance, surrender, re-splits as optional rules
 - [ ] Speed setting in the UI (`stepInterval` already exists)
