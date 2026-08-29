@@ -6,7 +6,7 @@
 - [ ] Extra hard almost always lands on Y-wing (swordfish 1/80); add XY-chain / uniqueness to widen the top band
 
 ## Black Omack
-- [ ] Implement a design direction (proposals on the local `design` branch: House Table with the optional decision coach; scaling study in progress)
+- [ ] Implement a design direction (proposals on the local `design` branch: House Table with the optional decision coach and the 0–5 mates scaling study)
 - [ ] Insurance, surrender, re-splits as optional rules
 - [ ] Speed setting in the UI (`stepInterval` already exists)
 - [ ] Session stats screen (hands, net, streaks); bot chatter
