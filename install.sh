@@ -24,9 +24,10 @@ main() {
     command -v "$tool" >/dev/null 2>&1 || { echo "$tool is required (this installer targets Omarchy / Arch Linux)." >&2; exit 1; }
   done
 
-  # makepkg and sudo need a terminal, but stdin is the curl pipe.
-  if [[ ! -t 0 && -r /dev/tty ]]; then
-    exec < /dev/tty
+  # makepkg and sudo need a terminal, but stdin is the curl pipe. Attach the
+  # tty when there is one; otherwise carry on and let makepkg complain itself.
+  if [[ ! -t 0 ]] && { exec 3</dev/tty; } 2>/dev/null; then
+    exec <&3 3<&-
   fi
 
   local work
