@@ -26,13 +26,13 @@ main() {
 
   # makepkg and sudo need a terminal, but stdin is the curl pipe. Attach the
   # tty when there is one; otherwise carry on and let makepkg complain itself.
-  if [[ ! -t 0 ]] && { exec 3</dev/tty; } 2>/dev/null; then
-    exec <&3 3<&-
+  if [[ ! -t 0 ]] && ( : </dev/tty ) 2>/dev/null; then
+    exec </dev/tty
   fi
 
   local work
   work="$(mktemp -d "${TMPDIR:-/tmp}/omagames.XXXXXX")"
-  trap 'rm -rf "$work"' EXIT
+  trap "rm -rf '$work'" EXIT
 
   echo "==> Fetching omagames ($ref)"
   git clone --quiet --depth 1 --branch "$ref" "$repo" "$work/omagames"
