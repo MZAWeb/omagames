@@ -1,20 +1,15 @@
 #include "gametests.h"
 
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QSettings>
-#include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QtTest>
 
 #include "cellmodel.h"
+#include "savedgame.h"
 #include "sudoku.h"
 #include "sudokugame.h"
-#include "sudokugenerator.h"
 
 namespace {
-
-constexpr quint32 kSeed = 20260829u;
 
 int cellInt(QAbstractListModel *model, int cell, CellModel::Role role) {
     return model->data(model->index(cell, 0), role).toInt();
@@ -39,46 +34,13 @@ void GameTests::initTestCase() {
     static QTemporaryDir dir;
     QVERIFY(dir.isValid());
     m_settingsDir = dir.path();
-    QSettings::setDefaultFormat(QSettings::IniFormat);
-    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, m_settingsDir);
+    TestSupport::redirectSettings(m_settingsDir);
 }
 
 void GameTests::init() {
     QSettings settings;
     settings.clear();
     settings.sync();
-}
-
-int GameTests::firstEmptyCell(const SudokuBoard &board) const {
-    for (int i = 0; i < Sudoku::kCells; ++i) {
-        if (board.value(i) == 0)
-            return i;
-    }
-    return -1;
-}
-
-SudokuBoard GameTests::installSavedGame(int blanks) {
-    SudokuBoard board;
-    board.setPuzzle(SudokuGenerator::generate(Difficulty::Easy, kSeed));
-    const Sudoku::Grid &solution = board.puzzle().solution;
-    int left = blanks;
-    for (int i = Sudoku::kCells - 1; i >= 0; --i) {
-        if (board.isGiven(i))
-            continue;
-        if (left > 0) {
-            --left;
-            continue;  // leave this one empty
-        }
-        board.setValue(i, solution[size_t(i)]);
-    }
-
-    QJsonObject json = board.toJson();
-    json.insert(QStringLiteral("elapsed"), 42);
-    QSettings settings;
-    settings.setValue(QStringLiteral("state/v1"),
-                      QString::fromUtf8(QJsonDocument(json).toJson(QJsonDocument::Compact)));
-    settings.sync();
-    return board;
 }
 
 void GameTests::startsOnTheStartScreen() {
@@ -187,73 +149,6 @@ void GameTests::undoRestartAndEraseGoThroughTheBoard() {
     game.restart();
     QCOMPARE(game.filledCount(), filled);
     QVERIFY(!game.canUndo());
-}
-
-void GameTests::winningSwitchesStateAndClearsTheSave() {
-    const SudokuBoard expected = installSavedGame(1);
-    const int last = firstEmptyCell(expected);
-
-    SudokuGame game;
-    QVERIFY(game.hasSavedGame());
-    game.resumeSavedGame();
-    QCOMPARE(game.state(), SudokuGame::Playing);
-    QCOMPARE(game.elapsedSeconds(), 42);
-    QCOMPARE(game.selectedIndex(), last);
-
-    // A wrong entry is flagged immediately and does not win.
-    game.enterDigit(expected.puzzle().solution[size_t(last)] % 9 + 1);
-    QVERIFY(cellBool(game.cells(), last, CellModel::WrongRole));
-    QCOMPARE(game.state(), SudokuGame::Playing);
-
-    game.enterDigit(expected.puzzle().solution[size_t(last)]);
-    QVERIFY(!cellBool(game.cells(), last, CellModel::WrongRole));
-    QCOMPARE(game.state(), SudokuGame::Won);
-    QVERIFY(!game.hasSavedGame());
-    QVERIFY(QSettings().value(QStringLiteral("state/v1")).toString().isEmpty());
-}
-
-void GameTests::checkAsYouGoIsRemembered() {
-    {
-        SudokuGame game;
-        game.newGame(SudokuGame::Easy);
-        game.setCheckAsYouGo(false);
-        QVERIFY(!game.checkAsYouGo());
-        game.backToStart();
-    }
-    SudokuGame game;
-    QVERIFY(!game.checkAsYouGo());
-}
-
-void GameTests::savedGameSurvivesRestart() {
-    int cell = -1;
-    {
-        SudokuGame game;
-        game.newGame(SudokuGame::Medium);
-        cell = game.selectedIndex();
-        game.enterDigit(7);
-        game.toggleNotesMode();
-        game.select(cell);
-        game.backToStart();  // saves on the way out
-        QVERIFY(game.hasSavedGame());
-    }
-
-    SudokuGame resumed;
-    QVERIFY(resumed.hasSavedGame());
-    QCOMPARE(resumed.state(), SudokuGame::Start);
-    resumed.resumeSavedGame();
-    QCOMPARE(resumed.state(), SudokuGame::Playing);
-    QCOMPARE(resumed.difficulty(), int(Difficulty::Medium));
-    QCOMPARE(cellInt(resumed.cells(), cell, CellModel::ValueRole), 7);
-
-    resumed.newGame(SudokuGame::Easy);  // a new game drops the old save
-    QVERIFY(!resumed.hasSavedGame());
-}
-
-void GameTests::solvedSaveIsNotOffered() {
-    installSavedGame(0);
-    SudokuGame game;
-    QVERIFY(!game.hasSavedGame());
-    QCOMPARE(game.state(), SudokuGame::Start);
 }
 
 void GameTests::clockRunsOnlyWhilePlaying() {

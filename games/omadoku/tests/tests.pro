@@ -14,7 +14,9 @@ HEADERS += \
     generatortests.h \
     gradertests.h \
     boardtests.h \
-    gametests.h
+    gametests.h \
+    persistencetests.h \
+    savedgame.h
 
 SOURCES += \
     ../src/sudoku.cpp \
@@ -28,4 +30,5 @@ SOURCES += \
     gradertests.cpp \
     boardtests.cpp \
     gametests.cpp \
+    persistencetests.cpp \
     tst_omadoku.cpp
