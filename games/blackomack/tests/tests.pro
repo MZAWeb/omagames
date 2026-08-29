@@ -5,5 +5,11 @@ TEMPLATE = app
 TARGET = tst_blackomack
 
 INCLUDEPATH += ../src
-SOURCES += tst_blackomack.cpp
-# TODO(agent): add engine sources, e.g. ../src/sudoku.cpp
+HEADERS += \
+    ../src/cards.h \
+    ../src/hand.h \
+    ../src/blackjackrules.h
+SOURCES += tst_blackomack.cpp \
+    ../src/cards.cpp \
+    ../src/hand.cpp \
+    ../src/blackjackrules.cpp
