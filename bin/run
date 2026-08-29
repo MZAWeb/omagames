@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+# Build and launch one game: bin/run omadoku [args...]
+set -eu
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+GAME="${1:?usage: bin/run <game> [args]}"; shift
+"$ROOT/bin/build" "$GAME" >/dev/null
+exec "$ROOT/build/games/$GAME/$GAME" "$@"

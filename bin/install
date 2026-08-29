@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+# Build and install one game's Arch package: bin/install omadoku
+set -eu
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+GAME="${1:?usage: bin/install <game>}"; shift
+command -v makepkg >/dev/null 2>&1 || { echo "makepkg is required." >&2; exit 1; }
+"$ROOT/bin/build" "$GAME"
+cd "$ROOT/games/$GAME/pkgbuild"
+exec makepkg -fsi "$@"

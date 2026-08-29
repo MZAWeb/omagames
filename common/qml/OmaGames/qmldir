@@ -1,0 +1,3 @@
+module OmaGames
+OmaButton 1.0 OmaButton.qml
+OmaPanel 1.0 OmaPanel.qml

@@ -1,0 +1,13 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="fonts/iAWriterMonoS-Regular.ttf">fonts/iAWriterMonoS-Regular.ttf</file>
+        <file alias="fonts/iAWriterMonoS-Bold.ttf">fonts/iAWriterMonoS-Bold.ttf</file>
+        <file alias="fonts/iAWriterMonoS-Italic.ttf">fonts/iAWriterMonoS-Italic.ttf</file>
+        <file alias="fonts/iAWriterMonoS-BoldItalic.ttf">fonts/iAWriterMonoS-BoldItalic.ttf</file>
+    </qresource>
+    <qresource prefix="/qml">
+        <file alias="OmaGames/qmldir">qml/OmaGames/qmldir</file>
+        <file alias="OmaGames/OmaButton.qml">qml/OmaGames/OmaButton.qml</file>
+        <file alias="OmaGames/OmaPanel.qml">qml/OmaGames/OmaPanel.qml</file>
+    </qresource>
+</RCC>

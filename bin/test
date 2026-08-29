@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+# Run the QtTest suites headlessly (all games, or one: bin/test omadoku).
+set -eu
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+if command -v qmake6 >/dev/null 2>&1; then QMAKE=qmake6; else QMAKE=qmake; fi
+JOBS="$(nproc 2>/dev/null || echo 1)"
+if [ $# -ge 1 ]; then GAMES="$1"; else GAMES="$(ls "$ROOT/games")"; fi
+STATUS=0
+for GAME in $GAMES; do
+  [ -f "$ROOT/games/$GAME/tests/tests.pro" ] || { echo "== $GAME: no tests"; continue; }
+  BUILD_DIR="$ROOT/build-tests/$GAME"
+  mkdir -p "$BUILD_DIR" && cd "$BUILD_DIR"
+  "$QMAKE" "$ROOT/games/$GAME/tests/tests.pro" && make -j"$JOBS"
+  echo "== $GAME"
+  QT_QPA_PLATFORM=offscreen "./tst_$GAME" || STATUS=1
+done
+exit $STATUS

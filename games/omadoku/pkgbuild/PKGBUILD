@@ -1,0 +1,28 @@
+# Maintainer: Daniel Dvorkin <daniel@mzaweb.com>
+
+pkgname=omadoku
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Sudoku for Omarchy'
+arch=('x86_64')
+url='https://github.com/danieldvorkin/omagames'
+license=('MIT')
+install='omadoku.install'
+depends=('qt6-base' 'qt6-declarative')
+makedepends=('gcc' 'make' 'qt6-base' 'qt6-declarative')
+source=()
+sha256sums=()
+
+build() {
+  cd "$startdir/../../.."
+  ./bin/build omadoku
+}
+
+package() {
+  cd "$startdir/../../.."
+  /usr/bin/install -Dm755 build/games/omadoku/omadoku "$pkgdir/usr/bin/omadoku"
+  /usr/bin/install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  /usr/bin/install -Dm644 common/fonts/OFL.txt "$pkgdir/usr/share/licenses/$pkgname/OFL.txt"
+  /usr/bin/install -Dm644 "$startdir/omadoku.svg" "$pkgdir/usr/share/icons/hicolor/scalable/apps/omadoku.svg"
+  /usr/bin/install -Dm644 "$startdir/omadoku.desktop" "$pkgdir/usr/share/applications/omadoku.desktop"
+}

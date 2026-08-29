@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Omadoku
+Comment=Sudoku for Omarchy
+Exec=omadoku
+Icon=omadoku
+Terminal=false
+Categories=Game;LogicGame;
+StartupWMClass=omadoku

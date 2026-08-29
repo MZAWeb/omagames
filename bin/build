@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+# Build every game (or one: bin/build omadoku). Binaries land in build/games/<game>/<game>.
+set -eu
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+if command -v qmake6 >/dev/null 2>&1; then QMAKE=qmake6
+elif command -v qmake >/dev/null 2>&1; then QMAKE=qmake
+else echo "qmake6 or qmake is required." >&2; exit 1; fi
+JOBS="$(nproc 2>/dev/null || echo 1)"
+if [ $# -ge 1 ]; then
+  GAME="$1"; BUILD_DIR="$ROOT/build/games/$GAME"
+  mkdir -p "$BUILD_DIR" && cd "$BUILD_DIR"
+  "$QMAKE" "$ROOT/games/$GAME/$GAME.pro" && make -j"$JOBS"
+  echo "Built $BUILD_DIR/$GAME"
+else
+  BUILD_DIR="$ROOT/build"
+  mkdir -p "$BUILD_DIR" && cd "$BUILD_DIR"
+  "$QMAKE" "$ROOT/omagames.pro" && make -j"$JOBS"
+  echo "Built games under $BUILD_DIR/games/"
+fi
