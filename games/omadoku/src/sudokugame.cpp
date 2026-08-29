@@ -97,6 +97,7 @@ void SudokuGame::select(int index) {
         return;
     m_selectedIndex = index;
     emit selectedIndexChanged();
+    emit selectedValueChanged();
 }
 
 void SudokuGame::moveSelection(int deltaRow, int deltaColumn) {
@@ -158,6 +159,7 @@ void SudokuGame::applyChange(const std::vector<int> &changed) {
     else
         m_cells.refreshAll();
     emit boardChanged();
+    emit selectedValueChanged();
 
     if (m_board.isSolved()) {
         m_clock.stop();

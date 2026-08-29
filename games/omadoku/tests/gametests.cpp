@@ -267,3 +267,21 @@ void GameTests::clockRunsOnlyWhilePlaying() {
     QTest::qWait(1200);
     QCOMPARE(game.elapsedSeconds(), stopped);  // paused on the start screen
 }
+
+void GameTests::selectedValueFollowsTheSelection() {
+    SudokuGame game;
+    game.newGame(SudokuGame::Easy);
+    const int empty = game.selectedIndex();
+    QCOMPARE(game.selectedValue(), 0);
+
+    QSignalSpy spy(&game, &SudokuGame::selectedValueChanged);
+    game.enterDigit(6);
+    QCOMPARE(game.selectedValue(), 6);
+    QVERIFY(spy.count() > 0);
+
+    game.select(firstGiven(game.cells()));
+    QCOMPARE(game.selectedValue(), cellInt(game.cells(), game.selectedIndex(), CellModel::ValueRole));
+
+    game.select(empty);
+    QCOMPARE(game.selectedValue(), 6);
+}

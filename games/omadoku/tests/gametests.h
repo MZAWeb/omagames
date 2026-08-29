@@ -17,6 +17,7 @@ private slots:
     void selectionMovesWithinTheGrid();
     void digitsGoIntoTheSelectedCellOnly();
     void notesModeWritesPencilMarks();
+    void selectedValueFollowsTheSelection();
     void undoRestartAndEraseGoThroughTheBoard();
     void winningSwitchesStateAndClearsTheSave();
     void checkAsYouGoIsRemembered();

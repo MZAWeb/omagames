@@ -18,6 +18,7 @@ class SudokuGame : public QObject {
     Q_PROPERTY(bool notesMode READ notesMode WRITE setNotesMode NOTIFY notesModeChanged)
     Q_PROPERTY(bool checkAsYouGo READ checkAsYouGo WRITE setCheckAsYouGo NOTIFY checkAsYouGoChanged)
     Q_PROPERTY(int selectedIndex READ selectedIndex WRITE select NOTIFY selectedIndexChanged)
+    Q_PROPERTY(int selectedValue READ selectedValue NOTIFY selectedValueChanged)
     Q_PROPERTY(bool canUndo READ canUndo NOTIFY boardChanged)
     Q_PROPERTY(int filledCount READ filledCount NOTIFY boardChanged)
     Q_PROPERTY(bool inProgress READ inProgress NOTIFY boardChanged)
@@ -44,6 +45,8 @@ public:
     bool checkAsYouGo() const { return m_board.checkAsYouGo(); }
     void setCheckAsYouGo(bool checkAsYouGo);
     int selectedIndex() const { return m_selectedIndex; }
+    // Digit under the selection (0 when empty), so the UI can highlight twins.
+    int selectedValue() const { return m_board.value(m_selectedIndex); }
     bool canUndo() const { return m_board.canUndo(); }
     int filledCount() const { return m_board.filledCount(); }
     bool inProgress() const;
@@ -71,6 +74,7 @@ signals:
     void notesModeChanged();
     void checkAsYouGoChanged();
     void selectedIndexChanged();
+    void selectedValueChanged();
     void elapsedSecondsChanged();
     void hasSavedGameChanged();
 
