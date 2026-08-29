@@ -1,5 +1,7 @@
 # Omagames
 
+[![CI](https://github.com/MZAWeb/omagames/actions/workflows/ci.yml/badge.svg)](https://github.com/MZAWeb/omagames/actions/workflows/ci.yml)
+
 Small, polished games for [Omarchy](https://omarchy.org), built with Qt Quick
 and C++ in the spirit of `omawrite` and `omacalc`: dead simple, keyboard first,
 and automatically following the Omarchy theme, system dark/light mode and text
