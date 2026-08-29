@@ -16,6 +16,19 @@ This is a monorepo: games live under `games/`, everything shared (theming,
 fonts, app bootstrap, common QML controls) lives under `common/` and is compiled
 into each game. Each game ships as its own Arch package.
 
+## Install
+
+One line per game, on Omarchy (or any Arch):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/MZAWeb/omagames/main/install.sh | bash -s omadoku
+curl -fsSL https://raw.githubusercontent.com/MZAWeb/omagames/main/install.sh | bash -s blackomack
+```
+
+It builds a real Arch package with `makepkg` and installs it with `pacman`, so
+`sudo pacman -R omadoku` removes it cleanly. Pass several games at once to
+install them together.
+
 ## Build & run
 
 ```sh
