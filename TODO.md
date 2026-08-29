@@ -14,8 +14,7 @@
 - [ ] House-edge regression test from the simulator (assert measured EV stays near −0.5% over seeded rounds)
 
 ## Shared
-- [ ] Promote `HintButton.qml` to `common/` (both games carry a copy); `HandView.qml` when a second card game needs it
-- [ ] `common/` unit tests (OmarchyTheme parsing, defaults, mix/alpha)
+- [ ] Promote `HandView.qml` to `common/` when a second card game needs it
 
 ## Release
 - [ ] Cut v0.1.0 with `bin/release` and submit `packaging/opr/*` to omarchy-pkgs (see docs/RELEASING.md) — when the games are ready
