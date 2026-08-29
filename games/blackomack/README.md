@@ -19,8 +19,9 @@ table seats four of them.
 You start with Ø 1,000. The bankroll, your table mates and session stats are
 saved between launches. Your session net appears with round and shoe context
 in the action dock; every seat shows its own cumulative net beside its bankroll.
-At the payout every hand shows what it paid. When you're broke you can only
-start a new game.
+At the payout every hand shows what it paid. Your best bankroll ever sits in the
+same line and lights up for the round that sets it; it survives new games and
+only a settings wipe clears it. When you're broke you can only start a new game.
 
 ## House Table
 
