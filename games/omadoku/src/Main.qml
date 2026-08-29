@@ -55,7 +55,7 @@ ApplicationWindow {
         id: screen
         anchors.fill: parent
         sourceComponent: game.state === "start" ? startScreen : boardScreen
-        onLoaded: item.forceActiveFocus()
+        onLoaded: (item as Item).forceActiveFocus()
     }
 
     Component { id: startScreen; StartScreen {} }
@@ -73,7 +73,7 @@ ApplicationWindow {
             onNewGameRequested: game.newGame(game.difficulty)
             onBackRequested: game.backToStart()
         }
-        onLoaded: item.forceActiveFocus()
+        onLoaded: (item as Item).forceActiveFocus()
     }
 
     Loader {
@@ -89,10 +89,10 @@ ApplicationWindow {
             }
             onRejected: {
                 confirmLoader.active = false;
-                screen.item.forceActiveFocus();
+                (screen.item as Item).forceActiveFocus();
             }
         }
-        onLoaded: item.forceActiveFocus()
+        onLoaded: (item as Item).forceActiveFocus()
     }
 
     // Remember the last windowed geometry rather than whatever the window
