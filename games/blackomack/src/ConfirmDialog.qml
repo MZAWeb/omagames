@@ -2,7 +2,8 @@ import QtQuick
 import QtQuick.Controls
 import OmaGames
 
-// Modal yes/no prompt; Escape cancels, Enter confirms.
+// Modal yes/no prompt; Enter or Y confirms, Escape or N cancels. Key handling
+// lives on the panel because Keys only attaches to Items, not to the Popup.
 Popup {
     id: dialog
     property string title: ""
@@ -10,6 +11,8 @@ Popup {
     property string acceptText: "OK"
     property bool cancellable: true
     signal accepted()
+
+    function accept() { accepted(); close(); }
 
     modal: true
     focus: true
@@ -19,9 +22,16 @@ Popup {
     background: Item {}
 
     OmaPanel {
+        focus: true
         padding: 24 * theme.textScale
         implicitWidth: content.implicitWidth + 2 * padding
         implicitHeight: content.implicitHeight + 2 * padding
+        Keys.onReturnPressed: dialog.accept()
+        Keys.onEnterPressed: dialog.accept()
+        Keys.onPressed: (event) => {
+            if (event.key === Qt.Key_Y) { dialog.accept(); event.accepted = true; }
+            else if (event.key === Qt.Key_N && dialog.cancellable) { dialog.close(); event.accepted = true; }
+        }
         Column {
             id: content
             spacing: 16 * theme.textScale
@@ -30,11 +40,9 @@ Popup {
             Row {
                 spacing: 8 * theme.textScale
                 anchors.right: parent.right
-                OmaButton { visible: dialog.cancellable; text: "Cancel"; onClicked: dialog.close() }
-                OmaButton { text: dialog.acceptText; primary: true; onClicked: { dialog.accepted(); dialog.close(); } }
+                HintButton { visible: dialog.cancellable; text: "Cancel"; hint: "N"; onClicked: dialog.close() }
+                HintButton { text: dialog.acceptText; hint: "Y"; primary: true; onClicked: dialog.accept() }
             }
         }
     }
-    Keys.onReturnPressed: { accepted(); close(); }
-    Keys.onEnterPressed: { accepted(); close(); }
 }
