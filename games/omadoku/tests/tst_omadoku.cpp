@@ -2,6 +2,7 @@
 #include <QtTest>
 
 #include "boardtests.h"
+#include "gametests.h"
 #include "generatortests.h"
 #include "gradertests.h"
 #include "solvertests.h"
@@ -21,5 +22,7 @@ int main(int argc, char *argv[]) {
     status |= QTest::qExec(&grader, argc, argv);
     BoardTests board;
     status |= QTest::qExec(&board, argc, argv);
+    GameTests gameTests;
+    status |= QTest::qExec(&gameTests, argc, argv);
     return status;
 }
