@@ -13,15 +13,15 @@ git add -A && git commit -m "Repo skeleton: shared theme library, game placehold
 # Optional but recommended: rename the default branch to match GitHub's default
 git branch -m master main
 
-# Create one worktree + branch per agent, as siblings of the main checkout
-git worktree add -b omadoku    ../omagames-omadoku    main
-git worktree add -b blackomack ../omagames-blackomack main
-git worktree add -b chores     ../omagames-chores     main   # only if running agent C
+# Create one worktree + branch per agent under .worktrees/ (gitignored)
+git worktree add -b omadoku .worktrees/omadoku    main
+git worktree add -b blackomack .worktrees/blackomack main
+git worktree add -b chores .worktrees/chores     main   # only if running agent C
 git worktree list
 ```
 
 Rules of thumb:
-- Worktrees live **outside** the repo directory (`../omagames-<name>`), never inside it.
+- Worktrees live in `.worktrees/<name>` inside the main checkout; the directory is gitignored so `git status` on `main` never sees them.
 - `main` stays untouched while agents work; you only merge into it.
 - Never open the same branch in two worktrees (git refuses anyway).
 
@@ -30,7 +30,7 @@ Rules of thumb:
 Start each agent **inside its worktree** so relative paths, `bin/*` and the
 build directory are its own. Prompt template:
 
-> You are working in the git worktree `~/code/omagames-omadoku` on branch
+> You are working in the git worktree `~/code/omagames/.worktrees/omadoku` on branch
 > `omadoku`. Read `CLAUDE.md`, `docs/PLAN.md`, then implement
 > `docs/tasks/omadoku.md`. Follow `docs/WORKTREES.md` for git usage.
 
@@ -62,8 +62,8 @@ git diff main...omadoku --stat        # files touched — check nothing outside 
 git diff main...omadoku -- common/    # eyeball shared changes specifically
 
 # Try it without leaving main: the worktree already has the code built
-../omagames-omadoku/bin/run omadoku
-../omagames-omadoku/bin/test omadoku
+.worktrees/omadoku/bin/run omadoku
+.worktrees/omadoku/bin/test omadoku
 ```
 
 Ask for fixes by re-prompting the same agent in its worktree; it keeps
@@ -89,12 +89,12 @@ bin/build && bin/test
 
 If an agent's branch has drifted far behind `main` (e.g. you merged A and now
 want B to pick up a common/ change), update it from inside its worktree:
-`cd ../omagames-blackomack && git merge main`.
+`cd .worktrees/blackomack && git merge main`.
 
 ## Cleanup
 
 ```sh
-git worktree remove ../omagames-omadoku      # deletes the directory
+git worktree remove .worktrees/omadoku      # deletes the directory
 git branch -d omadoku                        # after it is merged
 git worktree prune
 ```
