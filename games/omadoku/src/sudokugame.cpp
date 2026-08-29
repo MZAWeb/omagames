@@ -11,6 +11,7 @@ namespace {
 
 const auto kStateKey = QStringLiteral("state/v1");
 const auto kCheckKey = QStringLiteral("play/checkAsYouGo");
+const auto kPadModeKey = QStringLiteral("play/padMode");
 const auto kGeometryKey = QStringLiteral("window/geometry");
 const auto kMaximizedKey = QStringLiteral("window/maximized");
 const auto kElapsedKey = QStringLiteral("elapsed");
@@ -53,11 +54,16 @@ QVariantList SudokuGame::digitCounts() const {
     return counts;
 }
 
-void SudokuGame::setNotesMode(bool notesMode) {
-    if (m_notesMode == notesMode)
+void SudokuGame::setPadMode(PadMode padMode) {
+    if (m_padMode == padMode)
         return;
-    m_notesMode = notesMode;
-    emit notesModeChanged();
+    m_padMode = padMode;
+    QSettings().setValue(kPadModeKey, int(padMode));
+    emit padModeChanged();
+}
+
+void SudokuGame::cyclePadMode() {
+    setPadMode(PadMode((int(m_padMode) + 1) % 3));
 }
 
 void SudokuGame::setCheckAsYouGo(bool checkAsYouGo) {
@@ -79,7 +85,6 @@ void SudokuGame::newGame(int level) {
 
     m_elapsedSeconds = 0;
     emit elapsedSecondsChanged();
-    setNotesMode(false);
     clearHighlight();
     selectFirstEmptyCell();
     clearSavedGame();
@@ -116,13 +121,6 @@ void SudokuGame::moveSelection(int deltaRow, int deltaColumn) {
     select(row * Sudoku::kSize + column);
 }
 
-void SudokuGame::enterDigit(int digit) {
-    if (m_notesMode)
-        toggleNote(digit);
-    else
-        enterValue(digit);
-}
-
 void SudokuGame::enterValue(int digit) {
     if (m_state != Playing || m_selectedIndex < 0)
         return;
@@ -144,21 +142,20 @@ void SudokuGame::clearHighlight() {
 }
 
 void SudokuGame::pressPad(int digit) {
-    // With no cell to write into, the pad is a way to light up a digit.
-    if (m_state != Playing || m_selectedIndex < 0)
+    // With no cell to write into, the pad can only light a digit up, whatever
+    // the mode says.
+    if (m_padMode == Highlight || m_state != Playing || m_selectedIndex < 0)
         toggleHighlight(digit);
+    else if (m_padMode == Note)
+        toggleNote(digit);
     else
-        enterDigit(digit);
+        enterValue(digit);
 }
 
 void SudokuGame::erase() {
     if (m_state != Playing || m_selectedIndex < 0)
         return;
     applyChange(m_board.erase(m_selectedIndex));
-}
-
-void SudokuGame::toggleNotesMode() {
-    setNotesMode(!m_notesMode);
 }
 
 void SudokuGame::undo() {
@@ -241,6 +238,8 @@ void SudokuGame::selectFirstEmptyCell() {
 void SudokuGame::loadSettings() {
     const QSettings settings;
     m_board.setCheckAsYouGo(settings.value(kCheckKey, true).toBool());
+    const int padMode = settings.value(kPadModeKey, int(Fill)).toInt();
+    m_padMode = padMode >= int(Highlight) && padMode <= int(Fill) ? PadMode(padMode) : Fill;
 
     const QJsonObject json =
         QJsonDocument::fromJson(settings.value(kStateKey).toString().toUtf8()).object();

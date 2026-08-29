@@ -15,7 +15,7 @@ class SudokuGame : public QObject {
     Q_PROPERTY(QAbstractListModel *cells READ cells CONSTANT)
     Q_PROPERTY(State state READ state NOTIFY stateChanged)
     Q_PROPERTY(int difficulty READ difficulty NOTIFY boardChanged)
-    Q_PROPERTY(bool notesMode READ notesMode WRITE setNotesMode NOTIFY notesModeChanged)
+    Q_PROPERTY(PadMode padMode READ padMode WRITE setPadMode NOTIFY padModeChanged)
     Q_PROPERTY(bool checkAsYouGo READ checkAsYouGo WRITE setCheckAsYouGo NOTIFY checkAsYouGoChanged)
     Q_PROPERTY(int selectedIndex READ selectedIndex WRITE select NOTIFY selectedIndexChanged)
     Q_PROPERTY(int selectedValue READ selectedValue NOTIFY selectedValueChanged)
@@ -31,6 +31,11 @@ public:
     enum State { Start, Playing, Won };
     Q_ENUM(State)
 
+    // What a click on the digit pad does, mirroring the modifier-free,
+    // Shift and Ctrl meanings of the number row.
+    enum PadMode { Highlight, Note, Fill };
+    Q_ENUM(PadMode)
+
     // Mirrors Difficulty so QML can say SudokuGame.Medium.
     enum Level { Easy = int(Difficulty::Easy), Medium = int(Difficulty::Medium), Hard = int(Difficulty::Hard) };
     Q_ENUM(Level)
@@ -41,8 +46,8 @@ public:
     QAbstractListModel *cells() { return &m_cells; }
     State state() const { return m_state; }
     int difficulty() const { return int(m_board.puzzle().difficulty); }
-    bool notesMode() const { return m_notesMode; }
-    void setNotesMode(bool notesMode);
+    PadMode padMode() const { return m_padMode; }
+    void setPadMode(PadMode padMode);
     bool checkAsYouGo() const { return m_board.checkAsYouGo(); }
     void setCheckAsYouGo(bool checkAsYouGo);
     int selectedIndex() const { return m_selectedIndex; }
@@ -62,16 +67,14 @@ public:
     Q_INVOKABLE void select(int index);
     Q_INVOKABLE void moveSelection(int deltaRow, int deltaColumn);
     // Entry (Ctrl+digit), notes (Shift+digit) and highlighting (plain digit)
-    // are separate actions; enterDigit is the mode-governed one the digit pad
-    // uses when a cell is selected.
-    Q_INVOKABLE void enterDigit(int digit);
+    // are separate actions; the digit pad picks one of them by its mode.
     Q_INVOKABLE void enterValue(int digit);
     Q_INVOKABLE void toggleNote(int digit);
     Q_INVOKABLE void toggleHighlight(int digit);
     Q_INVOKABLE void clearHighlight();
     Q_INVOKABLE void pressPad(int digit);
+    Q_INVOKABLE void cyclePadMode();
     Q_INVOKABLE void erase();
-    Q_INVOKABLE void toggleNotesMode();
     Q_INVOKABLE void undo();
     Q_INVOKABLE void restart();
     Q_INVOKABLE void backToStart();
@@ -82,7 +85,7 @@ public:
 signals:
     void stateChanged();
     void boardChanged();
-    void notesModeChanged();
+    void padModeChanged();
     void checkAsYouGoChanged();
     void selectedIndexChanged();
     void selectedValueChanged();
@@ -108,6 +111,6 @@ private:
     int m_selectedIndex = -1;
     int m_highlightDigit = -1;
     int m_elapsedSeconds = 0;
-    bool m_notesMode = false;
+    PadMode m_padMode = Fill;
     bool m_hasSavedGame = false;
 };
