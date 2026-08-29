@@ -3,8 +3,8 @@
 #include "hand.h"
 
 // Fixed v1 house rules: 6 decks, dealer stands on all 17s, blackjack pays 3:2,
-// double on any two cards, one split, insurance against a dealer ace, no
-// surrender.
+// double on any two cards, splits up to four hands a seat, insurance against a
+// dealer ace, no surrender.
 namespace BlackjackRules {
 
 constexpr int kDecks = 6;
@@ -13,6 +13,7 @@ constexpr int kBlackjackPayoutNumerator = 3;
 constexpr int kBlackjackPayoutDenominator = 2;
 constexpr int kInsurancePayoutNumerator = 2;   // insurance pays 2 to 1
 constexpr int kInsuranceDivisor = 2;           // and costs half the original bet
+constexpr int kMaxHandsPerSeat = 4;            // three splits, aces excepted
 constexpr int kMinBet = 10;
 constexpr int kBetStep = 10;
 constexpr int kStartingBankroll = 1000;

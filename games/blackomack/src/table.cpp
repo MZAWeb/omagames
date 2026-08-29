@@ -223,7 +223,8 @@ bool Table::canAct(int seatIndex, Action action) const {
     case Action::Hit:
     case Action::Stand: return true;
     case Action::Double: return hand.canDouble() && seat.bankroll >= hand.bet;
-    case Action::Split: return hand.canSplit() && seat.bankroll >= hand.bet;
+    case Action::Split:
+        return hand.canSplit() && seat.hands.size() < kMaxHandsPerSeat && seat.bankroll >= hand.bet;
     }
     return false;
 }

@@ -108,7 +108,10 @@ private slots:
         QVERIFY(!hand({8, 8, 8}).canSplit());
         Hand again = hand({8, 8});
         again.fromSplit = true;
-        QVERIFY(!again.canSplit());           // no re-split
+        QVERIFY(again.canSplit());            // pairs re-split, up to the table's cap
+        Hand aces = hand({1, 1});
+        aces.fromSplit = true;
+        QVERIFY(!aces.canSplit());            // except split aces, which stand pat
         QVERIFY(hand({5, 6}).canDouble());
         QVERIFY(!hand({5, 6, 2}).canDouble());
     }
@@ -429,7 +432,7 @@ private slots:
         t.act(Table::Action::Split);
         QCOMPARE(t.currentHand(), 0);
         QVERIFY(t.canAct(t.humanSeat(), Table::Action::Double));   // double after split
-        QVERIFY(!t.canAct(t.humanSeat(), Table::Action::Split));   // no re-split
+        QVERIFY(!t.canAct(t.humanSeat(), Table::Action::Split));   // 8,3 is no pair
         t.act(Table::Action::Double);
         QCOMPARE(t.currentHand(), 1);
         QVERIFY(t.waitingForHuman());
@@ -920,6 +923,67 @@ private slots:
         QVERIFY(!BlackjackRules::dealerPeeks(c(9)));
     }
 
+    // --- Re-splits ---
+
+    void resplitsToFourHandsAndStopsThere() {
+        Table t(1);
+        t.stackDeck(cards({8, 9, 8, 7, 8, 8, 8, 10, 10, 10, 5, 10}));
+        t.placeBets(50);
+        dealOut(t);
+        for (int splits = 0; splits < 3; ++splits) {
+            QVERIFY(t.canAct(t.humanSeat(), Table::Action::Split));
+            t.act(Table::Action::Split);
+            QCOMPARE(t.currentHand(), 0);          // the fresh pair is played first
+        }
+        const Seat &me = t.human();
+        QCOMPARE(me.hands.size(), BlackjackRules::kMaxHandsPerSeat);
+        QCOMPARE(me.bankroll, 800);                // four stakes of 50 are down
+        t.act(Table::Action::Stand);
+        t.act(Table::Action::Stand);
+        t.act(Table::Action::Stand);
+        QCOMPARE(t.currentHand(), 3);
+        QVERIFY(me.hands[3].canSplit());           // a pair, but the seat is full
+        QVERIFY(!t.canAct(t.humanSeat(), Table::Action::Split));
+        t.act(Table::Action::Hit);
+        autoplay(t);
+        QVERIFY(t.dealer().isBust());
+        for (const Hand &h : me.hands)
+            QCOMPARE(h.returned, 100);
+        QCOMPARE(me.bankroll, 1200);
+    }
+    void splitAcesAreNeverResplit() {
+        Table t(1);
+        t.stackDeck(cards({1, 9, 1, 7, 1, 1, 10}));
+        t.placeBets(50);
+        dealOut(t);
+        t.act(Table::Action::Split);
+        const Seat &me = t.human();
+        QCOMPARE(me.hands.size(), 2);
+        QVERIFY(!me.hands[0].canSplit());          // A,A after a split still stands pat
+        QVERIFY(!me.hands[1].canSplit());
+        QCOMPARE(t.phase(), Table::Phase::DealerTurn);
+        autoplay(t);
+        QCOMPARE(me.bankroll, 1100);               // both 12s ride out a dealer bust
+    }
+    void basicStrategyResplitsPairs() {
+        Hand again = hand({8, 8});
+        again.fromSplit = true;
+        QCOMPARE(BasicStrategy::decide(again, c(10), false, true), BlackjackRules::Action::Split);
+        QCOMPARE(BasicStrategy::decide(again, c(10), false, false), BlackjackRules::Action::Hit);
+    }
+    void botsResplitAtTheTable() {
+        Table t(1);
+        t.addBot(perfect(QStringLiteral("Zed")));
+        t.stackDeck(cards({10, 8, 9, 9, 8, 7, 8, 5, 10, 10, 10, 10}));
+        t.placeBets(50);
+        dealOut(t);
+        QVERIFY(t.waitingForHuman());
+        t.act(Table::Action::Stand);
+        autoplay(t);
+        QVERIFY(t.roundOver());
+        QCOMPARE(t.seats()[1].hands.size(), 3);    // 8,8 split, then split again
+    }
+
     // --- Insurance ---
 
     void insuranceStakeAndReturn() {
@@ -1074,7 +1138,7 @@ private slots:
     // A whole shoe game played by the book has a known, small edge; these
     // slots are the guard rail against a rule change that quietly moves it.
 private:
-    static constexpr int kEdgeRounds = 50000;
+    static constexpr int kEdgeRounds = 80000;
 
     // Plays `rounds` seeded rounds with a perfect-basic-strategy human and
     // returns the net result per unit staked on the initial bet. The human's
@@ -1110,12 +1174,15 @@ private:
 
 private slots:
     void houseEdgeStaysInTheKnownBand() {
+        QElapsedTimer clock;
+        clock.start();
         const double solo = houseEdge(20240815, 0, kEdgeRounds);
         qInfo("house edge, heads-up: %.3f%%", 100 * solo);
         QVERIFY2(solo >= -0.015 && solo <= 0.005, qPrintable(QString::number(solo)));
         const double crowded = houseEdge(19700101, 3, kEdgeRounds);
         qInfo("house edge, three table mates: %.3f%%", 100 * crowded);
         QVERIFY2(crowded >= -0.015 && crowded <= 0.005, qPrintable(QString::number(crowded)));
+        qInfo("%lld rounds in %lld ms", 2 * qint64(kEdgeRounds), clock.elapsed());
     }
 };
 

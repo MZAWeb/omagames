@@ -11,7 +11,8 @@ table seats four of them.
   showing an ace or a ten-value card.
 - Blackjack pays 3:2, wins pay 1:1, pushes return the bet.
 - Double down on any first two cards (one card only), including after a split.
-- Split once per hand; split aces get one card each and cannot hit.
+- Split any pair, and split again up to four hands a seat; split aces get one
+  card each, cannot hit and cannot be re-split.
 - When the dealer shows an ace, every seat with a bet is offered insurance
   before the peek: a side bet of half the original stake that pays 2 to 1 if
   the dealer has blackjack and is lost otherwise. It is the one bet the coach
