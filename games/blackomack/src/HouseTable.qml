@@ -128,10 +128,10 @@ Item {
                     border.color: theme.alpha(theme.cyan, 0.6)
 
                     Text {
-                        text: "MAIN TABLE  ·  DEALER + YOU"
+                        text: "Dealer and you"
                         color: theme.foreground
-                        opacity: 0.72
-                        font.pixelSize: 10 * theme.textScale
+                        opacity: 0.75
+                        font.pixelSize: 11 * theme.textScale
                     }
                     DealerArea {
                         id: stageDealer
@@ -163,10 +163,10 @@ Item {
 
                     Text {
                         id: rosterLabel
-                        text: "SEAT ROSTER  ·  DEAL ORDER"
+                        text: "Table mates, in deal order"
                         color: theme.foreground
-                        opacity: 0.72
-                        font.pixelSize: 10 * theme.textScale
+                        opacity: 0.75
+                        font.pixelSize: 11 * theme.textScale
                     }
                     Flickable {
                         anchors.left: parent.left
