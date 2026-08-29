@@ -23,6 +23,7 @@ common/
   src/appsetup.*        OmaGames::setupApplication / setupEngine
   qml/OmaGames/         qmldir + generic controls (OmaButton, OmaPanel, PlayingCard, …)
   fonts/                iA Writer Mono S (OFL)
+  tests/tests.pro, tst_common.cpp   `bin/test common`, like a game's suite
 games/<game>/
   <game>.pro            include(../../common/common.pri) + game sources
   src/                  engine (QtCore only) + <Game>Game QObject bridge + QML
@@ -86,8 +87,9 @@ against the packages a player actually has.
 
 | Job | What it does |
 |---|---|
-| **Discover games** | Lists `games/*` into a JSON matrix. Adding a game needs no workflow edit. |
+| **Discover games** | Lists `games/*` into a JSON matrix, and every other top-level directory with its own `tests/tests.pro` (`common/`) into a second one. Adding a game or a shared suite needs no workflow edit. |
 | **build & test (`<game>`)** | One job per game: `bin/build <game>` then `bin/test <game>` (headless, `QT_QPA_PLATFORM=offscreen`). |
+| **test (`<suite>`)** | One job per shared suite: `bin/test <suite>`. `common/` has no binary of its own, so there is nothing to build first. |
 | **Code quality** | Four named steps, below. |
 | **package (`<game>`)** | One job per game: `makepkg` on `games/<game>/pkgbuild/PKGBUILD`, uploading `*.pkg.tar.zst` as an artifact. `makepkg` refuses to run as root, so the job creates a `builder` user and gives it the workspace. |
 
