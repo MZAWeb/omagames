@@ -12,6 +12,7 @@ constexpr int kBetStep = 10;
 constexpr int kStartingBankroll = 1000;
 
 enum class Outcome { Blackjack, Win, Push, Lose };
+enum class Action { Hit, Stand, Double, Split };
 
 bool dealerShouldHit(const Hand &dealer);
 Outcome outcome(const Hand &player, const Hand &dealer);
