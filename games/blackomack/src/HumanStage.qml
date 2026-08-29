@@ -26,11 +26,6 @@ OmaPanel {
         return sum;
     }
 
-    // Live status only: an idle seat says nothing rather than "waiting".
-    function statusText() {
-        return seatData && seatData.active ? "Your turn" : "";
-    }
-
     Column {
         id: content
         width: parent.width
@@ -54,11 +49,11 @@ OmaPanel {
                 elide: Text.ElideRight
                 Layout.fillWidth: true
             }
+            // Live status only: an idle seat says nothing rather than "waiting".
             Text {
-                visible: seat.statusText() !== ""
-                text: seat.statusText()
-                color: seat.seatData && seat.seatData.active ? theme.accent : theme.foreground
-                opacity: seat.seatData && seat.seatData.active ? 1.0 : 0.72
+                visible: seat.seatData && seat.seatData.active
+                text: "Your turn"
+                color: theme.accent
                 font.pixelSize: 11 * theme.textScale
                 font.bold: true
                 elide: Text.ElideRight

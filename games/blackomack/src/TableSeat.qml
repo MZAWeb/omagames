@@ -37,10 +37,8 @@ OmaPanel {
     }
 
     // Only a live hand says anything here: an idle seat is visibly at the
-    // table already, so an "at table" / "waiting" caption is pure noise.
+    // table already, so a "waiting" caption would be pure noise.
     function statusText() {
-        if (!active)
-            return "";
         return human ? "Your turn" : "Playing";
     }
 
@@ -69,12 +67,11 @@ OmaPanel {
                 Layout.alignment: Qt.AlignVCenter
             }
             Text {
-                visible: seat.statusText() !== ""
+                visible: seat.active
                 text: seat.statusText()
-                color: seat.active ? theme.accent : theme.foreground
-                opacity: seat.active ? 1.0 : 0.72
+                color: theme.accent
                 font.pixelSize: 11 * theme.textScale
-                font.bold: seat.active
+                font.bold: true
                 elide: Text.ElideRight
                 Layout.maximumWidth: 72 * theme.textScale
                 Layout.alignment: Qt.AlignVCenter
