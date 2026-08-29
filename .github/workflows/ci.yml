@@ -1,0 +1,163 @@
+# Omagames CI. Everything runs in an archlinux:latest container because Omarchy
+# is Arch: the packages CI installs are the packages a player would have.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # base-devel brings gcc, make and fakeroot (makepkg needs the last one);
+  # git is required by actions/checkout.
+  ARCH_PACKAGES: base-devel git qt6-base qt6-declarative
+
+jobs:
+  discover:
+    name: Discover games
+    runs-on: ubuntu-latest
+    outputs:
+      games: ${{ steps.list.outputs.games }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: List games/
+        id: list
+        run: |
+          set -eu
+          games=$(find games -mindepth 1 -maxdepth 1 -type d -printf '%f\n' \
+                  | sort | jq -R . | jq -sc .)
+          [ "$games" != "[]" ] || { echo "No games found under games/."; exit 1; }
+          echo "games=$games" >> "$GITHUB_OUTPUT"
+          echo "Discovered: $games"
+
+  build-test:
+    name: build & test (${{ matrix.game }})
+    needs: discover
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    strategy:
+      fail-fast: false
+      matrix:
+        game: ${{ fromJson(needs.discover.outputs.games) }}
+    steps:
+      - name: Install Qt 6 and toolchain
+        run: pacman -Syu --noconfirm --needed $ARCH_PACKAGES
+
+      - uses: actions/checkout@v7
+
+      - name: Build ${{ matrix.game }}
+        run: bin/build ${{ matrix.game }}
+
+      # bin/test already runs the suites with QT_QPA_PLATFORM=offscreen.
+      - name: Test ${{ matrix.game }}
+        run: bin/test ${{ matrix.game }}
+
+  quality:
+    name: Code quality
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install Qt 6 and toolchain
+        run: pacman -Syu --noconfirm --needed $ARCH_PACKAGES
+
+      - uses: actions/checkout@v7
+
+      - name: Shell scripts parse (sh -n bin/*)
+        run: |
+          set -eu
+          status=0
+          for script in bin/*; do
+            if sh -n "$script"; then
+              echo "ok   $script"
+            else
+              echo "::error file=$script::not valid POSIX shell"
+              status=1
+            fi
+          done
+          exit $status
+
+      - name: No hardcoded colors in QML
+        run: |
+          set -eu
+          if grep -rnE '#[0-9a-fA-F]{6}' --include='*.qml' games common; then
+            echo "::error::QML must take every color from the 'theme' context property (CLAUDE.md)."
+            exit 1
+          fi
+          echo "No hardcoded hex colors in any .qml."
+
+      # qmllint exits 0 even when it warns, so the output is what decides.
+      # .qmllint.ini documents the one disabled category.
+      - name: QML lint
+        run: |
+          set -eu
+          export PATH="/usr/lib/qt6/bin:$PATH"
+          find common/qml games -name '*.qml' -print0 \
+            | xargs -0 qmllint --qmldirs common/qml 2>&1 | tee qmllint.log
+          if grep -qE '^(Warning|Error):' qmllint.log; then
+            echo "::error::qmllint reported warnings."
+            exit 1
+          fi
+          echo "qmllint clean."
+
+      # -isystem keeps Qt's own headers out of -Werror: we gate our code, not
+      # whichever diagnostics the current GCC has learned about Qt's.
+      - name: C++ builds clean with -Wall -Wextra -Werror
+        run: |
+          set -eu
+          strict='-Wall -Wextra -Werror -isystem /usr/include/qt6'
+          jobs="$(nproc)"
+          build() {
+            rm -rf "$2" && mkdir -p "$2" && ( cd "$2" \
+              && qmake6 "$GITHUB_WORKSPACE/$1" QMAKE_CXXFLAGS+="$strict" \
+              && make -j"$jobs" )
+          }
+          echo "== games"
+          build omagames.pro build-strict/games
+          for pro in games/*/tests/tests.pro; do
+            game="$(basename "$(dirname "$(dirname "$pro")")")"
+            echo "== $game tests"
+            build "$pro" "build-strict/tests-$game"
+          done
+
+  package:
+    name: package (${{ matrix.game }})
+    needs: [discover, build-test]
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    strategy:
+      fail-fast: false
+      matrix:
+        game: ${{ fromJson(needs.discover.outputs.games) }}
+    steps:
+      - name: Install Qt 6 and toolchain
+        run: pacman -Syu --noconfirm --needed $ARCH_PACKAGES
+
+      - uses: actions/checkout@v7
+
+      # makepkg refuses to run as root, and the container runs as root.
+      - name: Create the build user
+        run: |
+          set -eu
+          useradd -m builder
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+
+      # No -s: every dependency is installed above, so a missing one is a real
+      # failure of the PKGBUILD rather than something CI should paper over.
+      - name: makepkg ${{ matrix.game }}
+        run: |
+          set -eu
+          pkgdir="$GITHUB_WORKSPACE/games/${{ matrix.game }}/pkgbuild"
+          su builder -c "cd '$pkgdir' && makepkg -f --noconfirm"
+          ls -l "$pkgdir"/*.pkg.tar.zst
+
+      - name: Upload ${{ matrix.game }} package
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.game }}-pkg
+          path: games/${{ matrix.game }}/pkgbuild/*.pkg.tar.zst
+          if-no-files-found: error

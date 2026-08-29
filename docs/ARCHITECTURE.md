@@ -76,3 +76,36 @@ playfield with the window like omacalc's `uiScale`.
 
 Every action has a key, and the control that triggers it shows that key. See
 `CLAUDE.md` for the required conventions.
+
+## CI
+
+`.github/workflows/ci.yml` runs on every push to `main` and every pull
+request. Every job runs in an `archlinux:latest` container with `base-devel`,
+`git`, `qt6-base` and `qt6-declarative`: Omarchy is Arch, so CI compiles
+against the packages a player actually has.
+
+| Job | What it does |
+|---|---|
+| **Discover games** | Lists `games/*` into a JSON matrix. Adding a game needs no workflow edit. |
+| **build & test (`<game>`)** | One job per game: `bin/build <game>` then `bin/test <game>` (headless, `QT_QPA_PLATFORM=offscreen`). |
+| **Code quality** | Four named steps, below. |
+| **package (`<game>`)** | One job per game: `makepkg` on `games/<game>/pkgbuild/PKGBUILD`, uploading `*.pkg.tar.zst` as an artifact. `makepkg` refuses to run as root, so the job creates a `builder` user and gives it the workspace. |
+
+The quality steps, each failing on its own so the log names the problem:
+
+1. **Shell scripts parse** — `sh -n` over every `bin/*` script.
+2. **No hardcoded colors in QML** — greps `games/` and `common/` for
+   `#rrggbb`; colors come from the `theme` context property (`CLAUDE.md`).
+3. **QML lint** — `qmllint` over every `.qml` with `-I common/qml` so
+   `import OmaGames` resolves. `qmllint` exits 0 even when it warns, so the
+   step fails on any `Warning:`/`Error:` line. `.qmllint.ini` disables exactly
+   one category, `UnqualifiedAccess`: `theme` and `game` are C++ context
+   properties injected at runtime and therefore invisible to static analysis,
+   and qmllint cannot whitelist individual identifiers.
+4. **C++ builds clean with `-Wall -Wextra -Werror`** — rebuilds the games and
+   every test suite with `qmake6 … QMAKE_CXXFLAGS+=`. The flags also carry
+   `-isystem /usr/include/qt6` so Qt's own headers are exempt: the gate is on
+   our code, not on what the current GCC has learned to say about Qt.
+
+Run all four locally before pushing; they need nothing the repo does not
+already require.
