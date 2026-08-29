@@ -67,7 +67,17 @@ QColor OmarchyTheme::color(const QString &key) const {
     const auto it = m_colors.constFind(key);
     if (it != m_colors.constEnd())
         return *it;
-    return defaults().value(key, foreground());
+    const QMap<QString, QColor> fallbacks = defaults();
+    const auto fallback = fallbacks.constFind(key);
+    if (fallback != fallbacks.constEnd())
+        return *fallback;
+    // Last resort for a key nothing defines: the foreground, so it shows up
+    // rather than disappearing. Resolved by hand because calling foreground()
+    // would come straight back here and recurse until the stack runs out.
+    const auto themeForeground = m_colors.constFind(QStringLiteral("foreground"));
+    if (themeForeground != m_colors.constEnd())
+        return *themeForeground;
+    return fallbacks.value(QStringLiteral("foreground"));
 }
 
 QColor OmarchyTheme::mix(const QColor &base, const QColor &tint, qreal amount) {
