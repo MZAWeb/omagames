@@ -30,12 +30,19 @@ Item {
         color: theme.mix(theme.darkBackground, theme.yellow, 0.035)
         border.color: theme.alpha(theme.yellow, coach.live ? 0.55 : 0.25)
 
-        // Turning the coach back off has to stay reachable with the mouse; the
-        // quiet line carries the C badge that says the same thing.
+        // Turning the coach back off stays reachable with the mouse, and the
+        // key that does it is on the panel in both states.
         MouseArea {
             anchors.fill: parent
-            enabled: !coach.live
             onClicked: game.toggleCoach()
+        }
+
+        OmaKeyHint {
+            id: liveBadge
+            visible: coach.live
+            key: "C"
+            anchors.right: parent.right
+            anchors.top: parent.top
         }
 
         Column {
@@ -45,7 +52,8 @@ Item {
 
             Text {
                 visible: coach.live
-                width: parent.width
+                // The badge sits on this line, so the verb stops short of it.
+                width: parent.width - liveBadge.implicitWidth - 6 * theme.textScale
                 text: game.coachAction
                 color: theme.yellow
                 font.pixelSize: (coach.compact ? 19 : 22) * theme.textScale
