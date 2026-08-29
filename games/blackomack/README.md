@@ -47,14 +47,12 @@ order.
 
 ## Decision Coach
 
-The optional Decision Coach is off by default and remembers your choice. Press
-`C` or use its badged control to toggle it. During your turn it shows one
-text-only basic-strategy recommendation for the active hand, such as
-`Hit — hard 16 vs 10`; it shows no odds, confidence or prediction and never
-changes focus or plays for you. Once the hand is decided it changes to the
-neutral resolved state and hides the recommendation. Strategy is calculated by
-the C++ bridge with the same tested `BasicStrategy` engine used by table mates,
-not by QML.
+The optional coach suggests the standard play for your hand against the
+dealer's card: on your turn it names the play and the spot it applies to —
+`Hit`, "16 against a 10" — and the rest of the time it says only `Coach on`.
+It starts off, remembers your choice, and toggles with `C`; the play itself
+comes from the same tested `BasicStrategy` engine the table mates use, in the
+C++ bridge rather than in QML.
 
 ## Table mates
 

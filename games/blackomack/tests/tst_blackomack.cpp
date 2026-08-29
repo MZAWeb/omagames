@@ -626,7 +626,8 @@ private slots:
         {
             BlackjackGame fresh;
             QVERIFY(!fresh.coachEnabled());
-            QVERIFY(fresh.coachAdvice().isEmpty());
+            QVERIFY(fresh.coachAction().isEmpty());
+            QVERIFY(fresh.coachSituation().isEmpty());
             fresh.setCoachEnabled(true);
             QVERIFY(fresh.coachEnabled());
         }
@@ -642,12 +643,18 @@ private slots:
     void bridgeCoachDescribesKnownHandsOnlyOnYourTurn() {
         struct Case {
             QVector<Card> deck;
-            QString advice;
+            QString action;
+            QString situation;
         };
+        // The wording is the player's, not the strategy table's: a verb and
+        // the spot it applies to, with the article the dealer's card takes.
         const QVector<Case> cases = {
-            {cards({10, 10, 6, 7}), QStringLiteral("Hit — hard 16 vs 10")},
-            {cards({1, 3, 7, 9}), QStringLiteral("Double — soft 18 vs 3")},
-            {cards({8, 10, 8, 7}), QStringLiteral("Split — pair 8s vs 10")},
+            {cards({10, 10, 6, 7}), QStringLiteral("Hit"), QStringLiteral("16 against a 10")},
+            {cards({10, 8, 6, 7}), QStringLiteral("Hit"), QStringLiteral("16 against an 8")},
+            {cards({10, 1, 6, 7}), QStringLiteral("Hit"), QStringLiteral("16 against an ace")},
+            {cards({1, 3, 7, 9}), QStringLiteral("Double"), QStringLiteral("Soft 18 against a 3")},
+            {cards({8, 10, 8, 7}), QStringLiteral("Split"), QStringLiteral("Pair of 8s against a 10")},
+            {cards({1, 6, 1, 9}), QStringLiteral("Split"), QStringLiteral("Pair of aces against a 6")},
         };
         for (const Case &test : cases) {
             QSettings().clear();
@@ -656,14 +663,17 @@ private slots:
             g.setBotCount(0);
             g.setCoachEnabled(true);
             g.stackDeck(test.deck);
-            QVERIFY(g.coachAdvice().isEmpty());
+            QVERIFY(g.coachAction().isEmpty());
+            QVERIFY(g.coachSituation().isEmpty());
             g.dealRound();
             QVERIFY(g.waitingForHuman());
             QCOMPARE(g.shoeRemaining(), 312);   // scripted cards do not consume the real shoe
             QCOMPARE(g.shoePercent(), 100);
-            QCOMPARE(g.coachAdvice(), test.advice);
+            QCOMPARE(g.coachAction(), test.action);
+            QCOMPARE(g.coachSituation(), test.situation);
             g.stand();
-            QVERIFY(g.coachAdvice().isEmpty());
+            QVERIFY(g.coachAction().isEmpty());
+            QVERIFY(g.coachSituation().isEmpty());
         }
 
         QSettings().clear();
@@ -674,7 +684,20 @@ private slots:
         splitGame.stackDeck(cards({8, 6, 8, 10, 3, 2}));
         splitGame.dealRound();
         splitGame.split();
-        QCOMPARE(splitGame.coachAdvice(), QStringLiteral("Double — hard 11 vs 6 · Hand 1 of 2"));
+        QCOMPARE(splitGame.coachAction(), QStringLiteral("Double"));
+        QCOMPARE(splitGame.coachSituation(), QStringLiteral("Hand 1 of 2 · 11 against a 6"));
+    }
+    void bridgeCoachSaysNothingWhileItIsOff() {
+        QSettings().clear();
+        BlackjackGame g;
+        g.setStepInterval(0);
+        g.setBotCount(0);
+        g.stackDeck(cards({10, 10, 6, 7}));
+        g.dealRound();
+        QVERIFY(g.waitingForHuman());
+        QVERIFY(g.coachAction().isEmpty());     // off is off, even mid-decision
+        g.setCoachEnabled(true);
+        QCOMPARE(g.coachAction(), QStringLiteral("Hit"));
     }
     void bridgeSkipPacingStopsBeforeTheHumanDecision() {
         BlackjackGame g;

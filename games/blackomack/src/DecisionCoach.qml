@@ -1,19 +1,21 @@
 import QtQuick
-import QtQuick.Layouts
 import OmaGames
 
-// Text-only learning aid. Strategy stays in BlackjackGame; this component
-// only presents Off, On and Resolved states.
+// Text-only learning aid. The play itself is decided by BlackjackGame; this
+// component only chooses between "off", "one live suggestion" and "on, but
+// nothing to suggest right now". Its box never changes size, so the panel
+// stays in one place whatever the table is doing.
 Item {
     id: coach
     property bool compact: false
-    implicitWidth: game.coachEnabled ? panel.implicitWidth : offButton.implicitWidth
-    implicitHeight: game.coachEnabled ? panel.implicitHeight : offButton.implicitHeight
+
+    readonly property bool live: game.coachAction !== ""
+    implicitWidth: (coach.compact ? 210 : 250) * Math.min(theme.textScale, 1.4)
+    implicitHeight: 84 * theme.textScale
 
     OmaHintButton {
-        id: offButton
         visible: !game.coachEnabled
-        text: "Coach off"
+        text: "Coach"
         hint: "C"
         fontScale: 0.82
         onClicked: game.toggleCoach()
@@ -22,52 +24,58 @@ Item {
     OmaPanel {
         id: panel
         visible: game.coachEnabled
-        padding: 9 * theme.textScale
-        implicitWidth: 270 * Math.min(theme.textScale, 1.4)
+        width: coach.width
         implicitHeight: content.implicitHeight + 2 * padding
+        padding: 9 * theme.textScale
         color: theme.mix(theme.darkBackground, theme.yellow, 0.035)
-        border.color: theme.alpha(theme.yellow, game.coachAdvice === "" ? 0.28 : 0.55)
+        border.color: theme.alpha(theme.yellow, coach.live ? 0.55 : 0.25)
+
+        // Turning the coach back off has to stay reachable with the mouse; the
+        // quiet line carries the C badge that says the same thing.
+        MouseArea {
+            anchors.fill: parent
+            enabled: !coach.live
+            onClicked: game.toggleCoach()
+        }
 
         Column {
             id: content
-            width: panel.implicitWidth - 2 * panel.padding
-            spacing: 5 * theme.textScale
+            width: parent.width
+            spacing: 3 * theme.textScale
 
-            RowLayout {
+            Text {
+                visible: coach.live
                 width: parent.width
-                Text {
-                    text: game.coachAdvice === "" ? "Decision coach · Resolved" : "Decision coach · On"
-                    color: game.coachAdvice === "" ? theme.foreground : theme.yellow
-                    opacity: game.coachAdvice === "" ? 0.72 : 1.0
-                    font.pixelSize: 10 * theme.textScale
-                    font.bold: true
-                    Layout.fillWidth: true
-                }
-                OmaHintButton {
-                    text: "On"
-                    hint: "C"
-                    fontScale: 0.7
-                    implicitHeight: 28 * theme.textScale
-                    onClicked: game.toggleCoach()
-                }
+                text: game.coachAction
+                color: theme.yellow
+                font.pixelSize: (coach.compact ? 19 : 22) * theme.textScale
+                font.bold: true
+                elide: Text.ElideRight
             }
             Text {
+                visible: coach.live
                 width: parent.width
-                text: game.coachAdvice === "" ? "Hand resolved · no recommendation shown" : game.coachAdvice
-                color: game.coachAdvice === "" ? theme.foreground : theme.yellow
-                opacity: game.coachAdvice === "" ? 0.72 : 1.0
-                font.pixelSize: (coach.compact ? 11 : 12) * theme.textScale
-                font.bold: game.coachAdvice !== ""
-                wrapMode: Text.WordWrap
-            }
-            Text {
-                visible: game.coachAdvice !== ""
-                width: parent.width
-                text: "Basic strategy · no odds or promises"
+                text: game.coachSituation
                 color: theme.foreground
-                opacity: 0.72
+                opacity: 0.8
                 font.pixelSize: 11 * theme.textScale
                 wrapMode: Text.WordWrap
+            }
+
+            Row {
+                visible: !coach.live
+                spacing: 6 * theme.textScale
+                Text {
+                    text: "Coach on"
+                    color: theme.foreground
+                    opacity: 0.75
+                    font.pixelSize: 11 * theme.textScale
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+                OmaKeyHint {
+                    key: "C"
+                    anchors.verticalCenter: parent.verticalCenter
+                }
             }
         }
     }

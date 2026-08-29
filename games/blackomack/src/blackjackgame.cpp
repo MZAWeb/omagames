@@ -25,15 +25,25 @@ QString actionText(Action action) {
     return QString();
 }
 
-QString matchupText(const Hand &hand, bool pairAvailable) {
+// The coach speaks the way a player would: "Pair of 8s against a 6", never
+// "pair 8s vs 6". Only eight takes "an" among the dealer's possible up cards.
+QString dealerText(const Card &up) {
+    if (up.isAce())
+        return QStringLiteral("an ace");
+    return QStringLiteral("%1 %2")
+        .arg(up.value() == 8 ? QStringLiteral("an") : QStringLiteral("a"))
+        .arg(up.value());
+}
+
+QString handText(const Hand &hand, bool pairAvailable) {
     if (pairAvailable && hand.canSplit()) {
         const Card &card = hand.cards.first();
-        const QString rank = card.isAce() ? QStringLiteral("A") : QString::number(card.value());
-        return QStringLiteral("pair %1s").arg(rank);
+        return card.isAce() ? QStringLiteral("Pair of aces")
+                            : QStringLiteral("Pair of %1s").arg(card.value());
     }
-    return QStringLiteral("%1 %2")
-        .arg(hand.isSoft() ? QStringLiteral("soft") : QStringLiteral("hard"))
-        .arg(hand.total());
+    if (hand.isSoft())
+        return QStringLiteral("Soft %1").arg(hand.total());
+    return QString::number(hand.total());
 }
 }
 
@@ -41,7 +51,7 @@ BlackjackGame::BlackjackGame(QObject *parent)
     : QObject(parent), m_rng(QRandomGenerator::global()->generate()), m_stepMs(kDefaultStepMs) {
     m_timer.setSingleShot(true);
     connect(&m_timer, &QTimer::timeout, this, &BlackjackGame::step);
-    connect(this, &BlackjackGame::stateChanged, this, &BlackjackGame::coachAdviceChanged);
+    connect(this, &BlackjackGame::stateChanged, this, &BlackjackGame::coachChanged);
     m_coachEnabled = QSettings().value(QString::fromLatin1(kCoachEnabledKey), false).toBool();
     if (!load())
         setBotCount(kDefaultBots);   // a fresh table is no fun on your own
@@ -54,28 +64,26 @@ void BlackjackGame::setCoachEnabled(bool enabled) {
     m_coachEnabled = enabled;
     QSettings().setValue(QString::fromLatin1(kCoachEnabledKey), enabled);
     emit coachEnabledChanged();
-    emit coachAdviceChanged();
+    emit coachChanged();
 }
 
-QString BlackjackGame::coachAdvice() const {
+BlackjackGame::Advice BlackjackGame::coachLookup() const {
     if (!m_coachEnabled || !m_table.waitingForHuman())
-        return QString();
+        return {};
     const int handIndex = m_table.currentHand();
     if (handIndex < 0 || handIndex >= m_table.human().hands.size())
-        return QString();
+        return {};
     const Hand &hand = m_table.human().hands[handIndex];
     const bool canDouble = m_table.canAct(m_table.humanSeat(), Action::Double);
     const bool canSplit = m_table.canAct(m_table.humanSeat(), Action::Split);
     const Action action = BasicStrategy::decide(hand, m_table.dealerUpCard(), canDouble, canSplit);
-    const Card dealer = m_table.dealerUpCard();
-    const QString dealerText = dealer.isAce() ? QStringLiteral("A") : QString::number(dealer.value());
-    QString advice = QStringLiteral("%1 — %2 vs %3")
-        .arg(actionText(action), matchupText(hand, canSplit), dealerText);
+    QString situation = QStringLiteral("%1 against %2")
+        .arg(handText(hand, canSplit), dealerText(m_table.dealerUpCard()));
     if (m_table.human().hands.size() > 1)
-        advice += QStringLiteral(" · Hand %1 of %2")
-            .arg(handIndex + 1)
-            .arg(m_table.human().hands.size());
-    return advice;
+        situation.prepend(QStringLiteral("Hand %1 of %2 · ")
+                              .arg(handIndex + 1)
+                              .arg(m_table.human().hands.size()));
+    return {actionText(action), situation};
 }
 
 QString BlackjackGame::phase() const {

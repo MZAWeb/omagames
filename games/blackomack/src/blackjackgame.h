@@ -42,7 +42,8 @@ class BlackjackGame : public QObject {
     Q_PROPERTY(int shoePercent READ shoePercent NOTIFY stateChanged)
     Q_PROPERTY(QString rulesSummary READ rulesSummary CONSTANT)
     Q_PROPERTY(bool coachEnabled READ coachEnabled WRITE setCoachEnabled NOTIFY coachEnabledChanged)
-    Q_PROPERTY(QString coachAdvice READ coachAdvice NOTIFY coachAdviceChanged)
+    Q_PROPERTY(QString coachAction READ coachAction NOTIFY coachChanged)
+    Q_PROPERTY(QString coachSituation READ coachSituation NOTIFY coachChanged)
 
 public:
     explicit BlackjackGame(QObject *parent = nullptr);
@@ -76,7 +77,10 @@ public:
     QString rulesSummary() const;
     bool coachEnabled() const { return m_coachEnabled; }
     void setCoachEnabled(bool enabled);
-    QString coachAdvice() const;
+    // The play to make ("Hit") and the spot it applies to ("16 against a 10"),
+    // both empty unless the coach is on and the human has a live decision.
+    QString coachAction() const { return coachLookup().action; }
+    QString coachSituation() const { return coachLookup().situation; }
 
     // Test seam for deterministic bridge scenarios; deliberately not exposed to QML.
     void stackDeck(const QVector<Card> &cards) { m_table.stackDeck(cards); }
@@ -104,9 +108,14 @@ signals:
     void messageChanged();
     void stepIntervalChanged();
     void coachEnabledChanged();
-    void coachAdviceChanged();
+    void coachChanged();
 
 private:
+    struct Advice {
+        QString action;
+        QString situation;
+    };
+    Advice coachLookup() const;
     void humanAct(Table::Action action);
     int pace() const;
     void record(const QVector<TableEvent> &events);
