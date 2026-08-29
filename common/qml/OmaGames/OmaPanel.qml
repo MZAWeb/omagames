@@ -2,6 +2,8 @@ import QtQuick
 
 // A slightly raised surface (dialogs, side panels, score boxes).
 Rectangle {
+    id: panel
+
     default property alias content: inner.data
     property real padding: 16 * theme.textScale
 
@@ -13,6 +15,6 @@ Rectangle {
     Item {
         id: inner
         anchors.fill: parent
-        anchors.margins: parent.padding
+        anchors.margins: panel.padding
     }
 }
