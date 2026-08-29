@@ -15,3 +15,5 @@ qrc_*.cpp
 .qmake.stash
 Makefile
 /.worktrees/
+/packaging/opr/*/pkg/
+/packaging/opr/*/src/

@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Cut a release: bump every game's pkgver, commit, tag v<version>, push, and
+# generate the OPR directories against the pushed tag.
+#
+#   bin/release <version>
+set -euo pipefail
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+version="${1:?usage: bin/release <version>}"
+[[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "version must look like 1.2.3" >&2; exit 1; }
+cd "$ROOT"
+[[ -z "$(git status --porcelain)" ]] || { echo "working tree must be clean" >&2; exit 1; }
+[[ "$(git rev-parse --abbrev-ref HEAD)" == main ]] || { echo "release from main" >&2; exit 1; }
+
+sed -i "s/^pkgver=.*/pkgver=$version/; s/^pkgrel=.*/pkgrel=1/" games/*/pkgbuild/PKGBUILD
+git add games/*/pkgbuild/PKGBUILD
+git commit -qm "Release v$version"
+git tag -a "v$version" -m "v$version"
+git push origin main "v$version"
+bin/opr-pkgbuilds "$version"
+echo
+echo "Tagged v$version. OPR directories are in packaging/opr/ — commit them, then"
+echo "follow docs/RELEASING.md to submit them to omarchy-pkgs."

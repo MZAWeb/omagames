@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# Generate the Omarchy Package Repository (OPR) directories for every game:
+#
+#   bin/opr-pkgbuilds <version> [--ref <git-ref>] [--out <dir>]
+#
+# Writes <out>/<game>/{PKGBUILD,<game>.install,.omarchy/package.json}, ready to
+# be copied into omacom/omarchy-pkgs as pkgbuilds/<game>/ (see docs/RELEASING.md).
+# The PKGBUILD builds from the GitHub release tarball of tag v<version>, like
+# omacalc's, so the tag must already be pushed. `--ref` swaps the tarball for a
+# commit/branch archive to test the packaging before tagging (never publish
+# those). Default output: packaging/opr/.
+set -euo pipefail
+
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+REPO="https://github.com/MZAWeb/omagames"
+
+version=""; ref=""; out="$ROOT/packaging/opr"
+while (( $# )); do
+  case "$1" in
+    --ref) ref="$2"; shift 2 ;;
+    --out) out="$2"; shift 2 ;;
+    -*) echo "unknown option $1" >&2; exit 1 ;;
+    *) version="$1"; shift ;;
+  esac
+done
+[[ -n $version ]] || { echo "usage: bin/opr-pkgbuilds <version> [--ref <git-ref>] [--out <dir>]" >&2; exit 1; }
+
+if [[ -n $ref ]]; then
+  tarball_url="$REPO/archive/$ref.tar.gz"
+  # GitHub names the top-level directory after the ref, with slashes replaced.
+  srcdir_name="omagames-${ref//\//-}"
+else
+  tarball_url="$REPO/archive/refs/tags/v$version.tar.gz"
+  srcdir_name="omagames-$version"
+fi
+
+tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
+echo "==> Fetching $tarball_url"
+curl -fsSL -o "$tmp/src.tar.gz" "$tarball_url"
+sha="$(sha256sum "$tmp/src.tar.gz" | cut -d' ' -f1)"
+echo "    sha256 $sha"
+
+for pkgbuild in "$ROOT"/games/*/pkgbuild/PKGBUILD; do
+  game="$(basename "$(dirname "$(dirname "$pkgbuild")")")"
+  dir="$out/$game"
+  mkdir -p "$dir/.omarchy"
+  # Reuse the in-repo metadata so the two PKGBUILDs cannot drift.
+  field() { sed -n "s/^$1=\(.*\)$/\1/p" "$pkgbuild" | head -1; }
+  cat > "$dir/PKGBUILD" <<PKG
+# Maintainer: Daniel Dvorkin <daniel@mzaweb.com>
+
+pkgname=$game
+pkgver=$version
+pkgrel=1
+pkgdesc=$(field pkgdesc)
+arch=$(field arch)
+url='$REPO'
+license=$(field license)
+install='$game.install'
+options=('!debug')
+depends=$(field depends)
+makedepends=$(field makedepends)
+source=("omagames-\$pkgver.tar.gz::$tarball_url")
+sha256sums=('$sha')
+
+build() {
+  cd "\$srcdir/$srcdir_name"
+  ./bin/build \$pkgname
+}
+
+package() {
+  cd "\$srcdir/$srcdir_name"
+  install -Dm755 "build/games/\$pkgname/\$pkgname" "\$pkgdir/usr/bin/\$pkgname"
+  install -Dm644 LICENSE "\$pkgdir/usr/share/licenses/\$pkgname/LICENSE"
+  install -Dm644 common/fonts/OFL.txt "\$pkgdir/usr/share/licenses/\$pkgname/OFL.txt"
+  install -Dm644 "games/\$pkgname/pkgbuild/\$pkgname.svg" "\$pkgdir/usr/share/icons/hicolor/scalable/apps/\$pkgname.svg"
+  install -Dm644 "games/\$pkgname/pkgbuild/\$pkgname.desktop" "\$pkgdir/usr/share/applications/\$pkgname.desktop"
+}
+PKG
+  cp "$(dirname "$pkgbuild")/$game.install" "$dir/$game.install"
+  printf '{ "source": "local" }\n' > "$dir/.omarchy/package.json"
+  echo "==> Wrote $dir"
+done

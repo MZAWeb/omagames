@@ -66,6 +66,7 @@ bin/           build / run / test / install
 - `docs/NEW-GAME.md` — step-by-step guide to add a game.
 - `CLAUDE.md` — the rules every change must follow (humans and agents alike).
 - `docs/PARALLEL-AGENTS.md` — running several coding agents at once with git worktrees.
+- `docs/RELEASING.md` — cutting a release and publishing to the Omarchy Package Repository.
 
 The iA Writer Mono font is bundled under the SIL Open Font License 1.1; see
 `common/fonts/OFL.txt`. MIT licensed, see `LICENSE`.

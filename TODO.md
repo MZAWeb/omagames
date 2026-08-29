@@ -16,8 +16,8 @@
 
 ## Repo
 - [ ] GitHub Actions CI: build + test per game, qmllint, `-Werror`, no hex colors, packaging artifacts (in progress)
-- [ ] Publish packages to the Omarchy repository
-- [ ] Screenshots per game in the READMEs
+- [ ] Cut v0.1.0 with `bin/release` and submit `packaging/opr/*` to omarchy-pkgs (see docs/RELEASING.md) — not yet, still polishing
+- [x] Screenshots in the root README
 - [ ] `common/` unit tests (OmarchyTheme parsing, defaults, mix/alpha)
 
 ## Future games
