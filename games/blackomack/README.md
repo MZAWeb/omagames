@@ -1,7 +1,8 @@
 # Black Omack
 
 Blackjack for Omarchy. Sit at a table with up to five AI table mates, each with
-a persistent personality, and try to grow your stack of Omabucks (Ø).
+a persistent personality, and try to grow your stack of Omabucks (Ø). A fresh
+table seats three of them.
 
 ## Rules (v1)
 
@@ -24,8 +25,8 @@ Each bot is rolled with a `skill` (how well it plays: rookie, regular, pro)
 and an `aggression` (bet sizing and appetite for risk: timid, steady, bold).
 Under its name it says how it bets and then how it plays — "timid pro",
 "bold rookie", "steady regular". A bot that goes broke leaves and a fresh one
-takes its seat. Change the number of bots (0–5) between rounds with the
-`−`/`+` buttons in the header.
+takes its seat. Change how many are at the table (0–5) between rounds with the
+`−`/`+` buttons in the header; the choice is saved.
 
 ## Keyboard
 

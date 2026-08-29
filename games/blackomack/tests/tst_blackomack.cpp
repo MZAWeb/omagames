@@ -565,6 +565,19 @@ private slots:
         QVERIFY(g.canDeal());
         QCOMPARE(g.phase(), QStringLiteral("betting"));
     }
+    void bridgeSeatsBotsOnAFreshTable() {
+        {
+            BlackjackGame fresh;
+            QCOMPARE(fresh.botCount(), 3);
+            QCOMPARE(fresh.maxBots(), 5);
+            fresh.setBotCount(9);
+            QCOMPARE(fresh.botCount(), 5);      // the table only has five other seats
+            fresh.setBotCount(-2);
+            QCOMPARE(fresh.botCount(), 0);      // playing alone is a choice
+        }
+        BlackjackGame again;                    // ... and it survives a relaunch
+        QCOMPARE(again.botCount(), 0);
+    }
     void bridgeLocksTheStakeOnceDealt() {
         BlackjackGame g;
         g.setStepInterval(0);

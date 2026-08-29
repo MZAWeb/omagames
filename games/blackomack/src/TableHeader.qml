@@ -31,6 +31,6 @@ RowLayout {
         horizontalAlignment: Text.AlignHCenter
         Layout.preferredWidth: 20 * theme.textScale
     }
-    HintButton { text: "+"; hint: "]"; enabled: header.betting && game.botCount < 5; onClicked: game.setBotCount(game.botCount + 1) }
+    HintButton { text: "+"; hint: "]"; enabled: header.betting && game.botCount < game.maxBots; onClicked: game.setBotCount(game.botCount + 1) }
     HintButton { text: "New game"; hint: "Ctrl+N"; enabled: header.betting; onClicked: header.newGameRequested(); Layout.leftMargin: 8 * theme.textScale }
 }

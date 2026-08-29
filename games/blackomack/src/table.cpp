@@ -25,7 +25,7 @@ void Table::setHumanBankroll(int bankroll) {
 }
 
 bool Table::addBot(const BotPersonality &personality, int bankroll, quint32 salt) {
-    if (m_phase != Phase::Betting || botCount() >= 5)
+    if (m_phase != Phase::Betting || botCount() >= kMaxBots)
         return false;
     Seat seat;
     seat.bot = BotPlayer(personality, salt);

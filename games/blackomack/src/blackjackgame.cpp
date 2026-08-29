@@ -18,7 +18,8 @@ BlackjackGame::BlackjackGame(QObject *parent)
     : QObject(parent), m_rng(QRandomGenerator::global()->generate()), m_stepMs(kDefaultStepMs) {
     m_timer.setSingleShot(true);
     connect(&m_timer, &QTimer::timeout, this, &BlackjackGame::step);
-    load();
+    if (!load())
+        setBotCount(kDefaultBots);   // a fresh table is no fun on your own
     m_bet = clampBet(m_bet, bankroll());
 }
 
@@ -101,7 +102,7 @@ void BlackjackGame::nextRound() {
 void BlackjackGame::setBotCount(int count) {
     if (m_table.phase() != Table::Phase::Betting)
         return;
-    count = qBound(0, count, 5);
+    count = qBound(0, count, kMaxBots);
     while (m_table.botCount() > count)
         m_table.removeLastBot();
     while (m_table.botCount() < count) {
@@ -190,17 +191,19 @@ void BlackjackGame::saveWindowGeometry(const QRect &geometry) {
     settings.setValue(QStringLiteral("window/geometry"), geometry);
 }
 
-void BlackjackGame::load() {
+// False when there is nothing saved yet, so the caller can set a table up.
+bool BlackjackGame::load() {
     QSettings settings;
     const QString text = settings.value(QString::fromLatin1(GameState::kKey)).toString();
     if (text.isEmpty())
-        return;
+        return false;
     const GameState state = GameState::fromString(text);
     m_table.setHumanBankroll(state.bankroll);
     for (const GameState::Bot &b : state.bots)
         m_table.addBot(b.personality, b.bankroll, m_rng.generate());
     m_handsPlayed = state.handsPlayed;
     m_netResult = state.netResult;
+    return true;
 }
 
 void BlackjackGame::save() const {
