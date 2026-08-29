@@ -8,9 +8,12 @@ INCLUDEPATH += ../src
 
 HEADERS += \
     testgrids.h \
-    solvertests.h
+    solvertests.h \
+    generatortests.h
 
 SOURCES += \
     ../src/sudoku.cpp \
+    ../src/sudokugenerator.cpp \
     solvertests.cpp \
+    generatortests.cpp \
     tst_omadoku.cpp

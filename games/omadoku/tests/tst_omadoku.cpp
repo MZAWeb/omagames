@@ -1,6 +1,7 @@
 #include <QCoreApplication>
 #include <QtTest>
 
+#include "generatortests.h"
 #include "solvertests.h"
 
 // One binary runs every suite so each area keeps its own small file.
@@ -12,5 +13,7 @@ int main(int argc, char *argv[]) {
     int status = 0;
     SolverTests solver;
     status |= QTest::qExec(&solver, argc, argv);
+    GeneratorTests generator;
+    status |= QTest::qExec(&generator, argc, argv);
     return status;
 }
