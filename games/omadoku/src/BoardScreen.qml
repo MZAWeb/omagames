@@ -41,16 +41,22 @@ FocusScope {
         return 0;
     }
 
+    // A modifier names the action outright; without one the selected mode
+    // decides. The bridge does the deciding, this only reports what was typed.
+    function overrideFor(event) {
+        if (event.modifiers & Qt.ControlModifier)
+            return "fill";
+        if (event.modifiers & Qt.ShiftModifier)
+            return "note";
+        if (event.modifiers & Qt.AltModifier)
+            return "highlight";
+        return "";
+    }
+
     Keys.onPressed: function(event) {
         var digit = root.digitFor(event);
         if (digit > 0) {
-            // The modifiers mean the same thing whatever the pad's mode is.
-            if (event.modifiers & Qt.ControlModifier)
-                game.enterValue(digit);
-            else if (event.modifiers & Qt.ShiftModifier)
-                game.toggleNote(digit);
-            else
-                game.toggleHighlight(digit);
+            game.pressDigit(digit, root.overrideFor(event));
         } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H) {
             game.moveSelection(0, -1);
         } else if (event.key === Qt.Key_Right || event.key === Qt.Key_L) {
@@ -138,7 +144,7 @@ FocusScope {
                     keySize: Math.max(18, Math.min(content.unit * 1.2,
                                                    side.keyBudget / 3.24,
                                                    side.width / 3.24))
-                    onDigitPressed: function(digit) { game.pressPad(digit); }
+                    onDigitPressed: function(digit) { game.pressDigit(digit); }
                 }
 
                 PadModeSelector {
