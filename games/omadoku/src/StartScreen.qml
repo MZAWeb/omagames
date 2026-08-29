@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import OmaGames
 
 // Difficulty picker and a way back into a saved game.
 FocusScope {
@@ -54,11 +55,11 @@ FocusScope {
                 Layout.fillWidth: true
                 spacing: 3 * theme.textScale
 
-                HintButton {
+                OmaHintButton {
                     Layout.fillWidth: true
                     text: parent.modelData.label
                     primary: parent.index === 0
-                    keyHint: (parent.index + 1).toString()
+                    hint: (parent.index + 1).toString()
                     onClicked: game.newGame(parent.modelData.id)
                 }
                 Text {
@@ -74,12 +75,12 @@ FocusScope {
                 }
             }
         }
-        HintButton {
+        OmaHintButton {
             Layout.fillWidth: true
             Layout.topMargin: 10 * theme.textScale
             visible: game.hasSavedGame
             text: qsTr("Resume saved game")
-            keyHint: qsTr("R")
+            hint: qsTr("R")
             onClicked: game.resumeSavedGame()
         }
     }

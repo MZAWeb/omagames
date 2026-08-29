@@ -25,10 +25,11 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       games: ${{ steps.list.outputs.games }}
+      suites: ${{ steps.list.outputs.suites }}
     steps:
       - uses: actions/checkout@v7
 
-      - name: List games/
+      - name: List games/ and the shared test suites
         id: list
         run: |
           set -eu
@@ -36,7 +37,17 @@ jobs:
                   | sort | jq -R . | jq -sc .)
           [ "$games" != "[]" ] || { echo "No games found under games/."; exit 1; }
           echo "games=$games" >> "$GITHUB_OUTPUT"
-          echo "Discovered: $games"
+          echo "Discovered games: $games"
+
+          # Suites that are not games: any other top-level directory carrying
+          # its own tests/tests.pro (common/, today). bin/test takes their
+          # directory name just like it takes a game's.
+          suites=$(for dir in */; do
+                     [ "$dir" = games/ ] && continue
+                     [ -f "$dir/tests/tests.pro" ] && basename "$dir"
+                   done | sort | jq -R . | jq -sc .)
+          echo "suites=$suites" >> "$GITHUB_OUTPUT"
+          echo "Discovered shared suites: $suites"
 
   build-test:
     name: build & test (${{ matrix.game }})
@@ -59,6 +70,27 @@ jobs:
       # bin/test already runs the suites with QT_QPA_PLATFORM=offscreen.
       - name: Test ${{ matrix.game }}
         run: bin/test ${{ matrix.game }}
+
+  shared-test:
+    name: test (${{ matrix.suite }})
+    needs: discover
+    if: needs.discover.outputs.suites != '[]'
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: ${{ fromJson(needs.discover.outputs.suites) }}
+    steps:
+      - name: Install Qt 6 and toolchain
+        run: pacman -Syu --noconfirm --needed $ARCH_PACKAGES
+
+      - uses: actions/checkout@v7
+
+      # Shared code ships inside every game, so there is no binary of its own
+      # to build first: the suite's .pro compiles the sources it needs.
+      - name: Test ${{ matrix.suite }}
+        run: bin/test ${{ matrix.suite }}
 
   quality:
     name: Code quality
@@ -121,10 +153,10 @@ jobs:
           }
           echo "== games"
           build omagames.pro build-strict/games
-          for pro in games/*/tests/tests.pro; do
-            game="$(basename "$(dirname "$(dirname "$pro")")")"
-            echo "== $game tests"
-            build "$pro" "build-strict/tests-$game"
+          for pro in $(find games common -path '*/tests/tests.pro' | sort); do
+            suite="$(basename "$(dirname "$(dirname "$pro")")")"
+            echo "== $suite tests"
+            build "$pro" "build-strict/tests-$suite"
           done
 
   package:

@@ -8,6 +8,5 @@
         <file alias="BetControls.qml">BetControls.qml</file>
         <file alias="MessageLog.qml">MessageLog.qml</file>
         <file alias="ConfirmDialog.qml">ConfirmDialog.qml</file>
-        <file alias="HintButton.qml">HintButton.qml</file>
     </qresource>
 </RCC>

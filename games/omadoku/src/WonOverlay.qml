@@ -49,18 +49,18 @@ Rectangle {
                 font.pixelSize: 14 * theme.textScale
                 horizontalAlignment: Text.AlignHCenter
             }
-            HintButton {
+            OmaHintButton {
                 Layout.fillWidth: true
                 Layout.topMargin: 6 * theme.textScale
                 text: qsTr("New game")
                 primary: true
-                keyHint: qsTr("Enter")
+                hint: qsTr("Enter")
                 onClicked: root.newGameRequested()
             }
-            HintButton {
+            OmaHintButton {
                 Layout.fillWidth: true
                 text: qsTr("Back to start")
-                keyHint: qsTr("Esc")
+                hint: qsTr("Esc")
                 onClicked: root.backRequested()
             }
         }

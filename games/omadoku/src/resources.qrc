@@ -7,7 +7,6 @@
         <file alias="SudokuCell.qml">SudokuCell.qml</file>
         <file alias="DigitPad.qml">DigitPad.qml</file>
         <file alias="PadModeSelector.qml">PadModeSelector.qml</file>
-        <file alias="HintButton.qml">HintButton.qml</file>
         <file alias="WonOverlay.qml">WonOverlay.qml</file>
         <file alias="ConfirmDialog.qml">ConfirmDialog.qml</file>
     </qresource>

@@ -48,7 +48,7 @@ RowLayout {
 
     Item { Layout.fillWidth: true }
 
-    HintButton {
+    OmaHintButton {
         text: "−10"; hint: "↓"; showHint: bar.betting
         enabled: bar.betting && game.bet > game.minBet
         onClicked: game.adjustBet(-10)
@@ -85,12 +85,12 @@ RowLayout {
             visible: !betField.activeFocus
         }
     }
-    HintButton {
+    OmaHintButton {
         text: "+10"; hint: "↑"; showHint: bar.betting
         enabled: bar.betting && game.bet < game.maxBet
         onClicked: game.adjustBet(10)
     }
-    HintButton {
+    OmaHintButton {
         text: "Max"; hint: "M"; showHint: bar.betting
         enabled: bar.betting && game.bet < game.maxBet
         onClicked: game.betMax()
@@ -98,10 +98,10 @@ RowLayout {
 
     Item { Layout.fillWidth: true }
 
-    HintButton { visible: bar.betting; text: "Deal"; hint: "Enter"; primary: true; enabled: game.canDeal; onClicked: game.dealRound() }
-    HintButton { visible: game.roundOver; text: "Next round"; hint: "Enter"; primary: true; onClicked: game.nextRound() }
-    HintButton { visible: !bar.betting && !game.roundOver; text: "Hit"; hint: "H"; primary: true; enabled: game.canHit; onClicked: game.hit() }
-    HintButton { visible: !bar.betting && !game.roundOver; text: "Stand"; hint: "S"; enabled: game.canStand; onClicked: game.stand() }
-    HintButton { visible: !bar.betting && !game.roundOver; text: "Double"; hint: "D"; enabled: game.canDouble; onClicked: game.doubleDown() }
-    HintButton { visible: !bar.betting && !game.roundOver; text: "Split"; hint: "P"; enabled: game.canSplit; onClicked: game.split() }
+    OmaHintButton { visible: bar.betting; text: "Deal"; hint: "Enter"; primary: true; enabled: game.canDeal; onClicked: game.dealRound() }
+    OmaHintButton { visible: game.roundOver; text: "Next round"; hint: "Enter"; primary: true; onClicked: game.nextRound() }
+    OmaHintButton { visible: !bar.betting && !game.roundOver; text: "Hit"; hint: "H"; primary: true; enabled: game.canHit; onClicked: game.hit() }
+    OmaHintButton { visible: !bar.betting && !game.roundOver; text: "Stand"; hint: "S"; enabled: game.canStand; onClicked: game.stand() }
+    OmaHintButton { visible: !bar.betting && !game.roundOver; text: "Double"; hint: "D"; enabled: game.canDouble; onClicked: game.doubleDown() }
+    OmaHintButton { visible: !bar.betting && !game.roundOver; text: "Split"; hint: "P"; enabled: game.canSplit; onClicked: game.split() }
 }
