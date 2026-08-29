@@ -9,23 +9,26 @@ QString cardText(const Card &c) { return c.rankText() + c.suitGlyph(); }
 QString handText(const Hand &h) {
     return h.isBust() ? QStringLiteral("bust") : QString::number(h.total());
 }
+// "Zed hits" but "You hit": the human is addressed in the second person.
+QString subject(const Seat &seat, const char *thirdPerson, const char *secondPerson) {
+    return seat.name() + QLatin1Char(' ') + QString::fromUtf8(seat.isHuman ? secondPerson : thirdPerson);
+}
 }
 
 QVector<TableEvent> Table::apply(int seatIndex, Action action) {
     Seat &seat = m_seats[seatIndex];
     Hand &hand = seat.hands[m_hand];
-    const QString who = seat.name();
     QString text;
     switch (action) {
     case Action::Hit: {
         const Card c = draw();
         hand.cards.append(c);
-        text = QStringLiteral("%1 hits: %2 (%3)").arg(who, cardText(c), handText(hand));
+        text = QStringLiteral("%1: %2 (%3)").arg(subject(seat, "hits", "hit"), cardText(c), handText(hand));
         break;
     }
     case Action::Stand:
         hand.stood = true;
-        text = QStringLiteral("%1 stands on %2").arg(who).arg(hand.total());
+        text = QStringLiteral("%1 on %2").arg(subject(seat, "stands", "stand")).arg(hand.total());
         break;
     case Action::Double: {
         seat.bankroll -= hand.bet;
@@ -33,7 +36,7 @@ QVector<TableEvent> Table::apply(int seatIndex, Action action) {
         hand.doubled = true;
         const Card c = draw();
         hand.cards.append(c);
-        text = QStringLiteral("%1 doubles: %2 (%3)").arg(who, cardText(c), handText(hand));
+        text = QStringLiteral("%1: %2 (%3)").arg(subject(seat, "doubles", "double"), cardText(c), handText(hand));
         break;
     }
     case Action::Split: {
@@ -43,7 +46,7 @@ QVector<TableEvent> Table::apply(int seatIndex, Action action) {
         second.fromSplit = true;
         second.cards.append(hand.cards.takeLast());
         hand.fromSplit = true;
-        text = QStringLiteral("%1 splits %2s").arg(who, hand.cards.first().rankText());
+        text = QStringLiteral("%1 %2s").arg(subject(seat, "splits", "split"), hand.cards.first().rankText());
         hand.cards.append(draw());
         second.cards.append(draw());
         seat.hands.insert(m_hand + 1, second);
@@ -94,12 +97,12 @@ QVector<TableEvent> Table::resolve() {
             const int net = hand.returned - hand.bet;
             QString text;
             switch (outcome(hand, m_dealer)) {
-            case Outcome::Blackjack: text = QStringLiteral("%1 blackjack! +%2"); break;
-            case Outcome::Win: text = QStringLiteral("%1 wins +%2"); break;
-            case Outcome::Push: text = QStringLiteral("%1 pushes"); break;
-            case Outcome::Lose: text = QStringLiteral("%1 loses %2"); break;
+            case Outcome::Blackjack: text = QStringLiteral("%1 blackjack! +%2").arg(seat.name()); break;
+            case Outcome::Win: text = QStringLiteral("%1 +%2").arg(subject(seat, "wins", "win")); break;
+            case Outcome::Push: text = QStringLiteral("%1 %2").arg(subject(seat, "pushes", "push")); break;
+            case Outcome::Lose: text = QStringLiteral("%1 %2").arg(subject(seat, "loses", "lose")); break;
             }
-            events.append({TableEvent::HandResolved, text.arg(seat.name()).arg(qAbs(net)), s, h});
+            events.append({TableEvent::HandResolved, text.arg(qAbs(net)), s, h});
         }
     }
     m_resolved = true;
