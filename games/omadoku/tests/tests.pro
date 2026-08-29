@@ -5,5 +5,12 @@ TEMPLATE = app
 TARGET = tst_omadoku
 
 INCLUDEPATH += ../src
-SOURCES += tst_omadoku.cpp
-# TODO(agent): add engine sources, e.g. ../src/sudoku.cpp
+
+HEADERS += \
+    testgrids.h \
+    solvertests.h
+
+SOURCES += \
+    ../src/sudoku.cpp \
+    solvertests.cpp \
+    tst_omadoku.cpp

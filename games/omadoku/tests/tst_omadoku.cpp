@@ -1,10 +1,16 @@
+#include <QCoreApplication>
 #include <QtTest>
 
-class OmadokuTest : public QObject {
-    Q_OBJECT
-private slots:
-    void placeholder() { QVERIFY(true); }
-};
+#include "solvertests.h"
 
-QTEST_GUILESS_MAIN(OmadokuTest)
-#include "tst_omadoku.moc"
+// One binary runs every suite so each area keeps its own small file.
+int main(int argc, char *argv[]) {
+    QCoreApplication app(argc, argv);
+    QCoreApplication::setOrganizationName(QStringLiteral("Omacom"));
+    QCoreApplication::setApplicationName(QStringLiteral("omadoku"));
+
+    int status = 0;
+    SolverTests solver;
+    status |= QTest::qExec(&solver, argc, argv);
+    return status;
+}
