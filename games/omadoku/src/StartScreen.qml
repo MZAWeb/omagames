@@ -15,6 +15,7 @@ FocusScope {
         case Qt.Key_2: game.newGame(SudokuGame.Medium); break;
         case Qt.Key_3: game.newGame(SudokuGame.Hard); break;
         case Qt.Key_R: if (game.hasSavedGame) game.resumeSavedGame(); break;
+        case Qt.Key_C: game.checkAsYouGo = !game.checkAsYouGo; break;
         default: return;
         }
         event.accepted = true;
@@ -41,45 +42,55 @@ FocusScope {
             font.pixelSize: 15 * theme.textScale
         }
 
-        OmaButton {
+        HintButton {
             Layout.fillWidth: true
             text: qsTr("Easy")
             primary: true
+            keyHint: qsTr("1")
             onClicked: game.newGame(SudokuGame.Easy)
         }
-        OmaButton {
+        HintButton {
             Layout.fillWidth: true
             text: qsTr("Medium")
+            keyHint: qsTr("2")
             onClicked: game.newGame(SudokuGame.Medium)
         }
-        OmaButton {
+        HintButton {
             Layout.fillWidth: true
             text: qsTr("Hard")
+            keyHint: qsTr("3")
             onClicked: game.newGame(SudokuGame.Hard)
         }
-        OmaButton {
+        HintButton {
             Layout.fillWidth: true
             Layout.topMargin: 10 * theme.textScale
             visible: game.hasSavedGame
             text: qsTr("Resume saved game")
+            keyHint: qsTr("R")
             onClicked: game.resumeSavedGame()
         }
 
-        Switch {
+        RowLayout {
             Layout.alignment: Qt.AlignHCenter
             Layout.topMargin: 12 * theme.textScale
-            text: qsTr("Check as I go")
-            checked: game.checkAsYouGo
-            font.pixelSize: 14 * theme.textScale
-            onToggled: game.checkAsYouGo = checked
+            spacing: 8 * theme.textScale
 
-            contentItem: Text {
-                text: parent.text
-                color: theme.foreground
-                font: parent.font
-                verticalAlignment: Text.AlignVCenter
-                leftPadding: parent.indicator.width + parent.spacing
+            Switch {
+                text: qsTr("Check as I go")
+                checked: game.checkAsYouGo
+                font.pixelSize: 14 * theme.textScale
+                onToggled: game.checkAsYouGo = checked
+
+                contentItem: Text {
+                    text: parent.text
+                    color: theme.foreground
+                    font: parent.font
+                    verticalAlignment: Text.AlignVCenter
+                    leftPadding: parent.indicator.width + parent.spacing
+                }
             }
+
+            OmaKeyHint { key: qsTr("C") }
         }
     }
 }

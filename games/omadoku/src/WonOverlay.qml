@@ -16,7 +16,13 @@ Rectangle {
     // Swallow clicks and keys so the board underneath stays untouched.
     MouseArea { anchors.fill: parent }
     focus: true
-    Keys.onPressed: function(event) { event.accepted = true; }
+    Keys.onPressed: function(event) {
+        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
+            root.newGameRequested();
+        else if (event.key === Qt.Key_Escape)
+            root.backRequested();
+        event.accepted = true;
+    }
 
     OmaPanel {
         anchors.centerIn: parent
@@ -43,16 +49,18 @@ Rectangle {
                 font.pixelSize: 14 * theme.textScale
                 horizontalAlignment: Text.AlignHCenter
             }
-            OmaButton {
+            HintButton {
                 Layout.fillWidth: true
                 Layout.topMargin: 6 * theme.textScale
                 text: qsTr("New game")
                 primary: true
+                keyHint: qsTr("Enter")
                 onClicked: root.newGameRequested()
             }
-            OmaButton {
+            HintButton {
                 Layout.fillWidth: true
                 text: qsTr("Back to start")
+                keyHint: qsTr("Esc")
                 onClicked: root.backRequested()
             }
         }

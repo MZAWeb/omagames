@@ -21,9 +21,9 @@ Rectangle {
     }
 
     Keys.onPressed: function(event) {
-        if (event.key === Qt.Key_Escape)
+        if (event.key === Qt.Key_Escape || event.key === Qt.Key_N)
             root.rejected();
-        else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
+        else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Y)
             root.accepted();
         event.accepted = true;
     }
@@ -49,15 +49,17 @@ Rectangle {
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 8 * theme.textScale
-                OmaButton {
+                HintButton {
                     Layout.fillWidth: true
                     text: root.rejectText
+                    keyHint: qsTr("Esc")
                     onClicked: root.rejected()
                 }
-                OmaButton {
+                HintButton {
                     Layout.fillWidth: true
                     text: root.acceptText
                     primary: true
+                    keyHint: qsTr("Enter")
                     onClicked: root.accepted()
                 }
             }

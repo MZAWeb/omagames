@@ -114,35 +114,42 @@ FocusScope {
             onDigitPressed: function(digit) { game.pressPad(digit); }
         }
 
+        DigitLegend { Layout.alignment: Qt.AlignHCenter }
+
         RowLayout {
             Layout.fillWidth: true
             spacing: 8 * theme.textScale
 
-            OmaButton {
+            HintButton {
                 Layout.fillWidth: true
                 text: game.notesMode ? qsTr("Notes on") : qsTr("Notes")
                 primary: game.notesMode
+                keyHint: qsTr("N")
                 onClicked: game.toggleNotesMode()
             }
-            OmaButton {
+            HintButton {
                 Layout.fillWidth: true
                 text: qsTr("Erase")
+                keyHint: qsTr("Bksp")
                 onClicked: game.erase()
             }
-            OmaButton {
+            HintButton {
                 Layout.fillWidth: true
                 text: qsTr("Undo")
-                enabled: game.canUndo
+                keyHint: qsTr("Ctrl+Z")
+                actionEnabled: game.canUndo
                 onClicked: game.undo()
             }
-            OmaButton {
+            HintButton {
                 Layout.fillWidth: true
                 text: qsTr("Restart")
+                keyHint: qsTr("R")
                 onClicked: game.restart()
             }
-            OmaButton {
+            HintButton {
                 Layout.fillWidth: true
                 text: qsTr("New game")
+                keyHint: qsTr("Esc")
                 onClicked: root.leaveRequested()
             }
         }
