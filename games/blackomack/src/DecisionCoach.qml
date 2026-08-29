@@ -37,23 +37,33 @@ Item {
             onClicked: game.toggleCoach()
         }
 
-        OmaKeyHint {
-            id: liveBadge
-            visible: coach.live
-            key: "C"
-            anchors.right: parent.right
-            anchors.top: parent.top
-        }
-
         Column {
             id: content
             width: parent.width
             spacing: 3 * theme.textScale
 
+            // A caption names the box, so a glance (or a screenshot) says what
+            // the big verb is: advice, not a command.
+            Item {
+                visible: coach.live
+                width: parent.width
+                height: caption.implicitHeight
+                Text {
+                    id: caption
+                    text: "Coach"
+                    color: theme.foreground
+                    opacity: 0.75
+                    font.pixelSize: 11 * theme.textScale
+                }
+                OmaKeyHint {
+                    key: "C"
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+            }
             Text {
                 visible: coach.live
-                // The badge sits on this line, so the verb stops short of it.
-                width: parent.width - liveBadge.implicitWidth - 6 * theme.textScale
+                width: parent.width
                 text: game.coachAction
                 color: theme.yellow
                 font.pixelSize: (coach.compact ? 19 : 22) * theme.textScale
