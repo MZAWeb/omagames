@@ -31,16 +31,19 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             width: Math.max(area.cardWidth, area.cardWidth + (area.cardCount - 1) * area.overlap)
             height: area.cardWidth * 1.45
+            // Counted, not listed: the hole card flips in place instead of
+            // being dealt again, and only the card that just arrived moves.
             Repeater {
-                model: area.dealer.cards ? area.dealer.cards : []
+                model: area.cardCount
                 delegate: PlayingCard {
-                    required property var modelData
                     required property int index
+                    readonly property var cardData: area.dealer.cards[index]
                     x: index * area.overlap
-                    rank: modelData.rank
-                    suit: modelData.suit
-                    red: modelData.red
-                    faceDown: modelData.hidden
+                    rank: cardData.rank
+                    suit: cardData.suit
+                    red: cardData.red
+                    faceDown: cardData.hidden
+                    animated: index === area.cardCount - 1
                     scale_: area.cardScale
                 }
             }

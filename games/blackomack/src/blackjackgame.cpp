@@ -2,8 +2,11 @@
 
 #include <QSettings>
 
+#include <iterator>
+
 #include "basicstrategy.h"
 #include "gamestate.h"
+#include "seatlayout.h"
 
 using namespace BlackjackRules;
 
@@ -13,6 +16,8 @@ constexpr int kDefaultStepMs = 500;
 // cards are pitched faster than the bot and dealer steps.
 constexpr int kDealStepMs = 180;
 constexpr int kLogLength = 8;
+// One tap each for a table minimum, a comfortable stake and a big one.
+constexpr int kBetPresets[] = {10, 50, 100};
 constexpr const char *kCoachEnabledKey = "coach/enabled";
 
 QString actionText(Action action) {
@@ -91,6 +96,13 @@ BlackjackGame::Advice BlackjackGame::coachLookup() const {
     return {actionText(action), situation};
 }
 
+QVariantList BlackjackGame::betPresets() const {
+    QVariantList presets;
+    for (int amount : kBetPresets)
+        presets.append(amount);
+    return presets;
+}
+
 QString BlackjackGame::phase() const {
     switch (m_table.phase()) {
     case Table::Phase::Betting: return QStringLiteral("betting");
@@ -141,6 +153,12 @@ void BlackjackGame::setBet(int amount) {
     m_bet = clamped;
     emit betChanged();
     emit stateChanged();   // canDeal depends on the bet
+}
+
+void BlackjackGame::setBetPreset(int index) {
+    if (index < 0 || index >= int(std::size(kBetPresets)))
+        return;
+    setBet(kBetPresets[index]);
 }
 
 void BlackjackGame::adjustBet(int delta) {
@@ -219,7 +237,12 @@ void BlackjackGame::skipPacing() {
 void BlackjackGame::setBotCount(int count) {
     if (m_table.phase() != Table::Phase::Betting)
         return;
-    count = qBound(0, count, kMaxBots);
+    // Never past the cap, but a table that is already over it (saved larger
+    // than a compact window allows) may still shrink a seat at a time.
+    seatBots(qBound(0, count, qMax(maxBots(), m_table.botCount())));
+}
+
+void BlackjackGame::seatBots(int count) {
     while (m_table.botCount() > count)
         m_table.removeLastBot();
     while (m_table.botCount() < count) {
@@ -240,7 +263,7 @@ void BlackjackGame::newGame() {
     m_netResult = 0;
     m_newBest = false;   // m_bestBankroll deliberately survives: it is a high score
     m_log.clear();
-    setBotCount(bots);
+    seatBots(bots);   // a new game reseats the table it replaces, cap or no cap
     setBet(50);
     record({{TableEvent::BotJoined, QStringLiteral("New game: %1 Omabucks").arg(kStartingBankroll)}});
     save();
@@ -306,6 +329,19 @@ void BlackjackGame::finishRound() {
         m_newBest = true;
     }
     save();
+}
+
+// --- Table layout ---
+
+void BlackjackGame::setCompactLayout(bool compact) {
+    if (compact == m_compactLayout)
+        return;
+    m_compactLayout = compact;
+    emit compactLayoutChanged();
+}
+
+QRectF BlackjackGame::seatRect(int count, int index, const QSizeF &table, const QSizeF &seat) const {
+    return SeatLayout::rect(count, index, table, seat);
 }
 
 QRect BlackjackGame::windowGeometry() const {

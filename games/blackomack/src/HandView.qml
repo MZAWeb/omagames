@@ -6,6 +6,7 @@ import OmaGames
 Item {
     id: view
     property var hand
+    property Item dealOrigin: null
     property real cardScale: 1.0
     property int handNumber: 0
     property int handCount: 1
@@ -25,6 +26,15 @@ Item {
 
     implicitWidth: Math.max(cardSpan, info.implicitWidth)
     implicitHeight: splitLabel.implicitHeight + cardsHeight + info.implicitHeight + 8 * theme.textScale
+
+    // Where a card flies in from, as an offset from its own slot: the dealer's
+    // cards when the table said where they are, a short drop otherwise.
+    function entryFrom(cardX, cardY, cardHeight) {
+        if (!dealOrigin)
+            return Qt.point(0, -cardHeight * 0.4);
+        var from = cards.mapFromItem(dealOrigin, dealOrigin.width / 2, 0);
+        return Qt.point(from.x - cardX, from.y - cardY);
+    }
 
     function resultColor(result) {
         switch (result) {
@@ -65,17 +75,22 @@ Item {
         width: view.cardSpan
         height: view.cardsHeight
 
+        // Counted, not listed: the cards are only rebuilt when one is dealt
+        // rather than on every turn at the table, and the card that just
+        // arrived is the only one that travels.
         Repeater {
-            model: view.hand ? view.hand.cards : []
+            model: view.cardCount
             delegate: PlayingCard {
-                required property var modelData
                 required property int index
+                readonly property var cardData: view.hand.cards[index]
                 x: (index % 4) * view.overlap
                 y: Math.floor(index / 4) * view.cardHeight * 0.55
-                rank: modelData.rank
-                suit: modelData.suit
-                red: modelData.red
+                rank: cardData.rank
+                suit: cardData.suit
+                red: cardData.red
                 scale_: view.handScale
+                animated: index === view.cardCount - 1
+                entryFrom: view.entryFrom(x, y, height)
             }
         }
     }

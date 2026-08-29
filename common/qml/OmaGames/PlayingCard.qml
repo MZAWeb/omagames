@@ -1,8 +1,9 @@
 import QtQuick
 
 // A playing card face (rank + suit glyph) or back, sized from the text scale so
-// it stays legible with the rest of the UI. Fades/slides in when created so a
-// freshly dealt card is easy to spot.
+// it stays legible with the rest of the UI. It travels into its slot when
+// created, so a freshly dealt card is easy to follow: by default a short drop,
+// or from wherever `entryFrom` says the dealer pitched it.
 Rectangle {
     id: card
     property string rank: "A"
@@ -11,6 +12,11 @@ Rectangle {
     property bool faceDown: false
     property real scale_: 1.0
     property bool animated: true
+    // Where the card starts, as an offset from its own slot. The entry moves
+    // the card with a transform rather than its x/y, so the slot's bindings
+    // survive the trip.
+    property point entryFrom: Qt.point(0, -height * 0.4)
+    property int entryDuration: 180
 
     width: 52 * theme.textScale * scale_
     height: width * 1.45
@@ -68,14 +74,34 @@ Rectangle {
         font.pixelSize: card.width * 0.5
     }
 
-    Component.onCompleted: {
-        if (!animated)
-            return;
-        opacity = 0;
-        y = -height * 0.4;
-        opacity = 1;
-        y = 0;
+    transform: Translate { id: entry }
+
+    ParallelAnimation {
+        id: entryAnimation
+        NumberAnimation {
+            target: entry
+            property: "x"
+            from: card.entryFrom.x
+            to: 0
+            duration: card.entryDuration
+            easing.type: Easing.OutCubic
+        }
+        NumberAnimation {
+            target: entry
+            property: "y"
+            from: card.entryFrom.y
+            to: 0
+            duration: card.entryDuration
+            easing.type: Easing.OutCubic
+        }
+        NumberAnimation {
+            target: card
+            property: "opacity"
+            from: 0
+            to: 1
+            duration: card.entryDuration
+        }
     }
-    Behavior on opacity { NumberAnimation { duration: 180 } }
-    Behavior on y { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+
+    Component.onCompleted: if (animated) entryAnimation.start()
 }

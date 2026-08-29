@@ -7,6 +7,7 @@ import OmaGames
 OmaPanel {
     id: seat
     property var seatData
+    property Item dealOrigin: null
     property real targetWidth: human ? 430 * theme.textScale : 190 * theme.textScale
     property real targetHeight: human ? 180 * theme.textScale : 132 * theme.textScale
     property real cardScale: human ? 1.12 : 0.82
@@ -117,11 +118,11 @@ OmaPanel {
             width: parent.width
             spacing: (seat.human ? 14 : 6) * theme.textScale
             Repeater {
-                model: seat.seatData ? seat.seatData.hands : []
+                model: seat.handCount
                 delegate: HandView {
-                    required property var modelData
                     required property int index
-                    hand: modelData
+                    hand: seat.seatData.hands[index]
+                    dealOrigin: seat.dealOrigin
                     cardScale: seat.cardScale
                     handNumber: index
                     handCount: seat.handCount

@@ -5,9 +5,12 @@ import OmaGames
 // minimum geometry, it becomes a dealer/human stage plus deal-order roster.
 Item {
     id: root
+    // Too small for a third seat on the oval: the window reports this to the
+    // bridge, which caps the table at two mates while it holds.
+    readonly property bool compact: theme.textScale >= 1.6 || width < 1016 || height < 488
     property bool rosterMode: theme.textScale >= 1.6
-                              || (game.botCount === 6 && (width < 1240 || height < 600))
-                              || (game.botCount >= 3 && (width < 1000 || height < 450))
+                              || (game.botCount >= 5 && (width < 1240 || height < 600))
+                              || (game.botCount >= 3 && compact)
                               || (game.botCount > 0 && width < 720)
     readonly property var botSeats: {
         var bots = [];
@@ -18,9 +21,6 @@ Item {
         return bots;
     }
 
-    function slotFor(index) { return [2, 3, 1, 4, 0, 5][index]; }
-    function slotX(slot) { return [0.0, 0.182, 0.32, 0.68, 0.818, 1.0][slot]; }
-    function slotY(slot) { return [0.52, 0.35, 0.06, 0.06, 0.35, 0.52][slot]; }
     Loader {
         anchors.fill: parent
         sourceComponent: root.rosterMode ? rosterLayout : ovalLayout
@@ -58,17 +58,23 @@ Item {
                 }
 
                 Repeater {
-                    model: root.botSeats
+                    // Seats are counted rather than listed so a seat (and the
+                    // cards on it) survives every state change of the round.
+                    model: root.botSeats.length
                     delegate: TableSeat {
-                        required property var modelData
                         required property int index
-                        readonly property int tableSlot: root.slotFor(index)
-                        seatData: modelData
+                        // The seating chart lives in C++ (SeatLayout), so the
+                        // spacing that keeps seats off each other is tested.
+                        readonly property rect slot: game.seatRect(root.botSeats.length, index,
+                                                                   Qt.size(table.width, table.height),
+                                                                   Qt.size(targetWidth, targetHeight))
+                        seatData: root.botSeats[index]
+                        dealOrigin: dealer
                         targetWidth: 190 * theme.textScale
                         targetHeight: 132 * theme.textScale
                         cardScale: game.botCount <= 2 ? 0.9 : 0.8
-                        x: root.slotX(tableSlot) * (table.width - width)
-                        y: root.slotY(tableSlot) * (table.height - height)
+                        x: slot.x
+                        y: slot.y
                     }
                 }
 
@@ -94,6 +100,7 @@ Item {
                 TableSeat {
                     id: human
                     seatData: game.seats[game.humanSeat]
+                    dealOrigin: dealer
                     targetWidth: (game.botCount <= 2 ? 500 : 430) * theme.textScale
                     targetHeight: (game.botCount <= 2 ? 226 : 181) * theme.textScale
                     cardScale: game.botCount <= 2 ? 1.3 : 1.12
@@ -148,6 +155,7 @@ Item {
                     }
                     HumanStage {
                         seatData: game.seats[game.humanSeat]
+                        dealOrigin: stageDealer
                         width: parent.width
                         x: (parent.width - width) / 2
                         y: parent.height - height
@@ -184,11 +192,11 @@ Item {
                             width: parent.width
                             spacing: 2 * theme.textScale
                             Repeater {
-                                model: root.botSeats
+                                model: root.botSeats.length
                                 delegate: RosterSeat {
-                                    required property var modelData
+                                    required property int index
                                     width: rosterColumn.width
-                                    seatData: modelData
+                                    seatData: root.botSeats[index]
                                 }
                             }
                         }

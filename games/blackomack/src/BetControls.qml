@@ -8,8 +8,9 @@ Item {
     readonly property bool typing: betField.activeFocus
     readonly property real gap: 7 * theme.textScale
     readonly property real minimumFieldWidth: 112 * theme.textScale
-    readonly property real fixedButtonsWidth: decrease.implicitWidth + increase.implicitWidth
-                                                   + maximum.implicitWidth + deal.implicitWidth
+    readonly property real fixedButtonsWidth: presets.implicitWidth + decrease.implicitWidth
+                                                   + increase.implicitWidth + maximum.implicitWidth
+                                                   + deal.implicitWidth
     implicitHeight: controls.childrenRect.height
 
     function focusBet() {
@@ -22,6 +23,24 @@ Item {
         width: parent.width
         spacing: bar.gap
 
+        // The stakes behind 1, 2 and 3: the bridge owns the amounts so the keys,
+        // the buttons and the README cannot drift apart.
+        Row {
+            id: presets
+            spacing: bar.gap
+            Repeater {
+                model: game.betPresets
+                delegate: OmaHintButton {
+                    required property var modelData
+                    required property int index
+                    width: implicitWidth
+                    text: "Ø " + modelData
+                    hint: String(index + 1)
+                    enabled: game.bet !== modelData && game.maxBet >= modelData
+                    onClicked: game.setBetPreset(index)
+                }
+            }
+        }
         OmaHintButton {
             id: decrease
             width: implicitWidth
@@ -32,7 +51,7 @@ Item {
         }
         Item {
             width: Math.max(bar.minimumFieldWidth,
-                            controls.width - bar.fixedButtonsWidth - 4 * bar.gap)
+                            controls.width - bar.fixedButtonsWidth - 5 * bar.gap)
             height: 40 * theme.textScale
             TextField {
                 id: betField

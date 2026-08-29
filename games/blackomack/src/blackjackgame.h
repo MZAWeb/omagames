@@ -3,6 +3,8 @@
 #include <QObject>
 #include <QRandomGenerator>
 #include <QRect>
+#include <QRectF>
+#include <QSizeF>
 #include <QStringList>
 #include <QTimer>
 #include <QVariantList>
@@ -18,8 +20,11 @@ class BlackjackGame : public QObject {
     Q_PROPERTY(int bankroll READ bankroll NOTIFY stateChanged)
     Q_PROPERTY(int bet READ bet NOTIFY betChanged)
     Q_PROPERTY(int minBet READ minBet CONSTANT)
-    Q_PROPERTY(int maxBots READ maxBots CONSTANT)
+    // maxBots only ever moves with compactLayout, so they share a signal.
+    Q_PROPERTY(int maxBots READ maxBots NOTIFY compactLayoutChanged)
+    Q_PROPERTY(bool compactLayout READ compactLayout WRITE setCompactLayout NOTIFY compactLayoutChanged)
     Q_PROPERTY(int maxBet READ maxBet NOTIFY stateChanged)
+    Q_PROPERTY(QVariantList betPresets READ betPresets CONSTANT)
     Q_PROPERTY(QString phase READ phase NOTIFY stateChanged)
     Q_PROPERTY(int botCount READ botCount NOTIFY stateChanged)
     Q_PROPERTY(bool canDeal READ canDeal NOTIFY stateChanged)
@@ -55,8 +60,10 @@ public:
     int bankroll() const { return m_table.human().bankroll; }
     int bet() const { return m_bet; }
     int minBet() const { return BlackjackRules::kMinBet; }
-    int maxBots() const { return BlackjackRules::kMaxBots; }
     int maxBet() const { return bankroll() - bankroll() % BlackjackRules::kBetStep; }
+    // The stakes behind the 1/2/3 keys, smallest first; a preset above the
+    // bankroll clamps like any other bet.
+    QVariantList betPresets() const;
     QString phase() const;
     int botCount() const { return m_table.botCount(); }
     bool canDeal() const;
@@ -98,6 +105,7 @@ public:
     void stackDeck(const QVector<Card> &cards) { m_table.stackDeck(cards); }
 
     Q_INVOKABLE void setBet(int amount);
+    Q_INVOKABLE void setBetPreset(int index);
     Q_INVOKABLE void adjustBet(int delta);
     Q_INVOKABLE void betMax();
     Q_INVOKABLE void dealRound();
@@ -113,6 +121,17 @@ public:
     Q_INVOKABLE void newGame();
     Q_INVOKABLE void toggleCoach() { setCoachEnabled(!m_coachEnabled); }
 
+    // --- Table layout ---
+    // A window too small for the oval's third seat seats two mates at most. A
+    // larger table that was saved keeps its mates — they move to the roster
+    // layout — but cannot grow again until the window does.
+    static constexpr int kCompactMaxBots = 2;
+    int maxBots() const { return m_compactLayout ? kCompactMaxBots : BlackjackRules::kMaxBots; }
+    bool compactLayout() const { return m_compactLayout; }
+    void setCompactLayout(bool compact);
+    // Seat geometry lives in SeatLayout so it can be checked without QML.
+    Q_INVOKABLE QRectF seatRect(int count, int index, const QSizeF &table, const QSizeF &seat) const;
+
     Q_INVOKABLE QRect windowGeometry() const;
     Q_INVOKABLE void saveWindowGeometry(const QRect &geometry);
 
@@ -123,6 +142,7 @@ signals:
     void stepIntervalChanged();
     void coachEnabledChanged();
     void coachChanged();
+    void compactLayoutChanged();
 
 private:
     struct Advice {
@@ -131,6 +151,7 @@ private:
     };
     Advice coachLookup() const;
     void humanAct(Table::Action action);
+    void seatBots(int count);
     int pace() const;
     void record(const QVector<TableEvent> &events);
     void schedule();
@@ -152,4 +173,5 @@ private:
     bool m_newBest = false;
     int m_roundStake = 0;
     bool m_coachEnabled = false;
+    bool m_compactLayout = false;
 };

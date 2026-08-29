@@ -36,15 +36,16 @@ Item {
         width: view.cardSpan
         height: view.cardsHeight
         Repeater {
-            model: view.hand ? view.hand.cards : []
+            model: view.cardCount
             delegate: PlayingCard {
-                required property var modelData
                 required property int index
+                readonly property var cardData: view.hand.cards[index]
                 x: (index % 4) * view.overlap
                 y: Math.floor(index / 4) * view.cardHeight * 0.52
-                rank: modelData.rank
-                suit: modelData.suit
-                red: modelData.red
+                rank: cardData.rank
+                suit: cardData.suit
+                red: cardData.red
+                animated: index === view.cardCount - 1
                 scale_: view.cardScale
             }
         }

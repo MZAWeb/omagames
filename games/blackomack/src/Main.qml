@@ -69,6 +69,9 @@ ApplicationWindow {
     Shortcut { enabled: window.betKeysActive; sequences: ["Up", "+"]; onActivated: game.adjustBet(10) }
     Shortcut { enabled: window.betKeysActive; sequences: ["Down", "-"]; onActivated: game.adjustBet(-10) }
     Shortcut { enabled: window.betKeysActive; sequence: "M"; onActivated: game.betMax() }
+    Shortcut { enabled: window.betKeysActive; sequence: "1"; onActivated: game.setBetPreset(0) }
+    Shortcut { enabled: window.betKeysActive; sequence: "2"; onActivated: game.setBetPreset(1) }
+    Shortcut { enabled: window.betKeysActive; sequence: "3"; onActivated: game.setBetPreset(2) }
     Shortcut { enabled: window.betKeysActive; sequence: "B"; onActivated: dock.focusBet() }
     Shortcut { enabled: window.betKeysActive && game.botCount > 0; sequence: "["; onActivated: game.setBotCount(game.botCount - 1) }
     Shortcut { enabled: window.betKeysActive && game.botCount < game.maxBots; sequence: "]"; onActivated: game.setBotCount(game.botCount + 1) }
@@ -83,6 +86,7 @@ ApplicationWindow {
             onNewGameRequested: newGameDialog.open()
         }
         HouseTable {
+            id: table
             Layout.fillWidth: true
             Layout.fillHeight: true
         }
@@ -90,6 +94,15 @@ ApplicationWindow {
             id: dock
             Layout.fillWidth: true
         }
+    }
+
+    // Only the window knows how much room the table has; the bridge turns that
+    // into the mate cap the header and the `]` key obey.
+    Binding {
+        target: game
+        property: "compactLayout"
+        value: table.compact
+        restoreMode: Binding.RestoreNone
     }
 
     ConfirmDialog {

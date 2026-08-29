@@ -107,11 +107,10 @@ OmaPanel {
             width: Math.max(0, content.width - x)
             spacing: 2 * theme.textScale
             Repeater {
-                model: row.seatData ? row.seatData.hands : []
+                model: row.handCount
                 delegate: RosterHand {
-                    required property var modelData
                     required property int index
-                    hand: modelData
+                    hand: row.seatData.hands[index]
                     handNumber: index
                     handCount: row.handCount
                     width: Math.min(implicitWidth, parent.width)

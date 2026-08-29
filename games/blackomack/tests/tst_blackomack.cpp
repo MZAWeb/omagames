@@ -7,6 +7,7 @@
 #include "botplayer.h"
 #include "cards.h"
 #include "hand.h"
+#include "seatlayout.h"
 #include "table.h"
 
 namespace {
@@ -917,10 +918,142 @@ private slots:
         QVERIFY(reloaded.canDeal());
     }
 
+    // --- Seat layout ---
+    // The oval's inner rectangle for a window: the window loses 24x162 to the
+    // margins, the header and the action dock, then 2 more each way to the
+    // table's own inset. 1280x800 is the default window, 1040x650 the smallest
+    // one that still draws the oval with three or four mates.
+    static QSizeF tableFor(qreal windowWidth, qreal windowHeight) {
+        return {windowWidth - 24 - 4, windowHeight - 162 - 4};
+    }
+    static QString seatMessage(int count, int i, int j, const QRectF &a, const QRectF &b) {
+        return QStringLiteral("%1 mates: seat %2 (%3,%4) meets seat %5 (%6,%7)")
+            .arg(count).arg(i).arg(a.x()).arg(a.y()).arg(j).arg(b.x()).arg(b.y());
+    }
+    // No two mates ever share a patch of felt: an empty 190x132 seat at both
+    // window sizes, and the ~175 tall seat a dealt hand grows into at the
+    // smallest window each table size is drawn on (five and six mates reflow to
+    // the roster below 1264x762, which is why they are checked there).
+    void seatSlotsNeverOverlap() {
+        struct Case {
+            QSizeF table;
+            QSizeF seat;
+            int maxCount;
+        };
+        const QList<Case> cases = {
+            {tableFor(1280, 800), QSizeF(190, 132), BlackjackRules::kMaxBots},
+            {tableFor(1040, 650), QSizeF(190, 132), BlackjackRules::kMaxBots},
+            {tableFor(1040, 650), QSizeF(190, 175), 4},
+            {tableFor(1264, 762), QSizeF(190, 175), BlackjackRules::kMaxBots},
+        };
+        for (const Case &c : cases) {
+            const QRectF felt(QPointF(0, 0), c.table);
+            for (int count = 0; count <= c.maxCount; ++count) {
+                for (int i = 0; i < count; ++i) {
+                    const QRectF a = SeatLayout::rect(count, i, c.table, c.seat);
+                    QVERIFY(felt.contains(a));
+                    for (int j = i + 1; j < count; ++j) {
+                        const QRectF b = SeatLayout::rect(count, j, c.table, c.seat);
+                        QVERIFY2(!a.intersects(b),
+                                 qPrintable(seatMessage(count, i, j, a, b)));
+                    }
+                }
+            }
+        }
+    }
+    // Mates fill the arc dealer-outwards, left first, so the pairs mirror and
+    // an odd extra mate sits dealer-left.
+    void seatSlotsAreSymmetric() {
+        for (int count = 1; count <= BlackjackRules::kMaxBots; ++count) {
+            for (int i = 0; i + 1 < count; i += 2) {
+                const QPointF left = SeatLayout::anchor(count, i);
+                const QPointF right = SeatLayout::anchor(count, i + 1);
+                QCOMPARE(left.x() + right.x(), 1.0);
+                QCOMPARE(left.y(), right.y());
+                QVERIFY(left.x() < 0.5);
+            }
+            if (count % 2 == 1)
+                QVERIFY(SeatLayout::anchor(count, count - 1).x() < 0.5);
+        }
+        QVERIFY(SeatLayout::anchor(3, 3).isNull());   // out of range asks for nothing
+        QVERIFY(SeatLayout::anchor(0, 0).isNull());
+    }
+
     void dealerPeekCards() {
         QVERIFY(BlackjackRules::dealerPeeks(c(1)));
         QVERIFY(BlackjackRules::dealerPeeks(c(13)));
         QVERIFY(!BlackjackRules::dealerPeeks(c(9)));
+    }
+
+    // --- Compact window ---
+    // A window without room for a third seat caps the table at two mates. A
+    // larger table that was already saved keeps its mates and can only shrink.
+    void bridgeCapsTheTableWhileTheWindowIsCompact() {
+        BlackjackGame g;
+        g.setStepInterval(0);
+        g.setBotCount(4);
+        QCOMPARE(g.maxBots(), BlackjackRules::kMaxBots);
+        g.setCompactLayout(true);
+        QCOMPARE(g.maxBots(), 2);
+        QCOMPARE(g.botCount(), 4);   // nobody is evicted
+        g.setBotCount(5);
+        QCOMPARE(g.botCount(), 4);   // and nobody else may sit down
+        g.setBotCount(3);
+        QCOMPARE(g.botCount(), 3);   // leaving stays possible, a seat at a time
+        g.setBotCount(2);
+        g.setBotCount(3);
+        QCOMPARE(g.botCount(), 2);   // once at the cap it holds
+        g.setCompactLayout(false);
+        QCOMPARE(g.maxBots(), BlackjackRules::kMaxBots);
+        g.setBotCount(6);
+        QCOMPARE(g.botCount(), 6);
+    }
+    void bridgeKeepsASavedTableBiggerThanACompactWindow() {
+        {
+            BlackjackGame g;
+            g.setBotCount(5);
+        }
+        BlackjackGame reloaded;
+        reloaded.setCompactLayout(true);
+        QCOMPARE(reloaded.botCount(), 5);
+        QCOMPARE(reloaded.maxBots(), 2);
+        reloaded.newGame();
+        QCOMPARE(reloaded.botCount(), 5);   // a new game reseats the same table
+    }
+    // --- Bet presets ---
+    // 1, 2 and 3 stake the presets, which clamp to the bankroll like any bet
+    // and are only live while betting.
+    void bridgeBetPresets() {
+        BlackjackGame g;
+        g.setStepInterval(0);
+        g.setBotCount(0);
+        QCOMPARE(g.betPresets(), QVariantList({10, 50, 100}));
+        g.setBetPreset(2);
+        QCOMPARE(g.bet(), 100);
+        g.setBetPreset(0);
+        QCOMPARE(g.bet(), 10);
+        g.setBetPreset(1);
+        QCOMPARE(g.bet(), 50);
+        g.setBetPreset(3);
+        QCOMPARE(g.bet(), 50);   // there is no fourth preset
+        g.setBetPreset(-1);
+        QCOMPARE(g.bet(), 50);
+
+        // a preset above the bankroll stakes what is there instead
+        g.setBet(940);
+        g.stackDeck(cards({10, 10, 6, 10}));   // 16 against 20
+        playRound(g);
+        g.nextRound();
+        QCOMPARE(g.bankroll(), 60);
+        g.setBetPreset(2);
+        QCOMPARE(g.bet(), 60);
+
+        // and the stake is locked once the cards are out
+        g.setBetPreset(0);
+        g.dealRound();
+        const int staked = g.bet();
+        g.setBetPreset(2);
+        QCOMPARE(g.bet(), staked);
     }
 
     // --- Re-splits ---
