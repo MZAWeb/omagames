@@ -2,16 +2,24 @@ import QtQuick
 
 // A short label that rises and fades from the spot a claim closed at, then
 // removes itself. `anchorX`/`anchorY` are the spot in the parent's pixels;
-// the label centres on it and stays inside the parent.
+// the label centres on it and stays inside the parent. One claim can earn
+// two bonuses at once: `stackIndex` lifts each later label above the one
+// before it, or below it when the spot is at the top edge.
 Text {
     id: popup
 
     property real anchorX: 0
     property real anchorY: 0
+    property int stackIndex: 0
     signal finished()
 
+    readonly property real stackStep: 22 * theme.textScale
+    readonly property real baseY: anchorY - height
+
     x: Math.min(Math.max(0, anchorX - width / 2), parent.width - width)
-    y: Math.min(Math.max(0, anchorY - height), parent.height - height)
+    y: baseY - stackIndex * stackStep >= 0
+        ? Math.min(baseY - stackIndex * stackStep, parent.height - height)
+        : Math.max(0, baseY) + stackIndex * stackStep
 
     color: theme.yellow
     font.pixelSize: 15 * theme.textScale

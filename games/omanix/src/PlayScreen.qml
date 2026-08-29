@@ -117,9 +117,12 @@ FocusScope {
 
             Connections {
                 target: game
+                // One claim can earn two bonuses at once; each new label
+                // sits above the ones still showing.
                 function onBonusEarned(text, x, y) {
                     popupComponent.createObject(popups, {
-                        text: text, anchorX: (x + 0.5) * arena.cell, anchorY: y * arena.cell });
+                        text: text, anchorX: (x + 0.5) * arena.cell, anchorY: y * arena.cell,
+                        stackIndex: popups.children.length });
                 }
                 function onExtraLife() {
                     popupComponent.createObject(popups, {
@@ -130,7 +133,7 @@ FocusScope {
         }
 
         KeyLegend {
-            Layout.alignment: Qt.AlignHCenter
+            Layout.fillWidth: true
             compact: true
         }
     }

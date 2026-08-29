@@ -97,7 +97,7 @@ FocusScope {
         }
 
         KeyLegend {
-            Layout.alignment: Qt.AlignHCenter
+            Layout.fillWidth: true
             Layout.topMargin: 14 * theme.textScale
         }
     }
