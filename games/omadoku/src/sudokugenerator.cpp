@@ -8,6 +8,7 @@
 #include <array>
 
 using Sudoku::Grid;
+using SudokuGrader::Technique;
 
 namespace {
 
@@ -29,15 +30,81 @@ bool fillGrid(Grid &grid, int index, QRandomGenerator &rng) {
     for (int digit : digits) {
         if (!Sudoku::isValidPlacement(grid, index, digit))
             continue;
-        grid[index] = digit;
+        grid[size_t(index)] = digit;
         if (fillGrid(grid, index + 1, rng))
             return true;
-        grid[index] = 0;
+        grid[size_t(index)] = 0;
     }
     return false;
 }
 
+// Puts one clue back so that a puzzle just past the level's ceiling drops
+// into the level. Removing a clue can jump from "too easy" straight over a
+// narrow band; refilling a different cell finds the state in between.
+bool refillIntoLevel(Grid &givens, const Grid &solution, const std::vector<int> &order,
+                     Difficulty difficulty) {
+    for (int index : order) {
+        if (givens[size_t(index)] != 0)
+            continue;
+        givens[size_t(index)] = solution[size_t(index)];
+        if (SudokuGenerator::meetsLevel(givens, difficulty))
+            return true;
+        givens[size_t(index)] = 0;
+    }
+    return false;
+}
+
+// One carving pass. A clue only goes when the puzzle stays unique and stays
+// within the level's ceiling, so the ladder can always finish what is left.
+// Past the target it keeps carving until the level is met: fewer clues is
+// what pushes a puzzle up the ladder. A removal that would overshoot the
+// ceiling is the last resort, paired with a refill to land in the band.
+Grid carve(const Grid &solution, const std::vector<int> &order, int target, Difficulty difficulty) {
+    const Technique ceiling = SudokuGenerator::ceiling(difficulty);
+    Grid givens = solution;
+    int clues = Sudoku::kCells;
+    for (int index : order) {
+        if (clues <= target && SudokuGenerator::meetsLevel(givens, difficulty))
+            break;
+        const int removed = givens[size_t(index)];
+        givens[size_t(index)] = 0;
+        if (Sudoku::countSolutions(givens, 2) != 1) {
+            givens[size_t(index)] = removed;
+        } else if (SudokuGrader::solvableWith(givens, ceiling)) {
+            --clues;
+        } else if (clues <= target && refillIntoLevel(givens, solution, order, difficulty)) {
+            break;
+        } else {
+            givens[size_t(index)] = removed;
+        }
+    }
+    return givens;
+}
+
 }  // namespace
+
+Technique SudokuGenerator::ceiling(Difficulty difficulty) {
+    switch (difficulty) {
+    case Difficulty::Easy:
+        return Technique::HiddenSingle;
+    case Difficulty::Medium:
+        return Technique::Claiming;
+    case Difficulty::Hard:
+        return Technique::XWing;
+    case Difficulty::ExtraHard:
+        break;
+    }
+    return Technique::Swordfish;
+}
+
+bool SudokuGenerator::meetsLevel(const Grid &givens, Difficulty difficulty) {
+    if (!SudokuGrader::solvableWith(givens, ceiling(difficulty)))
+        return false;
+    if (difficulty == Difficulty::Easy)
+        return true;
+    const Difficulty below = Difficulty(int(difficulty) - 1);
+    return !SudokuGrader::solvableWith(givens, ceiling(below));
+}
 
 int SudokuGenerator::minClues(Difficulty difficulty) {
     switch (difficulty) {
@@ -46,7 +113,9 @@ int SudokuGenerator::minClues(Difficulty difficulty) {
     case Difficulty::Medium:
         return 30;
     case Difficulty::Hard:
-        return 24;
+        return 26;
+    case Difficulty::ExtraHard:
+        break;
     }
     return 24;
 }
@@ -58,37 +127,12 @@ int SudokuGenerator::maxClues(Difficulty difficulty) {
     case Difficulty::Medium:
         return 34;
     case Difficulty::Hard:
-        return 28;
+        return 30;
+    case Difficulty::ExtraHard:
+        break;
     }
     return 28;
 }
-
-namespace {
-
-// One carving pass: removes clues in `order` while the puzzle stays unique
-// (and, for Easy, stays solvable by singles). Hard keeps carving past the
-// target while singles still crack it, but never below the difficulty floor.
-Sudoku::Grid carve(const Grid &solution, const std::vector<int> &order, int target, int floorClues,
-                   bool requireSingles, bool forbidSingles) {
-    Grid givens = solution;
-    int clues = Sudoku::kCells;
-    for (int index : order) {
-        if (clues <= floorClues)
-            break;
-        if (clues <= target && !(forbidSingles && SudokuGrader::solvableWithSingles(givens)))
-            break;
-        const int removed = givens[index];
-        givens[index] = 0;
-        const bool unique = Sudoku::countSolutions(givens, 2) == 1;
-        if (unique && (!requireSingles || SudokuGrader::solvableWithSingles(givens)))
-            --clues;
-        else
-            givens[index] = removed;
-    }
-    return givens;
-}
-
-}  // namespace
 
 Puzzle SudokuGenerator::generate(Difficulty difficulty, quint32 seed) {
     if (seed == 0)
@@ -106,23 +150,21 @@ Puzzle SudokuGenerator::generate(Difficulty difficulty, quint32 seed) {
     for (int i = 0; i < Sudoku::kCells; ++i)
         order[size_t(i)] = i;
 
-    // Easy must stay solvable by singles alone; Hard must need more than that.
-    // A removal order that cannot deliver a hard-enough puzzle is retried with
-    // a fresh shuffle a bounded number of times - we keep the first attempt as
-    // a fallback rather than ever looping forever.
-    const bool requireSingles = difficulty == Difficulty::Easy;
-    const bool forbidSingles = difficulty == Difficulty::Hard;
-    constexpr int kMaxAttempts = 12;
+    // A removal order that never reaches the level is retried with a fresh
+    // shuffle, a bounded number of times. Should every attempt fall short
+    // the first carve is kept: it is within the ceiling, only easier than
+    // promised, and `hardest` tells the truth about it.
+    constexpr int kMaxAttempts = 200;
     for (int attempt = 0; attempt < kMaxAttempts; ++attempt) {
         shuffle(order, rng);
-        const Grid givens = carve(puzzle.solution, order, target, minClues(difficulty),
-                                  requireSingles, forbidSingles);
+        const Grid givens = carve(puzzle.solution, order, target, difficulty);
         if (attempt == 0)
             puzzle.givens = givens;
-        if (!forbidSingles || !SudokuGrader::solvableWithSingles(givens)) {
+        if (meetsLevel(givens, difficulty)) {
             puzzle.givens = givens;
             break;
         }
     }
+    puzzle.hardest = SudokuGrader::grade(puzzle.givens).hardest;
     return puzzle;
 }

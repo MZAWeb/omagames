@@ -1,9 +1,8 @@
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
 import OmaGames
 
-// Difficulty picker, the check mode setting and a way back into a saved game.
+// Difficulty picker and a way back into a saved game.
 FocusScope {
     id: root
 
@@ -17,8 +16,6 @@ FocusScope {
         } else if (event.key === Qt.Key_R) {
             if (game.hasSavedGame)
                 game.resumeSavedGame();
-        } else if (event.key === Qt.Key_C) {
-            game.checkAsYouGo = !game.checkAsYouGo;
         } else {
             return;
         }
@@ -27,8 +24,8 @@ FocusScope {
 
     ColumnLayout {
         anchors.centerIn: parent
-        width: Math.min(parent.width - 48 * theme.textScale, 320 * theme.textScale)
-        spacing: 14 * theme.textScale
+        width: Math.min(parent.width - 48 * theme.textScale, 340 * theme.textScale)
+        spacing: 10 * theme.textScale
 
         Text {
             Layout.alignment: Qt.AlignHCenter
@@ -49,15 +46,33 @@ FocusScope {
         Repeater {
             model: game.difficulties
 
-            OmaHintButton {
+            // A level is its button and, under it, the techniques it asks for
+            // beyond the level above: the promise the generator keeps.
+            ColumnLayout {
                 required property var modelData
                 required property int index
 
                 Layout.fillWidth: true
-                text: modelData.label
-                primary: index === 0
-                hint: (index + 1).toString()
-                onClicked: game.newGame(modelData.id)
+                spacing: 3 * theme.textScale
+
+                OmaHintButton {
+                    Layout.fillWidth: true
+                    text: parent.modelData.label
+                    primary: parent.index === 0
+                    hint: (parent.index + 1).toString()
+                    onClicked: game.newGame(parent.modelData.id)
+                }
+                Text {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 12 * theme.textScale
+                    Layout.rightMargin: 12 * theme.textScale
+                    Layout.bottomMargin: 4 * theme.textScale
+                    text: parent.modelData.techniques.join(" · ")
+                    color: theme.mix(theme.background, theme.foreground, 0.55)
+                    font.pixelSize: 11 * theme.textScale
+                    wrapMode: Text.WordWrap
+                    horizontalAlignment: Text.AlignHCenter
+                }
             }
         }
         OmaHintButton {
@@ -67,33 +82,6 @@ FocusScope {
             text: qsTr("Resume saved game")
             hint: qsTr("R")
             onClicked: game.resumeSavedGame()
-        }
-
-        RowLayout {
-            Layout.alignment: Qt.AlignHCenter
-            Layout.topMargin: 12 * theme.textScale
-            spacing: 8 * theme.textScale
-
-            Switch {
-                id: checkSwitch
-                text: qsTr("Check as I go")
-                checked: game.checkAsYouGo
-                font.pixelSize: 14 * theme.textScale
-                onToggled: game.checkAsYouGo = checked
-
-                // The label is drawn by hand so it can take the theme's color;
-                // `parent` inside a contentItem is only a plain Item, so the
-                // control has to be reached through its id.
-                contentItem: Text {
-                    text: checkSwitch.text
-                    color: theme.foreground
-                    font: checkSwitch.font
-                    verticalAlignment: Text.AlignVCenter
-                    leftPadding: checkSwitch.indicator.width + checkSwitch.spacing
-                }
-            }
-
-            OmaKeyHint { key: qsTr("C") }
         }
     }
 }

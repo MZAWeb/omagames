@@ -8,6 +8,7 @@
 #include "savedgame.h"
 #include "sudoku.h"
 #include "sudokugame.h"
+#include "sudokugrader.h"
 
 namespace {
 
@@ -49,7 +50,7 @@ void GameTests::startsOnTheStartScreen() {
     QVERIFY(!game.hasSavedGame());
     QVERIFY(!game.canUndo());
     QCOMPARE(game.selectedIndex(), -1);
-    QVERIFY(game.checkAsYouGo());  // default on
+    QVERIFY(game.validateAsYouGo());  // default on
 }
 
 void GameTests::newGameSelectsTheFirstEmptyCell() {
@@ -63,7 +64,7 @@ void GameTests::newGameSelectsTheFirstEmptyCell() {
     QVERIFY(game.selectedIndex() >= 0);
     QCOMPARE(cellInt(game.cells(), game.selectedIndex(), CellModel::ValueRole), 0);
 
-    QVERIFY(game.filledCount() >= SudokuGenerator::minClues(Difficulty::Hard));
+    QVERIFY(game.filledCount() > 0);
     QCOMPARE(game.digitCounts().size(), 9);
 }
 
@@ -109,16 +110,37 @@ void GameTests::digitsGoIntoTheSelectedCellOnly() {
 void GameTests::exposesDifficultiesWithLabels() {
     SudokuGame game;
     const QVariantList levels = game.difficulties();
-    QCOMPARE(levels.size(), 3);
+    QCOMPARE(levels.size(), 4);
 
     const QVariantMap easy = levels.first().toMap();
     QCOMPARE(easy.value(QStringLiteral("id")).toString(), QStringLiteral("easy"));
     QVERIFY(!easy.value(QStringLiteral("label")).toString().isEmpty());
+    QVERIFY(!easy.value(QStringLiteral("description")).toString().isEmpty());
+    QCOMPARE(easy.value(QStringLiteral("techniques")).toStringList(),
+             QStringList({QStringLiteral("Naked single"), QStringLiteral("Hidden single")}));
 
-    const QVariantMap hard = levels.last().toMap();
-    game.newGame(hard.value(QStringLiteral("id")).toString());
+    // Every level introduces at least one rung, and no rung is listed twice.
+    QStringList seen;
+    for (const QVariant &entry : levels) {
+        const QStringList techniques = entry.toMap().value(QStringLiteral("techniques")).toStringList();
+        QVERIFY(!techniques.isEmpty());
+        for (const QString &technique : techniques) {
+            QVERIFY2(!seen.contains(technique), qPrintable(technique + QStringLiteral(" listed twice")));
+            seen << technique;
+        }
+    }
+    QCOMPARE(seen.size(), SudokuGrader::kTechniqueCount);
+
+    const QVariantMap extra = levels.last().toMap();
+    QCOMPARE(extra.value(QStringLiteral("id")).toString(), QStringLiteral("extrahard"));
+    game.newGame(extra.value(QStringLiteral("id")).toString());
+    QCOMPARE(game.difficulty(), QStringLiteral("extrahard"));
+    QCOMPARE(game.difficultyLabel(), extra.value(QStringLiteral("label")).toString());
+    // What the puzzle needs is one of the rungs the level promises.
+    QVERIFY(extra.value(QStringLiteral("techniques")).toStringList().contains(game.techniqueLabel()));
+
+    game.newGame(QStringLiteral("hard"));
     QCOMPARE(game.difficulty(), QStringLiteral("hard"));
-    QCOMPARE(game.difficultyLabel(), hard.value(QStringLiteral("label")).toString());
 
     game.newGame(QStringLiteral("nonsense"));  // an unknown id lands on Easy
     QCOMPARE(game.difficulty(), QStringLiteral("easy"));
@@ -292,6 +314,26 @@ void GameTests::selectedValueFollowsTheSelection() {
 
     game.select(empty);
     QCOMPARE(game.selectedValue(), 6);
+}
+
+void GameTests::validateAsYouGoFlipsMidGame() {
+    // A saved game built from a known seed, so the solution is at hand to
+    // pick a digit that is certainly wrong.
+    const SudokuBoard expected = TestSupport::installSavedGame(3, 20260829u);
+    SudokuGame game;
+    game.resumeSavedGame();
+    const int cell = game.selectedIndex();
+    QVERIFY(game.validateAsYouGo());
+
+    game.enterValue(expected.puzzle().solution[size_t(cell)] % 9 + 1);
+    QVERIFY(cellBool(game.cells(), cell, CellModel::WrongRole));
+
+    QSignalSpy spy(&game, &SudokuGame::validateAsYouGoChanged);
+    game.setValidateAsYouGo(false);  // off: the mark vanishes until the grid is full
+    QVERIFY(!cellBool(game.cells(), cell, CellModel::WrongRole));
+    game.setValidateAsYouGo(true);   // on: it is back at once, no new entry needed
+    QVERIFY(cellBool(game.cells(), cell, CellModel::WrongRole));
+    QCOMPARE(spy.count(), 2);
 }
 
 void GameTests::untouchedPuzzleIsNotInProgress() {

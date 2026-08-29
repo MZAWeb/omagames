@@ -17,13 +17,14 @@ private slots:
     void eraseClearsValueAndNotes();
     void undoRestoresValuesAndNotes();
     void undoKeepsAtLeastAHundredLevels();
-    void checkAsYouGoFlagsWrongEntries();
+    void validateAsYouGoFlagsWrongEntries();
     void checkWhenFullDefersFlagging();
     void solvedWhenEveryCellMatches();
     void restartClearsEntriesAndHistory();
     void countsFilledCellsAndDigits();
     void countsOnlyPlayerEntries();
     void jsonRoundTripsBoardState();
+    void jsonKeepsTheLevelAndTechnique();
 
 private:
     int emptyCell(int nth = 0) const;

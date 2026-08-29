@@ -59,23 +59,26 @@ void PersistenceTests::winningSwitchesStateAndClearsTheSave() {
     QVERIFY(QSettings().value(QStringLiteral("state/v1")).toString().isEmpty());
 }
 
-void PersistenceTests::checkAsYouGoIsRemembered() {
+void PersistenceTests::validateAsYouGoIsRemembered() {
     {
         SudokuGame game;
         game.newGame(QStringLiteral("easy"));
-        game.setCheckAsYouGo(false);
-        QVERIFY(!game.checkAsYouGo());
+        game.setValidateAsYouGo(false);
+        QVERIFY(!game.validateAsYouGo());
         game.backToStart();
     }
     SudokuGame game;
-    QVERIFY(!game.checkAsYouGo());
+    QVERIFY(!game.validateAsYouGo());
 }
 
 void PersistenceTests::savedGameSurvivesRestart() {
     int cell = -1;
+    QString technique;
     {
         SudokuGame game;
         game.newGame(QStringLiteral("medium"));
+        technique = game.techniqueLabel();
+        QVERIFY(!technique.isEmpty());
         cell = game.selectedIndex();
         game.enterValue(7);
         game.backToStart();  // saves on the way out
@@ -88,6 +91,7 @@ void PersistenceTests::savedGameSurvivesRestart() {
     resumed.resumeSavedGame();
     QCOMPARE(resumed.state(), QStringLiteral("playing"));
     QCOMPARE(resumed.difficulty(), QStringLiteral("medium"));
+    QCOMPARE(resumed.techniqueLabel(), technique);
     QCOMPARE(cellInt(resumed.cells(), cell, CellModel::ValueRole), 7);
 
     resumed.newGame(QStringLiteral("easy"));  // a new game drops the old save

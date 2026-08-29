@@ -6,11 +6,14 @@
 #include <QSettings>
 
 #include "sudoku.h"
+#include "sudokugrader.h"
 
 namespace {
 
 const auto kStateKey = QStringLiteral("state/v1");
-const auto kCheckKey = QStringLiteral("play/checkAsYouGo");
+// Still the key it was first stored under, so an existing preference survives
+// the control's rename.
+const auto kValidateKey = QStringLiteral("play/checkAsYouGo");
 const auto kPadModeKey = QStringLiteral("play/padMode");
 const auto kGeometryKey = QStringLiteral("window/geometry");
 const auto kMaximizedKey = QStringLiteral("window/maximized");
@@ -27,6 +30,7 @@ const auto kFillId = QStringLiteral("fill");
 const auto kEasyId = QStringLiteral("easy");
 const auto kMediumId = QStringLiteral("medium");
 const auto kHardId = QStringLiteral("hard");
+const auto kExtraHardId = QStringLiteral("extrahard");
 
 QString idFor(Difficulty difficulty) {
     switch (difficulty) {
@@ -36,8 +40,49 @@ QString idFor(Difficulty difficulty) {
         return kMediumId;
     case Difficulty::Hard:
         return kHardId;
+    case Difficulty::ExtraHard:
+        return kExtraHardId;
     }
     return kEasyId;
+}
+
+QString techniqueName(SudokuGrader::Technique technique) {
+    using SudokuGrader::Technique;
+    switch (technique) {
+    case Technique::NakedSingle:
+        return SudokuGame::tr("Naked single");
+    case Technique::HiddenSingle:
+        return SudokuGame::tr("Hidden single");
+    case Technique::NakedPair:
+        return SudokuGame::tr("Naked pair");
+    case Technique::HiddenPair:
+        return SudokuGame::tr("Hidden pair");
+    case Technique::PointingPair:
+        return SudokuGame::tr("Pointing pair");
+    case Technique::Claiming:
+        return SudokuGame::tr("Claiming");
+    case Technique::NakedTriple:
+        return SudokuGame::tr("Naked triple");
+    case Technique::XWing:
+        return SudokuGame::tr("X-wing");
+    case Technique::YWing:
+        return SudokuGame::tr("Y-wing");
+    case Technique::Swordfish:
+        break;
+    }
+    return SudokuGame::tr("Swordfish");
+}
+
+// The rungs a level adds on top of the level below: everything between the
+// two ceilings, which is exactly what its puzzles can demand and the easier
+// level's never do.
+QStringList techniquesIntroducedBy(Difficulty difficulty) {
+    const int from = difficulty == Difficulty::Easy
+        ? 0 : int(SudokuGenerator::ceiling(Difficulty(int(difficulty) - 1))) + 1;
+    QStringList names;
+    for (int t = from; t <= int(SudokuGenerator::ceiling(difficulty)); ++t)
+        names << techniqueName(SudokuGrader::Technique(t));
+    return names;
 }
 
 // Writing on every keystroke would hit the disk far too often; a short delay
@@ -71,17 +116,29 @@ QString SudokuGame::difficultyLabel() const {
     return {};
 }
 
+QString SudokuGame::techniqueLabel() const {
+    return techniqueName(m_board.puzzle().hardest);
+}
+
 QVariantList SudokuGame::difficulties() {
-    QVariantList list;
-    const QVector<QPair<QString, QString>> entries {
-        {kEasyId, tr("Easy")},
-        {kMediumId, tr("Medium")},
-        {kHardId, tr("Hard")},
+    struct Level {
+        Difficulty difficulty;
+        QString label;
+        QString description;
     };
-    for (const auto &entry : entries) {
+    const QVector<Level> levels {
+        {Difficulty::Easy, tr("Easy"), tr("Singles only: every step is a digit with one place left.")},
+        {Difficulty::Medium, tr("Medium"), tr("Adds pairs and box-line eliminations.")},
+        {Difficulty::Hard, tr("Hard"), tr("Adds naked triples and X-wings.")},
+        {Difficulty::ExtraHard, tr("Extra hard"), tr("Needs a Y-wing or a swordfish somewhere.")},
+    };
+    QVariantList list;
+    for (const Level &level : levels) {
         list.append(QVariantMap {
-            {QStringLiteral("id"), entry.first},
-            {QStringLiteral("label"), entry.second},
+            {QStringLiteral("id"), idFor(level.difficulty)},
+            {QStringLiteral("label"), level.label},
+            {QStringLiteral("techniques"), techniquesIntroducedBy(level.difficulty)},
+            {QStringLiteral("description"), level.description},
         });
     }
     return list;
@@ -166,22 +223,24 @@ void SudokuGame::cyclePadMode() {
     }
 }
 
-void SudokuGame::setCheckAsYouGo(bool checkAsYouGo) {
-    if (m_board.checkAsYouGo() == checkAsYouGo)
+void SudokuGame::setValidateAsYouGo(bool validateAsYouGo) {
+    if (m_board.validateAsYouGo() == validateAsYouGo)
         return;
-    m_board.setCheckAsYouGo(checkAsYouGo);
-    QSettings().setValue(kCheckKey, checkAsYouGo);
+    m_board.setValidateAsYouGo(validateAsYouGo);
+    QSettings().setValue(kValidateKey, validateAsYouGo);
     m_cells.refreshAll();
-    emit checkAsYouGoChanged();
+    emit validateAsYouGoChanged();
     emit boardChanged();
 }
 
 void SudokuGame::newGame(const QString &difficulty) {
     // An unknown id can only come from a caller with a stale idea of the
     // levels; Easy is the safe landing.
-    const Difficulty level = difficulty == kHardId ? Difficulty::Hard
-        : difficulty == kMediumId                  ? Difficulty::Medium
-                                                   : Difficulty::Easy;
+    Difficulty level = Difficulty::Easy;
+    for (int i = 0; i < kDifficultyCount; ++i) {
+        if (idFor(Difficulty(i)) == difficulty)
+            level = Difficulty(i);
+    }
     m_board.setPuzzle(SudokuGenerator::generate(level));
     m_cells.refreshAll();
 
@@ -284,9 +343,9 @@ void SudokuGame::backToStart() {
 void SudokuGame::applyChange(const std::vector<int> &changed) {
     if (changed.empty())
         return;
-    // Deferred checking can light up cells far from the edited one, so repaint
+    // Deferred validation can light up cells far from the edited one, so repaint
     // everything unless we know only these cells changed.
-    if (m_board.checkAsYouGo())
+    if (m_board.validateAsYouGo())
         m_cells.refresh(changed);
     else
         m_cells.refreshAll();
@@ -340,7 +399,7 @@ void SudokuGame::selectFirstEmptyCell() {
 
 void SudokuGame::loadSettings() {
     const QSettings settings;
-    m_board.setCheckAsYouGo(settings.value(kCheckKey, true).toBool());
+    m_board.setValidateAsYouGo(settings.value(kValidateKey, true).toBool());
     // Anything unrecognised (including the int this key held before the modes
     // got names) falls back to the default.
     m_padMode = modeFromId(settings.value(kPadModeKey).toString(), PadMode::Highlight);

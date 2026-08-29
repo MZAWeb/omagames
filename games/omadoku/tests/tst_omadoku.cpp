@@ -6,6 +6,7 @@
 #include "generatortests.h"
 #include "persistencetests.h"
 #include "gradertests.h"
+#include "techniquetests.h"
 #include "solvertests.h"
 
 // One binary runs every suite so each area keeps its own small file.
@@ -19,6 +20,8 @@ int main(int argc, char *argv[]) {
     status |= QTest::qExec(&solver, argc, argv);
     GeneratorTests generator;
     status |= QTest::qExec(&generator, argc, argv);
+    TechniqueTests techniques;
+    status |= QTest::qExec(&techniques, argc, argv);
     GraderTests grader;
     status |= QTest::qExec(&grader, argc, argv);
     BoardTests board;

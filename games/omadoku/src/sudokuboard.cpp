@@ -2,6 +2,8 @@
 
 #include <QJsonArray>
 
+#include "sudokugrader.h"
+
 #include <algorithm>
 
 namespace {
@@ -78,10 +80,10 @@ bool SudokuBoard::isSolved() const {
     return m_values == m_puzzle.solution;
 }
 
-void SudokuBoard::setCheckAsYouGo(bool checkAsYouGo) {
-    if (m_checkAsYouGo == checkAsYouGo)
+void SudokuBoard::setValidateAsYouGo(bool validateAsYouGo) {
+    if (m_validateAsYouGo == validateAsYouGo)
         return;
-    m_checkAsYouGo = checkAsYouGo;
+    m_validateAsYouGo = validateAsYouGo;
     refreshWrong();
 }
 
@@ -178,7 +180,7 @@ void SudokuBoard::applyState(const CellState &state) {
 
 void SudokuBoard::refreshWrong() {
     m_wrong.fill(false);
-    if (!m_checkAsYouGo && filledCount() < Sudoku::kCells)
+    if (!m_validateAsYouGo && filledCount() < Sudoku::kCells)
         return;
     for (int index : Sudoku::wrongCells(m_values, m_puzzle.solution))
         m_wrong[size_t(index)] = true;
@@ -195,6 +197,7 @@ QJsonObject SudokuBoard::toJson() const {
     json.insert(QStringLiteral("values"), gridToJson(m_values));
     json.insert(QStringLiteral("notes"), notes);
     json.insert(QStringLiteral("difficulty"), int(m_puzzle.difficulty));
+    json.insert(QStringLiteral("technique"), SudokuGrader::techniqueId(m_puzzle.hardest));
     json.insert(QStringLiteral("seed"), qint64(m_puzzle.seed));
     return json;
 }
@@ -216,10 +219,14 @@ bool SudokuBoard::fromJson(const QJsonObject &json, SudokuBoard *board) {
         return false;
 
     const int difficulty = json.value(QStringLiteral("difficulty")).toInt(int(Difficulty::Easy));
-    puzzle.difficulty = difficulty >= int(Difficulty::Easy) && difficulty <= int(Difficulty::Hard)
+    puzzle.difficulty = difficulty >= 0 && difficulty < kDifficultyCount
         ? Difficulty(difficulty)
         : Difficulty::Easy;
     puzzle.seed = quint32(json.value(QStringLiteral("seed")).toInteger(0));
+    // A save from before puzzles were graded names no technique; grading it
+    // now keeps the header honest for it too.
+    if (!SudokuGrader::techniqueFromId(json.value(QStringLiteral("technique")).toString(), &puzzle.hardest))
+        puzzle.hardest = SudokuGrader::grade(puzzle.givens).hardest;
 
     board->setPuzzle(puzzle);
     board->m_values = values;

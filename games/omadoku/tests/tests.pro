@@ -12,6 +12,7 @@ HEADERS += \
     testgrids.h \
     solvertests.h \
     generatortests.h \
+    techniquetests.h \
     gradertests.h \
     boardtests.h \
     gametests.h \
@@ -21,12 +22,16 @@ HEADERS += \
 SOURCES += \
     ../src/sudoku.cpp \
     ../src/sudokugenerator.cpp \
+    ../src/candidategrid.cpp \
+    ../src/sudokutechniques.cpp \
+    ../src/sudokufish.cpp \
     ../src/sudokugrader.cpp \
     ../src/sudokuboard.cpp \
     ../src/cellmodel.cpp \
     ../src/sudokugame.cpp \
     solvertests.cpp \
     generatortests.cpp \
+    techniquetests.cpp \
     gradertests.cpp \
     boardtests.cpp \
     gametests.cpp \

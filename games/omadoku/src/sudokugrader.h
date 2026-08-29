@@ -1,15 +1,27 @@
 #pragma once
 
-#include "sudoku.h"
+#include <optional>
 
-// A minimal difficulty yardstick: whether a puzzle falls to the two easiest
-// human techniques. The generator uses it so "Easy" never needs guessing and
-// "Hard" always needs more than singles.
+#include "sudokutechniques.h"
+
+// Grades a puzzle the way a player experiences it: climbing the technique
+// ladder from the easiest rung, restarting from the bottom after every
+// step, and noting the hardest rung it ever needed. Nothing guesses, so a
+// grid the ladder cannot finish is simply beyond the given ceiling.
 namespace SudokuGrader {
 
-// Repeatedly places naked singles (one candidate left in a cell) and hidden
-// singles (one place left in a row/column/box for a digit). True when that
-// alone completes the grid.
-bool solvableWithSingles(const Sudoku::Grid &grid);
+struct Grading {
+    bool solved = false;
+    // The hardest rung climbed; only meaningful when solved. A grid that is
+    // already complete needed nothing, which reads as the lowest rung.
+    Technique hardest = Technique::NakedSingle;
+};
+
+// One step: the easiest technique up to `ceiling` (inclusive) that makes
+// progress, or nothing when the ladder is stuck.
+std::optional<Technique> step(CandidateGrid &grid, Technique ceiling);
+
+Grading grade(const Sudoku::Grid &grid, Technique ceiling = kHardestTechnique);
+bool solvableWith(const Sudoku::Grid &grid, Technique ceiling);
 
 }
