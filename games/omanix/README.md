@@ -20,6 +20,13 @@ clear the level.
   trail. So does running into your own trail.
 - **Chasers** drift the same way through the claimed ground and kill on
   contact wherever you are. Level 1 has one; more join every few levels.
+- Every level opens with a short banner ("Level 3 · 5 balls · 2 chasers")
+  while everything holds still for 1.2 s; a key pressed during it takes
+  effect the moment play starts.
+- While a ball is within 3 cells of your trail the trail pulses brighter:
+  that is the close-call zone, so finish the cut or expect to lose it. The
+  marker is a solid square on the ground and an accent-filled outline while
+  cutting, so you always know when you are exposed.
 - Level goal: **75%** of the interior claimed. Each level adds a ball, the
   balls get a little faster, and chasers pile up every few levels.
 - Three lives, an extra one every 10,000 points. After a lost life everything
@@ -49,7 +56,9 @@ Every constant is named in `src/game.h`.
 | **Hard** | 4 | fast | one more every 2 levels | speeds up every 2 levels |
 
 The last difficulty played is preselected. The top ten scores per difficulty
-(with level and date) are kept in `~/.config/Omacom/omanix.conf`.
+(with level and date) are kept in `~/.config/Omacom/omanix.conf`; the header
+shows the best for the difficulty in play and tints the score once you pass
+it, and the game-over overlay names your rank when you made the table.
 
 ## Keyboard
 
@@ -62,7 +71,7 @@ Everything is reachable without a mouse; each button shows its key as a badge.
 | `R` | Restart the level from scratch (keeps score and lives) |
 | `1` `2` `3` | Start an Easy / Normal / Hard game (start screen) |
 | `H` | High scores (start screen) |
-| `Enter` | Continue after a cleared level; play again after a game over |
+| `Enter` / `Space` | Continue after a cleared level; play again after a game over |
 | `Esc` | Leave the game (confirmed mid-game), close the high scores |
 | `Y` / `Enter`, `N` / `Esc` | Confirm / cancel a dialog |
 | `Ctrl+Q` | Quit |
