@@ -1,14 +1,16 @@
 # Omagames
 
-A collection of small, polished games for [Omarchy](https://omarchy.org), built with
-Qt Quick and C++ in the same spirit as `omawrite` and `omacalc`: dead simple,
-keyboard friendly, and automatically following the Omarchy theme and system
-dark/light mode.
+Small, polished games for [Omarchy](https://omarchy.org), built with Qt Quick
+and C++ in the spirit of `omawrite` and `omacalc`: dead simple, keyboard first,
+and automatically following the Omarchy theme, system dark/light mode and text
+size.
 
 | Game | Directory | What |
 |---|---|---|
-| **Omadoku** | `games/omadoku` | Sudoku with easy/medium/hard puzzles generated on the fly, notes mode, optional instant validation |
-| **Black Omack** | `games/blackomack` | Casino blackjack with a persistent Omabucks bankroll and up to five AI-driven table mates |
+| **Omadoku** | `games/omadoku` | Sudoku with generated puzzles, notes mode and optional instant checking |
+| **Black Omack** | `games/blackomack` | Casino blackjack with a persistent Omabucks bankroll and AI table mates |
+
+Each game has its own README with rules and keyboard shortcuts.
 
 This is a monorepo: games live under `games/`, everything shared (theming,
 fonts, app bootstrap, common QML controls) lives under `common/` and is compiled
@@ -34,12 +36,17 @@ Omarchy theme.
 
 ```
 common/        shared C++ (OmarchyTheme, SystemTheme, OmaGames::setupApplication), QML module `OmaGames`, fonts
-games/<name>/  <name>.pro, src/ (engine + QML), tests/, pkgbuild/
-docs/          PLAN.md (architecture & decisions), tasks/ (agent briefs)
+games/<name>/  <name>.pro, src/ (engine + QML), tests/, pkgbuild/, README.md
+docs/          ARCHITECTURE.md, NEW-GAME.md, PARALLEL-AGENTS.md
 bin/           build / run / test / install
 ```
 
-See `docs/PLAN.md` for the architecture and `CLAUDE.md` for the coding rules.
+## Contributing
+
+- `docs/ARCHITECTURE.md` — how a game is structured and why.
+- `docs/NEW-GAME.md` — step-by-step guide to add a game.
+- `CLAUDE.md` — the rules every change must follow (humans and agents alike).
+- `docs/PARALLEL-AGENTS.md` — running several coding agents at once with git worktrees.
 
 The iA Writer Mono font is bundled under the SIL Open Font License 1.1; see
-`common/fonts/OFL.txt`.
+`common/fonts/OFL.txt`. MIT licensed, see `LICENSE`.

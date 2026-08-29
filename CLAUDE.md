@@ -1,11 +1,11 @@
 # Omagames — rules for anyone (human or agent) working in this repo
 
-Read `docs/PLAN.md` first. If you are implementing a game, your brief is in
-`docs/tasks/<game>.md`; follow it and stay inside your game's directory unless
-the brief says otherwise.
+Read `docs/ARCHITECTURE.md` first. Adding a game? Follow `docs/NEW-GAME.md`.
+Working on an existing game? Its `games/<game>/README.md` is the spec; stay
+inside `games/<game>/` unless you are deliberately changing shared code.
 
 ## Stack
-- Qt 6.11, C++17, QML (Qt Quick Controls 2, Material style), qmake. No CMake, no extra deps.
+- Qt 6, C++17, QML (Qt Quick Controls 2, Material style), qmake. No CMake, no extra deps.
 - Build with `bin/build <game>`, test with `bin/test <game>`, run with `bin/run <game>`.
   Every change must leave `bin/build` and `bin/test` green.
 
@@ -16,26 +16,43 @@ the brief says otherwise.
 - One `QObject` "game" class (e.g. `SudokuGame`, `BlackjackGame`) is the *only*
   bridge to QML: it exposes state via `Q_PROPERTY`/models and actions via
   `Q_INVOKABLE`. QML never contains rules; it only renders state and calls actions.
-- The UI must be swappable later without touching the engine. Keep QML free of
-  hardcoded colors/fonts: use the `theme` context property (`OmarchyTheme`) and
-  `theme.textScale` for sizes. Shared controls come from `import OmaGames`.
+- The UI must be swappable without touching the engine. Keep QML free of
+  hardcoded colors, fonts and pixel sizes: use the `theme` context property
+  (`OmarchyTheme`) and `theme.textScale`. Shared controls come from `import OmaGames`.
+- Rule of thumb: delete every `.qml` file and `bin/test` should still pass and
+  still cover all the rules.
 
 ## Shared code (`common/`)
 - `OmarchyTheme` (`theme` in QML): every color from Omarchy's `colors.toml`,
   `darkMode`, `textScale`, plus `theme.mix(a, b, t)` and `theme.alpha(c, a)`.
 - `OmaGames::setupApplication` / `setupEngine`: see `common/src/appsetup.h`.
-- QML module `OmaGames`: `OmaButton`, `OmaPanel`. Add new *generic* controls
-  there (register in `common/qml/OmaGames/qmldir` **and** `common/common.qrc`);
-  game-specific controls stay in the game.
-- Coordinate before changing existing common/ APIs — other games use them.
+- QML module `OmaGames` (`common/qml/OmaGames/`): generic controls such as
+  `OmaButton`, `OmaPanel`, `PlayingCard`. Add new *generic* controls there
+  (register in `qmldir` **and** `common/common.qrc`, append-only); game-specific
+  controls stay in the game.
+- Changing an existing `common/` API affects every game: build and test all of
+  them (`bin/build && bin/test`) and keep the change backwards compatible when possible.
+
+## Keyboard first
+- Everything must be playable without a mouse. Every action has a single-key
+  shortcut and the UI shows it (key badge on the control). `Ctrl+Q` quits,
+  `Escape` backs out / closes dialogs, dialogs also accept `Enter`/`Y`/`N`.
 
 ## Persistence
 - `QSettings` (org "Omacom", app = game name → `~/.config/Omacom/<game>.conf`).
-  Tests must redirect it: `QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, tmpDir)`
-  and `QSettings::setDefaultFormat(QSettings::IniFormat)` in `initTestCase` (see omacalc tests).
+  Store complex state as one JSON string under a versioned key (`state/v1`).
+- Tests must redirect it: `QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, tmpDir)`
+  and `QSettings::setDefaultFormat(QSettings::IniFormat)` in `initTestCase`.
+- Remember window geometry via QSettings (`window/geometry`).
 
 ## Style
-- Match omacalc/omawrite: `m_` members, `QStringLiteral`, brief comments that
-  explain *why*. Keep files small; one class per file.
-- Keyboard first: everything reachable without a mouse; `Ctrl+Q` quits; `Escape` backs out.
-- Window: remember geometry via QSettings like omacalc (`window/geometry`).
+- Match omacalc/omawrite: `m_` members, `QStringLiteral`, anonymous namespaces
+  for helpers, const-correctness, no raw `new` without a parent. One class per
+  file, files under ~300 lines. Comments explain *why*, not what. No dead code,
+  no leftover `qDebug()`, no TODOs.
+- Tests are not optional: every rule gets a test, with deterministic seeds.
+
+## Git
+- Atomic commits, one logical change each, message `"<game>: <imperative summary>"`
+  (`"common: ..."` for shared code). Every commit builds and passes tests.
+- Never commit `build/`, `build-tests/` or generated files.
