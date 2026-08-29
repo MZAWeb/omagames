@@ -158,9 +158,9 @@ void BlackjackGame::step() {
         if (events.isEmpty())
             break;
         record(events);
-        emit stateChanged();
         if (m_table.roundOver())
-            finishRound();
+            finishRound();   // before the signal, so the stats settle with the round
+        emit stateChanged();
         if (m_stepMs > 0) {
             schedule();
             return;
