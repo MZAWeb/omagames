@@ -58,6 +58,11 @@ int BotPlayer::chooseBet(int bankroll) {
     return BlackjackRules::clampBet(int(bankroll * fraction), bankroll);
 }
 
+bool BotPlayer::takesInsurance() {
+    const double appetite = (1.0 - m_personality.skill) * (0.3 + 0.5 * m_personality.aggression);
+    return m_rng.generateDouble() < appetite;
+}
+
 Action BotPlayer::decide(const Hand &hand, const Card &dealerUp, bool canDouble, bool canSplit) {
     Action strategy = BasicStrategy::decide(hand, dealerUp, canDouble, canSplit);
     if (m_rng.generateDouble() >= m_personality.skill)

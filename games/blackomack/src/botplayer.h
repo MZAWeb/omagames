@@ -34,6 +34,9 @@ public:
     const BotPersonality &personality() const { return m_personality; }
 
     int chooseBet(int bankroll);
+    // Basic strategy never insures, so only the shakier players bite — and the
+    // bolder they are, the more the side bet tempts them.
+    bool takesInsurance();
     BlackjackRules::Action decide(const Hand &hand, const Card &dealerUp, bool canDouble, bool canSplit);
 
 private:

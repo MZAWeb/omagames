@@ -3,13 +3,16 @@
 #include "hand.h"
 
 // Fixed v1 house rules: 6 decks, dealer stands on all 17s, blackjack pays 3:2,
-// double on any two cards, one split, no insurance or surrender.
+// double on any two cards, one split, insurance against a dealer ace, no
+// surrender.
 namespace BlackjackRules {
 
 constexpr int kDecks = 6;
 constexpr int kDealerStandTotal = 17;
 constexpr int kBlackjackPayoutNumerator = 3;
 constexpr int kBlackjackPayoutDenominator = 2;
+constexpr int kInsurancePayoutNumerator = 2;   // insurance pays 2 to 1
+constexpr int kInsuranceDivisor = 2;           // and costs half the original bet
 constexpr int kMinBet = 10;
 constexpr int kBetStep = 10;
 constexpr int kStartingBankroll = 1000;
@@ -28,6 +31,11 @@ int payout(const Hand &player, const Hand &dealer);
 bool validBet(int bet, int bankroll);
 // Nearest legal bet for a bankroll (0 when the player cannot afford the minimum).
 int clampBet(int bet, int bankroll);
+
+// The side bet against a dealer ace: half the original stake, returning the
+// stake plus 2 to 1 when the dealer turns over a natural and nothing otherwise.
+int insuranceStake(int bet);
+int insuranceReturn(int stake, const Hand &dealer);
 
 // Dealer peeks for a natural when showing an ace or a ten-value card.
 bool dealerPeeks(const Card &upCard);

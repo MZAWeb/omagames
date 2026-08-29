@@ -87,6 +87,30 @@ OmaPanel {
             OmaHintButton { width: Math.max(implicitWidth, actionFlow.buttonWidth); text: "Split"; hint: "P"; enabled: game.canSplit; onClicked: game.split() }
         }
 
+        // The insurance offer replaces the play commands for one decision:
+        // half the stake against the dealer's ace, or wave it away.
+        Flow {
+            id: insuranceFlow
+            visible: game.canInsure
+            width: parent.width
+            spacing: dock.gap
+            readonly property real buttonWidth: (width - spacing) / 2
+
+            OmaHintButton {
+                width: Math.max(implicitWidth, insuranceFlow.buttonWidth)
+                text: "Insurance Ø " + game.insuranceCost
+                hint: "I"
+                onClicked: game.insurance()
+            }
+            OmaHintButton {
+                width: Math.max(implicitWidth, insuranceFlow.buttonWidth)
+                text: "No insurance"
+                hint: "N"
+                primary: true
+                onClicked: game.declineInsurance()
+            }
+        }
+
         OmaHintButton {
             visible: game.roundOver
             width: Math.max(implicitWidth, Math.min(parent.width, 250 * theme.textScale))
@@ -98,9 +122,11 @@ OmaPanel {
         }
 
         OmaHintButton {
-            visible: game.phase !== "betting" && !game.waitingForHuman && !game.roundOver
+            visible: game.phase !== "betting" && !game.waitingForHuman && !game.canInsure && !game.roundOver
             width: Math.max(implicitWidth, parent.width)
-            text: game.phase === "dealing" ? "Dealing…" : game.phase === "dealer" ? "Dealer playing…" : "Table mate playing…"
+            text: game.phase === "dealing" ? "Dealing…"
+                  : game.phase === "insurance" ? "Table mates deciding…"
+                  : game.phase === "dealer" ? "Dealer playing…" : "Table mate playing…"
             hint: "Space"
             onClicked: game.skipPacing()
         }

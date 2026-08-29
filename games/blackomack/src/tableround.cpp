@@ -65,6 +65,49 @@ QVector<TableEvent> Table::apply(int seatIndex, Action action) {
     return events;
 }
 
+// One seat's answer to the insurance offer, then on to the next seat — or to
+// the peek once every seat has been asked.
+QVector<TableEvent> Table::applyInsurance(bool take) {
+    Seat &seat = m_seats[m_insureSeat];
+    QVector<TableEvent> events;
+    QString text;
+    if (take) {
+        seat.insuranceBet = insuranceCost(m_insureSeat);
+        seat.bankroll -= seat.insuranceBet;
+        text = QStringLiteral("%1 insurance").arg(subject(seat, "takes", "take"));
+    }
+    // A decline is worth an event for the animation but not a line in the log.
+    events.append({TableEvent::Insurance, text, m_insureSeat});
+    ++m_insureSeat;
+    if (findInsuranceSeat()) {
+        if (waitingForInsurance())
+            events.append({TableEvent::HumanTurn, QStringLiteral("Insurance?"), m_insureSeat});
+        return events;
+    }
+    return events + peekAndOpen();
+}
+
+// Insurance is settled at the peek, whichever way the hole card falls.
+QVector<TableEvent> Table::settleInsurance() {
+    QVector<TableEvent> events;
+    for (int i = 0; i < m_seats.size(); ++i) {
+        Seat &seat = m_seats[i];
+        if (seat.insuranceBet <= 0)
+            continue;
+        seat.insuranceReturned = insuranceReturn(seat.insuranceBet, m_dealer);
+        seat.bankroll += seat.insuranceReturned;
+        const QString whose = seat.isHuman ? QStringLiteral("Insurance")
+                                           : QStringLiteral("%1's insurance").arg(seat.name());
+        const bool won = seat.insuranceReturned > 0;
+        events.append({TableEvent::InsuranceResolved,
+                       QStringLiteral("%1 %2 Ø %3")
+                           .arg(whose, won ? QStringLiteral("pays") : QStringLiteral("loses"))
+                           .arg(won ? seat.insuranceReturned - seat.insuranceBet : seat.insuranceBet),
+                       i});
+    }
+    return events;
+}
+
 QVector<TableEvent> Table::dealerStep() {
     if (m_holeHidden) {
         m_holeHidden = false;
