@@ -42,9 +42,11 @@ Be explicit that:
   pushes, opens the PR with `gh pr create`, waits for `gh pr checks`, and reports:
   done / missing / decisions / test totals / wishes outside its paths.
 
-The same brief works for non-Claude agents (e.g. `codex -m <model> -c
-model_reasoning_effort=high -s workspace-write`); Codex's sandbox cannot write
-`.git`, so commit its output yourself.
+The same brief works for non-Claude agents, e.g.
+`codex -m <model> -c model_reasoning_effort=high -s workspace-write --add-dir ~/code/omagames/.git`.
+The `--add-dir` matters: a worktree's git metadata lives in the main repo's
+`.git/worktrees/<name>/`, outside Codex's writable workspace, so without it
+`git commit` fails on `index.lock` and you end up committing on its behalf.
 
 Tip: when driving an agent through tmux, send prompts with
 `tmux send-keys -l "<text>"` followed by a separate `send-keys Enter` (Codex
