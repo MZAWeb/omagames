@@ -5,6 +5,7 @@
 #include "botplayer.h"
 #include "cards.h"
 #include "hand.h"
+#include "table.h"
 
 namespace {
 Card c(int rank, Suit suit = Suit::Spades) { return {rank, suit}; }
@@ -15,6 +16,18 @@ Hand hand(std::initializer_list<int> ranks, int bet = 10) {
     h.bet = bet;
     return h;
 }
+QVector<Card> cards(std::initializer_list<int> ranks) {
+    QVector<Card> v;
+    for (int r : ranks)
+        v.append(c(r));
+    return v;
+}
+// Runs automatic steps until the human must act or the round is settled.
+void autoplay(Table &t) {
+    while (!t.waitingForHuman() && !t.roundOver() && t.phase() != Table::Phase::Betting)
+        t.advance();
+}
+BotPersonality perfect(const QString &name, quint32 seed = 1) { return {name, 1.0, 0.5, seed}; }
 }
 
 class BlackOmackTest : public QObject {
@@ -232,6 +245,193 @@ private slots:
         }
         QCOMPARE(BotPersonality({QStringLiteral("x"), 0.9, 0.1, 1}).label(), QStringLiteral("cautious · sharp"));
         QCOMPARE(BotPersonality({QStringLiteral("x"), 0.5, 0.9, 1}).label(), QStringLiteral("wild · average"));
+    }
+
+    // --- Table ---
+    void naturalPaysThreeToTwo() {
+        Table t(1);
+        t.stackDeck(cards({1, 7, 13, 10}));
+        QCOMPARE(t.placeBets(50).size(), 1);
+        QCOMPARE(t.human().bankroll, 950);
+        t.deal();
+        QCOMPARE(t.phase(), Table::Phase::DealerTurn);   // nothing for the human to decide
+        QVERIFY(t.holeHidden());
+        autoplay(t);
+        QVERIFY(t.roundOver());
+        QVERIFY(!t.holeHidden());
+        QCOMPARE(t.dealer().cards.size(), 2);            // no draw with nobody to beat
+        QCOMPARE(t.human().hands[0].returned, 125);
+        QCOMPARE(t.human().bankroll, 1075);
+    }
+    void dealerPeekEndsRound() {
+        Table t(1);
+        t.stackDeck(cards({10, 1, 9, 13}));
+        t.placeBets(50);
+        const auto events = t.deal();
+        QCOMPARE(t.phase(), Table::Phase::Payout);
+        QVERIFY(!t.holeHidden());
+        QCOMPARE(events.last().type, TableEvent::DealerBlackjack);
+        QVERIFY(t.act(Table::Action::Hit).isEmpty());
+        autoplay(t);
+        QCOMPARE(t.human().bankroll, 950);
+        QCOMPARE(t.human().hands[0].returned, 0);
+    }
+    void doubleTakesExactlyOneCard() {
+        Table t(1);
+        t.stackDeck(cards({5, 6, 6, 10, 10, 9}));
+        t.placeBets(100);
+        t.deal();
+        QVERIFY(t.waitingForHuman());
+        QVERIFY(t.canAct(t.humanSeat(), Table::Action::Double));
+        QVERIFY(!t.canAct(t.humanSeat(), Table::Action::Split));
+        t.act(Table::Action::Double);
+        QCOMPARE(t.human().hands[0].cards.size(), 3);
+        QCOMPARE(t.human().hands[0].bet, 200);
+        QCOMPARE(t.human().bankroll, 800);
+        QVERIFY(!t.waitingForHuman());
+        autoplay(t);
+        QVERIFY(t.dealer().isBust());
+        QCOMPARE(t.human().bankroll, 1200);
+    }
+    void splitAcesGetOneCardEach() {
+        Table t(1);
+        t.stackDeck(cards({1, 9, 1, 7, 10, 5, 2}));
+        t.placeBets(50);
+        t.deal();
+        QVERIFY(t.canAct(t.humanSeat(), Table::Action::Split));
+        t.act(Table::Action::Split);
+        const Seat &me = t.human();
+        QCOMPARE(me.hands.size(), 2);
+        QCOMPARE(me.hands[0].cards.size(), 2);
+        QCOMPARE(me.hands[1].cards.size(), 2);
+        QCOMPARE(me.bankroll, 900);
+        QVERIFY(!t.waitingForHuman());               // both hands are done: no hitting split aces
+        QCOMPARE(t.phase(), Table::Phase::DealerTurn);
+        autoplay(t);
+        QCOMPARE(t.dealer().total(), 18);
+        QCOMPARE(me.hands[0].returned, 100);         // A+10 after a split is 21, not a natural
+        QCOMPARE(me.hands[1].returned, 0);
+        QCOMPARE(me.bankroll, 1000);
+    }
+    void splitHandsPlayInOrderAndMayDouble() {
+        Table t(1);
+        t.stackDeck(cards({8, 6, 8, 9, 3, 10, 10, 10}));
+        t.placeBets(50);
+        t.deal();
+        t.act(Table::Action::Split);
+        QCOMPARE(t.currentHand(), 0);
+        QVERIFY(t.canAct(t.humanSeat(), Table::Action::Double));   // double after split
+        QVERIFY(!t.canAct(t.humanSeat(), Table::Action::Split));   // no re-split
+        t.act(Table::Action::Double);
+        QCOMPARE(t.currentHand(), 1);
+        QVERIFY(t.waitingForHuman());
+        t.act(Table::Action::Stand);
+        autoplay(t);
+        QVERIFY(t.dealer().isBust());
+        QCOMPARE(t.human().bankroll, 1000 + 100 + 50);
+    }
+    void dealerStandsOnSoft17AtTheTable() {
+        Table t(1);
+        t.stackDeck(cards({10, 1, 8, 6}));
+        t.placeBets(10);
+        t.deal();
+        t.act(Table::Action::Stand);
+        autoplay(t);
+        QCOMPARE(t.dealer().cards.size(), 2);
+        QCOMPARE(t.dealer().total(), 17);
+        QCOMPARE(t.human().bankroll, 1010);
+    }
+    void doubleAndSplitNeedFunds() {
+        Table t(1);
+        t.setHumanBankroll(60);
+        t.stackDeck(cards({8, 6, 8, 9}));
+        t.placeBets(50);
+        t.deal();
+        QVERIFY(t.waitingForHuman());
+        QVERIFY(!t.canAct(t.humanSeat(), Table::Action::Double));
+        QVERIFY(!t.canAct(t.humanSeat(), Table::Action::Split));
+        QVERIFY(t.act(Table::Action::Split).isEmpty());
+        QVERIFY(t.canAct(t.humanSeat(), Table::Action::Hit));
+    }
+    void seatingKeepsHumanInTheMiddle() {
+        Table t(1);
+        QCOMPARE(t.humanSeat(), 0);
+        QVERIFY(t.addBot(perfect(QStringLiteral("Zed"))));
+        QCOMPARE(t.humanSeat(), 0);
+        QVERIFY(t.addBot(perfect(QStringLiteral("Mona"))));
+        QCOMPARE(t.humanSeat(), 1);
+        t.addBot(perfect(QStringLiteral("Bucky")));
+        t.addBot(perfect(QStringLiteral("Ivy")));
+        t.addBot(perfect(QStringLiteral("Rex")));
+        QCOMPARE(t.botCount(), 5);
+        QVERIFY(!t.addBot(perfect(QStringLiteral("Lola"))));
+        QCOMPARE(t.humanSeat(), 2);
+        QVERIFY(t.removeLastBot());
+        QCOMPARE(t.botCount(), 4);
+        QVERIFY(t.human().isHuman);
+        QCOMPARE(t.takenNames(), QStringList({QStringLiteral("Zed"), QStringLiteral("Mona"), QStringLiteral("Bucky"), QStringLiteral("Ivy")}));
+    }
+    void fullRoundsWithBotsBalanceTheBooks() {
+        Table t(2024);
+        QRandomGenerator rng(1);
+        t.addBot({QStringLiteral("Zed"), 0.9, 0.9, 11});
+        t.addBot({QStringLiteral("Moe"), 0.1, 0.2, 12});
+        t.addBot({QStringLiteral("Ivy"), 0.5, 0.5, 13});
+        QVERIFY(t.placeBets(15).isEmpty());          // not a multiple of 10
+        QVERIFY(t.placeBets(2000).isEmpty());        // more than the bankroll
+        for (int round = 0; round < 40; ++round) {
+            QVector<int> before;
+            for (const Seat &s : t.seats())
+                before.append(s.bankroll);
+            QVERIFY(!t.placeBets(20).isEmpty());
+            QVERIFY(!t.addBot(perfect(QStringLiteral("Rex"))));   // not mid-round
+            t.deal();
+            while (!t.roundOver()) {
+                autoplay(t);
+                if (t.waitingForHuman())
+                    t.act(BasicStrategy::decide(t.human().hands[t.currentHand()], t.dealerUpCard(),
+                                                t.canAct(t.humanSeat(), Table::Action::Double),
+                                                t.canAct(t.humanSeat(), Table::Action::Split)));
+            }
+            for (int i = 0; i < t.seats().size(); ++i) {
+                int staked = 0, returned = 0;
+                for (const Hand &h : t.seats()[i].hands) {
+                    QVERIFY(h.resolved);
+                    staked += h.bet;
+                    returned += h.returned;
+                }
+                QCOMPARE(t.seats()[i].bankroll, before[i] - staked + returned);
+            }
+            t.nextRound(rng);
+            QCOMPARE(t.phase(), Table::Phase::Betting);
+        }
+    }
+    void brokeBotIsReplacedNextRound() {
+        Table t(3);
+        QRandomGenerator rng(9);
+        t.addBot(perfect(QStringLiteral("Zed")), 5);
+        t.placeBets(10);
+        QVERIFY(t.seats()[1].hands.isEmpty());     // can't afford the minimum: sits out
+        t.deal();
+        while (!t.roundOver()) {
+            autoplay(t);
+            if (t.waitingForHuman())
+                t.act(Table::Action::Stand);
+        }
+        const auto events = t.nextRound(rng);
+        QCOMPARE(events.size(), 2);
+        QCOMPARE(events[0].type, TableEvent::BotLeft);
+        QCOMPARE(events[1].type, TableEvent::BotJoined);
+        QVERIFY(t.seats()[1].bot.personality().name != QStringLiteral("Zed"));
+        QCOMPARE(t.seats()[1].bankroll, 1000);
+    }
+    void nextRoundOnlyAfterPayout() {
+        Table t(1);
+        QRandomGenerator rng(1);
+        QVERIFY(t.nextRound(rng).isEmpty());
+        t.placeBets(10);
+        QVERIFY(t.nextRound(rng).isEmpty());
+        QVERIFY(t.advance().isEmpty());              // nothing automatic before the deal
     }
 
     void dealerPeekCards() {

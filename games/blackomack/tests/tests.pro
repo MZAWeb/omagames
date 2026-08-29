@@ -10,10 +10,13 @@ HEADERS += \
     ../src/hand.h \
     ../src/blackjackrules.h \
     ../src/basicstrategy.h \
-    ../src/botplayer.h
+    ../src/botplayer.h \
+    ../src/table.h
 SOURCES += tst_blackomack.cpp \
     ../src/cards.cpp \
     ../src/hand.cpp \
     ../src/blackjackrules.cpp \
     ../src/basicstrategy.cpp \
-    ../src/botplayer.cpp
+    ../src/botplayer.cpp \
+    ../src/table.cpp \
+    ../src/tableround.cpp
