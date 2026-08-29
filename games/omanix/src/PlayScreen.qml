@@ -84,6 +84,8 @@ FocusScope {
                     markerColor: theme.brightForeground
                     gridColor: theme.alpha(theme.foreground, 0.05)
                     flashColor: theme.red
+                    accentColor: theme.accent
+                    trailThreatened: game.trailThreatened
                 }
                 // qmllint enable import unresolved-type missing-type incompatible-type missing-property
             }

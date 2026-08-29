@@ -2,9 +2,11 @@
 
 #include <QPainter>
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 
 #include "omanixgame.h"
+#include "omarchytheme.h"
 
 namespace {
 
@@ -17,6 +19,8 @@ constexpr int kFlashMs = 450;
 constexpr int kBlinkMs = 900;
 constexpr int kBlinkPeriodMs = 150;
 constexpr int kGhosts = 3;
+// The trail pulses toward the marker's brightness while a ball is close.
+constexpr int kPulseMs = 360;
 constexpr int kFrameMs = 16;
 constexpr int kMinGridCell = 5;
 
@@ -51,6 +55,16 @@ void FieldView::setSource(QObject *source) {
     }
     m_history.clear();
     emit sourceChanged();
+    update();
+}
+
+void FieldView::setTrailThreatened(bool threatened) {
+    if (m_trailThreatened == threatened)
+        return;
+    m_trailThreatened = threatened;
+    if (threatened)
+        m_animation.start();
+    emit trailThreatenedChanged();
     update();
 }
 
@@ -121,9 +135,16 @@ void FieldView::animate() {
         m_flash.clear();
         m_flashStart = -1;
     }
-    if (!sweeping && !flashing)
+    if (!sweeping && !flashing && !m_trailThreatened)
         m_animation.stop();
     update();
+}
+
+QColor FieldView::trailColorNow(qint64 now) const {
+    if (!m_trailThreatened)
+        return m_trailColor;
+    const double phase = 0.5 + 0.5 * std::sin(2 * M_PI * double(now % kPulseMs) / kPulseMs);
+    return OmarchyTheme::mix(m_trailColor, m_markerColor, 0.15 + 0.55 * phase);
 }
 
 void FieldView::paint(QPainter *painter) {
@@ -139,6 +160,7 @@ void FieldView::paint(QPainter *painter) {
 void FieldView::paintCells(QPainter *painter, const Game &game, qint64 now) {
     const Field &field = game.field();
     const int c = m_cellSize;
+    const QColor trail = trailColorNow(now);
     painter->setPen(Qt::NoPen);
     for (int y = 0; y < field.height(); ++y) {
         for (int x = 0; x < field.width(); ++x) {
@@ -146,7 +168,7 @@ void FieldView::paintCells(QPainter *painter, const Game &game, qint64 now) {
             if (cell == Cell::Claimed)
                 painter->fillRect(x * c, y * c, c, c, m_claimedColor);
             else if (cell == Cell::Trail)
-                painter->fillRect(x * c, y * c, c, c, m_trailColor);
+                painter->fillRect(x * c, y * c, c, c, trail);
         }
     }
     for (const SweepCell &sweep : m_sweep) {
@@ -207,12 +229,25 @@ void FieldView::paintMovers(QPainter *painter, const Game &game, qint64 now) {
         painter->drawPolygon(diamond, 4);
     }
 
+    paintMarker(painter, game, now);
+}
+
+// Solid on the ground; an accent-filled outline while cutting, so exposure
+// is visible at a glance.
+void FieldView::paintMarker(QPainter *painter, const Game &game, qint64 now) {
     const bool blinking = m_flashStart >= 0 && now - m_flashStart < kBlinkMs;
     if (blinking && ((now - m_flashStart) / kBlinkPeriodMs) % 2 == 1)
         return;
+    const double c = m_cellSize;
     const QPoint p = game.player().pos;
     const double grow = c * 0.18;
-    painter->setBrush(m_markerColor);
-    painter->setPen(QPen(m_openColor, std::max(1.0, c * 0.12)));
-    painter->drawRoundedRect(QRectF(p.x() * c - grow, p.y() * c - grow, c + 2 * grow, c + 2 * grow), c * 0.25, c * 0.25);
+    const QRectF box(p.x() * c - grow, p.y() * c - grow, c + 2 * grow, c + 2 * grow);
+    if (game.player().onTrail) {
+        painter->setBrush(m_accentColor);
+        painter->setPen(QPen(m_markerColor, std::max(1.0, c * 0.16)));
+    } else {
+        painter->setBrush(m_markerColor);
+        painter->setPen(QPen(m_openColor, std::max(1.0, c * 0.12)));
+    }
+    painter->drawRoundedRect(box, c * 0.25, c * 0.25);
 }

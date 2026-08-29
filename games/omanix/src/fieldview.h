@@ -26,6 +26,8 @@ class FieldView : public QQuickPaintedItem {
     Q_PROPERTY(QColor markerColor MEMBER m_markerColor NOTIFY colorsChanged)
     Q_PROPERTY(QColor gridColor MEMBER m_gridColor NOTIFY colorsChanged)
     Q_PROPERTY(QColor flashColor MEMBER m_flashColor NOTIFY colorsChanged)
+    Q_PROPERTY(QColor accentColor MEMBER m_accentColor NOTIFY colorsChanged)
+    Q_PROPERTY(bool trailThreatened READ trailThreatened WRITE setTrailThreatened NOTIFY trailThreatenedChanged)
 
 public:
     explicit FieldView(QQuickItem *parent = nullptr);
@@ -34,6 +36,8 @@ public:
     void setSource(QObject *source);
     int cellSize() const { return m_cellSize; }
     void setCellSize(int cellSize);
+    bool trailThreatened() const { return m_trailThreatened; }
+    void setTrailThreatened(bool threatened);
 
     void paint(QPainter *painter) override;
 
@@ -41,6 +45,7 @@ signals:
     void sourceChanged();
     void cellSizeChanged();
     void colorsChanged();
+    void trailThreatenedChanged();
 
 private:
     struct SweepCell {
@@ -55,6 +60,8 @@ private:
     void animate();
     void paintCells(QPainter *painter, const Game &game, qint64 now);
     void paintMovers(QPainter *painter, const Game &game, qint64 now);
+    void paintMarker(QPainter *painter, const Game &game, qint64 now);
+    QColor trailColorNow(qint64 now) const;
 
     OmanixGame *m_source = nullptr;
     int m_cellSize = 8;
@@ -66,6 +73,8 @@ private:
     QColor m_markerColor;
     QColor m_gridColor;
     QColor m_flashColor;
+    QColor m_accentColor;
+    bool m_trailThreatened = false;
 
     QElapsedTimer m_clock;
     QTimer m_animation {this};
