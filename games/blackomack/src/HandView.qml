@@ -1,8 +1,9 @@
 import QtQuick
 import OmaGames
 
-// One hand: overlapping cards, total and a result badge. `hand` is a map from
-// game.seats[].hands[] (cards, total, soft, bet, active, result, net).
+// One hand: overlapping cards, total, a result badge and what the hand won or
+// lost. `hand` is a map from game.seats[].hands[] (cards, total, soft, bet,
+// active, result, resolved, net); the net comes straight from the engine.
 Item {
     id: view
     property var hand
@@ -13,8 +14,11 @@ Item {
     readonly property real cardW: 52 * theme.textScale * cardScale
     readonly property real overlap: cardW * 0.55
     readonly property real badgeH: 20 * theme.textScale
+    readonly property real cardSpan: Math.max(cardW, cardW + (cardCount - 1) * overlap)
+    readonly property int net: hand && hand.resolved ? hand.net : 0
 
-    implicitWidth: Math.max(cardW, cardW + (cardCount - 1) * overlap)
+    // A settled hand's result line can be wider than the cards above it.
+    implicitWidth: Math.max(cardSpan, info.implicitWidth)
     implicitHeight: cardW * 1.45 + badgeH + 4 * theme.textScale
 
     function badgeColor(result) {
@@ -39,7 +43,8 @@ Item {
 
     Item {
         id: cards
-        width: view.implicitWidth
+        anchors.horizontalCenter: parent.horizontalCenter
+        width: view.cardSpan
         height: view.cardW * 1.45
         Repeater {
             model: view.hand ? view.hand.cards : []
@@ -56,9 +61,10 @@ Item {
     }
 
     Row {
+        id: info
         anchors.top: cards.bottom
         anchors.topMargin: 4 * theme.textScale
-        anchors.horizontalCenter: cards.horizontalCenter
+        anchors.horizontalCenter: parent.horizontalCenter
         spacing: 6 * theme.textScale
 
         Text {
@@ -84,6 +90,15 @@ Item {
                 font.pixelSize: 11 * theme.textScale
                 font.bold: true
             }
+        }
+        // What the hand paid: a push returns the stake, so it says nothing.
+        Text {
+            visible: view.net !== 0
+            text: (view.net > 0 ? "+" : "−") + Math.abs(view.net)
+            color: view.net > 0 ? theme.green : theme.red
+            font.pixelSize: 12 * theme.textScale
+            font.bold: true
+            anchors.verticalCenter: parent.verticalCenter
         }
     }
 }

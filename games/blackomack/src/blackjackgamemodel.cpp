@@ -39,6 +39,7 @@ QVariantMap handMap(const Hand &hand, const Hand &dealer, bool active) {
         {QStringLiteral("active"), active},
         {QStringLiteral("finished"), hand.isFinished()},
         {QStringLiteral("result"), resultText(hand, dealer)},
+        {QStringLiteral("resolved"), hand.resolved},
         {QStringLiteral("net"), hand.resolved ? hand.returned - hand.bet : 0},
     };
 }

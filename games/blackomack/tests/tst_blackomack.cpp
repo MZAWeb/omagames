@@ -598,6 +598,35 @@ private slots:
         QCOMPARE(again.botCount(), 1);
         QVERIFY(!again.isBroke());
     }
+    // The payout screen reads its amounts straight off the model.
+    void bridgeReportsWhatEachHandPaid() {
+        BlackjackGame g;
+        g.setStepInterval(0);
+        g.setBotCount(2);
+        g.setBet(20);
+        playRound(g);
+        int handsSeen = 0;
+        for (const QVariant &seatValue : g.seats()) {
+            const QVariantList hands = seatValue.toMap().value(QStringLiteral("hands")).toList();
+            for (const QVariant &handValue : hands) {
+                const QVariantMap hand = handValue.toMap();
+                QVERIFY(hand.value(QStringLiteral("resolved")).toBool());
+                const int bet = hand.value(QStringLiteral("bet")).toInt();
+                const int net = hand.value(QStringLiteral("net")).toInt();
+                const QString result = hand.value(QStringLiteral("result")).toString();
+                if (result == QStringLiteral("BLACKJACK"))
+                    QCOMPARE(net, bet * 3 / 2);          // 3:2, and doubles carry the doubled bet
+                else if (result == QStringLiteral("WIN"))
+                    QCOMPARE(net, bet);
+                else if (result == QStringLiteral("PUSH"))
+                    QCOMPARE(net, 0);
+                else
+                    QCOMPARE(net, -bet);                 // LOSE or BUST
+                ++handsSeen;
+            }
+        }
+        QVERIFY(handsSeen > 0);
+    }
     void bridgeBrokePlayerMustStartOver() {
         BlackjackGame g;
         g.setStepInterval(0);
