@@ -68,7 +68,12 @@ void BlackjackGame::setCoachEnabled(bool enabled) {
 }
 
 BlackjackGame::Advice BlackjackGame::coachLookup() const {
-    if (!m_coachEnabled || !m_table.waitingForHuman())
+    if (!m_coachEnabled)
+        return {};
+    // Insurance is a losing bet at every count a basic-strategy player knows.
+    if (m_table.waitingForInsurance())
+        return {QStringLiteral("No insurance"), QStringLiteral("Dealer shows an ace")};
+    if (!m_table.waitingForHuman())
         return {};
     const int handIndex = m_table.currentHand();
     if (handIndex < 0 || handIndex >= m_table.human().hands.size())
@@ -90,6 +95,7 @@ QString BlackjackGame::phase() const {
     switch (m_table.phase()) {
     case Table::Phase::Betting: return QStringLiteral("betting");
     case Table::Phase::Dealing: return QStringLiteral("dealing");
+    case Table::Phase::Insurance: return QStringLiteral("insurance");
     case Table::Phase::PlayerTurns: return QStringLiteral("playing");
     case Table::Phase::DealerTurn: return QStringLiteral("dealer");
     case Table::Phase::Payout: return QStringLiteral("payout");
@@ -165,6 +171,31 @@ void BlackjackGame::humanAct(Table::Action action) {
     schedule();
 }
 
+// Half the original stake goes down before the dealer peeks; the round's
+// stake has to grow with it or the session net would read the returned side
+// bet as pure profit.
+void BlackjackGame::insurance() {
+    if (!canInsure())
+        return;
+    const int cost = insuranceCost();
+    const auto events = m_table.takeInsurance();
+    if (events.isEmpty())
+        return;
+    m_roundStake += cost;
+    record(events);
+    emit stateChanged();
+    schedule();
+}
+
+void BlackjackGame::declineInsurance() {
+    const auto events = m_table.declineInsurance();
+    if (events.isEmpty())
+        return;
+    record(events);
+    emit stateChanged();
+    schedule();
+}
+
 void BlackjackGame::nextRound() {
     if (!roundOver())
         return;
@@ -175,10 +206,11 @@ void BlackjackGame::nextRound() {
 }
 
 void BlackjackGame::skipPacing() {
-    if (m_table.waitingForHuman() || m_table.roundOver() || m_table.phase() == Table::Phase::Betting)
+    if (m_table.waitingForHuman() || canInsure() || m_table.roundOver()
+        || m_table.phase() == Table::Phase::Betting)
         return;
     m_timer.stop();
-    while (!m_table.waitingForHuman() && !m_table.roundOver())
+    while (!m_table.waitingForHuman() && !canInsure() && !m_table.roundOver())
         if (!advanceOnce())
             break;
     emit stateChanged();
@@ -232,7 +264,8 @@ void BlackjackGame::record(const QVector<TableEvent> &events) {
 // Automatic steps run on the timer so people can follow the bots and dealer;
 // an interval of 0 runs them synchronously, which keeps tests deterministic.
 void BlackjackGame::schedule() {
-    if (m_table.waitingForHuman() || m_table.roundOver() || m_table.phase() == Table::Phase::Betting)
+    if (m_table.waitingForHuman() || canInsure() || m_table.roundOver()
+        || m_table.phase() == Table::Phase::Betting)
         return;
     const int ms = pace();
     if (ms == 0)
@@ -263,7 +296,7 @@ bool BlackjackGame::advanceOnce() {
 }
 
 void BlackjackGame::finishRound() {
-    int returned = 0;
+    int returned = m_table.human().insuranceReturned;
     for (const Hand &h : m_table.human().hands)
         returned += h.returned;
     ++m_handsPlayed;

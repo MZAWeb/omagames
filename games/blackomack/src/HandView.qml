@@ -13,7 +13,10 @@ Item {
     readonly property int cardCount: hand ? hand.cards.length : 0
     readonly property int cardsPerRow: Math.min(4, Math.max(1, cardCount))
     readonly property int cardRows: Math.max(1, Math.ceil(cardCount / 4))
-    readonly property real cardWidth: 52 * theme.textScale * cardScale
+    // Four hands share one seat after three splits: past two, the cards shrink
+    // rather than push the seat out of the table.
+    readonly property real handScale: cardScale * (handCount > 2 ? 0.78 : 1.0)
+    readonly property real cardWidth: 52 * theme.textScale * handScale
     readonly property real cardHeight: cardWidth * 1.45
     readonly property real overlap: cardWidth * (cardCount > 4 ? 0.48 : 0.56)
     readonly property real cardSpan: cardWidth + (cardsPerRow - 1) * overlap
@@ -72,7 +75,7 @@ Item {
                 rank: modelData.rank
                 suit: modelData.suit
                 red: modelData.red
-                scale_: view.cardScale
+                scale_: view.handScale
             }
         }
     }

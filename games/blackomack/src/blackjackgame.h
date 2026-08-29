@@ -27,6 +27,8 @@ class BlackjackGame : public QObject {
     Q_PROPERTY(bool canStand READ canStand NOTIFY stateChanged)
     Q_PROPERTY(bool canDouble READ canDouble NOTIFY stateChanged)
     Q_PROPERTY(bool canSplit READ canSplit NOTIFY stateChanged)
+    Q_PROPERTY(bool canInsure READ canInsure NOTIFY stateChanged)
+    Q_PROPERTY(int insuranceCost READ insuranceCost NOTIFY stateChanged)
     Q_PROPERTY(bool roundOver READ roundOver NOTIFY stateChanged)
     Q_PROPERTY(bool waitingForHuman READ waitingForHuman NOTIFY stateChanged)
     Q_PROPERTY(bool isBroke READ isBroke NOTIFY stateChanged)
@@ -62,6 +64,10 @@ public:
     bool canStand() const { return canHit(); }
     bool canDouble() const { return m_table.waitingForHuman() && m_table.canAct(m_table.humanSeat(), Table::Action::Double); }
     bool canSplit() const { return m_table.waitingForHuman() && m_table.canAct(m_table.humanSeat(), Table::Action::Split); }
+    // The insurance offer is a decision like any other: while it stands the
+    // table waits for the human and the dock swaps in its two commands.
+    bool canInsure() const { return m_table.waitingForInsurance(); }
+    int insuranceCost() const { return m_table.insuranceCost(m_table.humanSeat()); }
     bool roundOver() const { return m_table.roundOver(); }
     bool waitingForHuman() const { return m_table.waitingForHuman(); }
     bool isBroke() const { return m_table.human().broke() && m_table.phase() == Table::Phase::Betting; }
@@ -99,6 +105,8 @@ public:
     Q_INVOKABLE void stand() { humanAct(Table::Action::Stand); }
     Q_INVOKABLE void doubleDown() { humanAct(Table::Action::Double); }
     Q_INVOKABLE void split() { humanAct(Table::Action::Split); }
+    Q_INVOKABLE void insurance();
+    Q_INVOKABLE void declineInsurance();
     Q_INVOKABLE void nextRound();
     Q_INVOKABLE void skipPacing();
     Q_INVOKABLE void setBotCount(int count);
