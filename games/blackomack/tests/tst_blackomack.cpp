@@ -24,6 +24,13 @@ QVector<Card> cards(std::initializer_list<int> ranks) {
         v.append(c(r));
     return v;
 }
+// Pitches the opening cards one step at a time, the way the bridge does.
+QVector<TableEvent> dealOut(Table &t) {
+    QVector<TableEvent> events;
+    while (t.phase() == Table::Phase::Dealing)
+        events += t.advance();
+    return events;
+}
 // Runs automatic steps until the human must act or the round is settled.
 void autoplay(Table &t) {
     while (!t.waitingForHuman() && !t.roundOver() && t.phase() != Table::Phase::Betting)
@@ -293,12 +300,51 @@ private slots:
     }
 
     // --- Table ---
+    void openingDealGoesOutOneCardAtATime() {
+        Table t(1);
+        t.addBot(perfect(QStringLiteral("Zed")));
+        t.addBot(perfect(QStringLiteral("Mona")));       // human sits in the middle
+        t.stackDeck(cards({2, 3, 4, 5, 6, 7, 8, 9}));
+        t.placeBets(10);
+        QCOMPARE(t.phase(), Table::Phase::Dealing);
+        QVERIFY(t.dealer().cards.isEmpty());
+
+        QVector<int> order;
+        int cardsOut = 0;
+        while (t.phase() == Table::Phase::Dealing) {
+            const auto events = t.advance();
+            QVERIFY(!events.isEmpty());
+            QCOMPARE(events.first().type, TableEvent::Dealt);
+            int dealt = 0;
+            for (const TableEvent &e : events)
+                if (e.type == TableEvent::Dealt)
+                    ++dealt;
+            QCOMPARE(dealt, 1);                          // exactly one card per step
+            order.append(events.first().seat);
+            ++cardsOut;
+            int onTheFelt = t.dealer().cards.size();
+            for (const Seat &s : t.seats())
+                for (const Hand &h : s.hands)
+                    onTheFelt += h.cards.size();
+            QCOMPARE(onTheFelt, cardsOut);
+            QVERIFY(t.act(Table::Action::Hit).isEmpty()); // nobody plays mid-deal
+        }
+        // One card to every seat in turn, then the dealer, twice around.
+        QCOMPARE(order, QVector<int>({0, 1, 2, Table::kDealerSeat, 0, 1, 2, Table::kDealerSeat}));
+        QCOMPARE(t.seats()[0].hands[0].cards, cards({2, 6}));
+        QCOMPARE(t.human().hands[0].cards, cards({3, 7}));
+        QCOMPARE(t.seats()[2].hands[0].cards, cards({4, 8}));
+        QCOMPARE(t.dealer().cards, cards({5, 9}));
+        QVERIFY(t.holeHidden());                         // the hole card waits for the reveal
+        QCOMPARE(t.phase(), Table::Phase::PlayerTurns);
+        QCOMPARE(t.currentSeat(), 0);                    // the seat left of the human decides first
+    }
     void naturalPaysThreeToTwo() {
         Table t(1);
         t.stackDeck(cards({1, 7, 13, 10}));
         QCOMPARE(t.placeBets(50).size(), 1);
         QCOMPARE(t.human().bankroll, 950);
-        t.deal();
+        dealOut(t);
         QCOMPARE(t.phase(), Table::Phase::DealerTurn);   // nothing for the human to decide
         QVERIFY(t.holeHidden());
         autoplay(t);
@@ -312,7 +358,7 @@ private slots:
         Table t(1);
         t.stackDeck(cards({10, 1, 9, 13}));
         t.placeBets(50);
-        const auto events = t.deal();
+        const auto events = dealOut(t);
         QCOMPARE(t.phase(), Table::Phase::Payout);
         QVERIFY(!t.holeHidden());
         QCOMPARE(events.last().type, TableEvent::DealerBlackjack);
@@ -325,7 +371,7 @@ private slots:
         Table t(1);
         t.stackDeck(cards({5, 6, 6, 10, 10, 9}));
         t.placeBets(100);
-        t.deal();
+        dealOut(t);
         QVERIFY(t.waitingForHuman());
         QVERIFY(t.canAct(t.humanSeat(), Table::Action::Double));
         QVERIFY(!t.canAct(t.humanSeat(), Table::Action::Split));
@@ -342,7 +388,7 @@ private slots:
         Table t(1);
         t.stackDeck(cards({1, 9, 1, 7, 10, 5, 2}));
         t.placeBets(50);
-        t.deal();
+        dealOut(t);
         QVERIFY(t.canAct(t.humanSeat(), Table::Action::Split));
         t.act(Table::Action::Split);
         const Seat &me = t.human();
@@ -362,7 +408,7 @@ private slots:
         Table t(1);
         t.stackDeck(cards({8, 6, 8, 9, 3, 10, 10, 10}));
         t.placeBets(50);
-        t.deal();
+        dealOut(t);
         t.act(Table::Action::Split);
         QCOMPARE(t.currentHand(), 0);
         QVERIFY(t.canAct(t.humanSeat(), Table::Action::Double));   // double after split
@@ -379,7 +425,7 @@ private slots:
         Table t(1);
         t.stackDeck(cards({10, 1, 8, 6}));
         t.placeBets(10);
-        t.deal();
+        dealOut(t);
         t.act(Table::Action::Stand);
         autoplay(t);
         QCOMPARE(t.dealer().cards.size(), 2);
@@ -391,7 +437,7 @@ private slots:
         t.setHumanBankroll(60);
         t.stackDeck(cards({8, 6, 8, 9}));
         t.placeBets(50);
-        t.deal();
+        dealOut(t);
         QVERIFY(t.waitingForHuman());
         QVERIFY(!t.canAct(t.humanSeat(), Table::Action::Double));
         QVERIFY(!t.canAct(t.humanSeat(), Table::Action::Split));
@@ -430,7 +476,7 @@ private slots:
                 before.append(s.bankroll);
             QVERIFY(!t.placeBets(20).isEmpty());
             QVERIFY(!t.addBot(perfect(QStringLiteral("Rex"))));   // not mid-round
-            t.deal();
+            dealOut(t);
             while (!t.roundOver()) {
                 autoplay(t);
                 if (t.waitingForHuman())
@@ -457,7 +503,7 @@ private slots:
         t.addBot(perfect(QStringLiteral("Zed")), 5);
         t.placeBets(10);
         QVERIFY(t.seats()[1].hands.isEmpty());     // can't afford the minimum: sits out
-        t.deal();
+        dealOut(t);
         while (!t.roundOver()) {
             autoplay(t);
             if (t.waitingForHuman())
@@ -474,9 +520,9 @@ private slots:
         Table t(1);
         QRandomGenerator rng(1);
         QVERIFY(t.nextRound(rng).isEmpty());
+        QVERIFY(t.advance().isEmpty());              // nothing automatic while betting
         t.placeBets(10);
         QVERIFY(t.nextRound(rng).isEmpty());
-        QVERIFY(t.advance().isEmpty());              // nothing automatic before the deal
     }
 
     // --- Persistence / bridge ---

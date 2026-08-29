@@ -21,7 +21,8 @@ struct Seat {
 };
 
 // Something that happened at the table; the UI logs the text and can animate
-// by type. `seat`/`hand` are -1 when not about a specific hand.
+// by type. `seat`/`hand` are -1 when not about a specific hand, except on a
+// `Dealt` event, where `seat` is `Table::kDealerSeat` for the dealer's card.
 struct TableEvent {
     enum Type {
         Shuffled, BetPlaced, Dealt, DealerBlackjack, PlayerAction, HumanTurn,
@@ -40,6 +41,7 @@ class Table {
 public:
     enum class Phase { Betting, Dealing, PlayerTurns, DealerTurn, Payout };
     using Action = BlackjackRules::Action;
+    static constexpr int kDealerSeat = -1;
 
     explicit Table(quint32 shoeSeed = 0);
 
@@ -66,8 +68,9 @@ public:
     void stackDeck(const QVector<Card> &cards);
 
     // Round flow. Each step returns the events it produced (empty if refused).
+    // After the bets the opening deal, the bots and the dealer all run through
+    // `advance()`, one card or one decision at a time.
     QVector<TableEvent> placeBets(int humanBet);
-    QVector<TableEvent> deal();
     bool canAct(int seat, Action action) const;
     QVector<TableEvent> act(Action action);     // the human's current hand
     QVector<TableEvent> advance();              // next automatic step
@@ -77,6 +80,9 @@ public:
 private:
     Card draw();
     void rebalanceSeats();
+    QVector<int> dealOrder() const;
+    QVector<TableEvent> dealStep();
+    QVector<TableEvent> openTurns();
     void moveCursor();
     QVector<TableEvent> apply(int seat, Action action);
     QVector<TableEvent> dealerStep();
@@ -89,6 +95,7 @@ private:
     int m_humanSeat = 0;
     Hand m_dealer;
     bool m_holeHidden = true;
+    int m_dealt = 0;
     Phase m_phase = Phase::Betting;
     int m_seat = 0;
     int m_hand = 0;

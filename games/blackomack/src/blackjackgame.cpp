@@ -8,13 +8,15 @@ using namespace BlackjackRules;
 
 namespace {
 constexpr int kDefaultStepMs = 500;
+// The opening deal is a formality rather than a decision to follow, so the
+// cards are pitched faster than the bot and dealer steps.
+constexpr int kDealStepMs = 180;
 constexpr int kLogLength = 8;
 }
 
 BlackjackGame::BlackjackGame(QObject *parent)
-    : QObject(parent), m_rng(QRandomGenerator::global()->generate()) {
+    : QObject(parent), m_rng(QRandomGenerator::global()->generate()), m_stepMs(kDefaultStepMs) {
     m_timer.setSingleShot(true);
-    m_timer.setInterval(kDefaultStepMs);
     connect(&m_timer, &QTimer::timeout, this, &BlackjackGame::step);
     load();
     m_bet = clampBet(m_bet, bankroll());
@@ -36,10 +38,17 @@ bool BlackjackGame::canDeal() const {
 }
 
 void BlackjackGame::setStepInterval(int ms) {
-    if (ms == m_timer.interval())
+    ms = qMax(0, ms);
+    if (ms == m_stepMs)
         return;
-    m_timer.setInterval(qMax(0, ms));
+    m_stepMs = ms;
     emit stepIntervalChanged();
+}
+
+int BlackjackGame::pace() const {
+    if (m_stepMs == 0)
+        return 0;
+    return m_table.phase() == Table::Phase::Dealing ? qMin(kDealStepMs, m_stepMs) : m_stepMs;
 }
 
 void BlackjackGame::setBet(int amount) {
@@ -64,7 +73,6 @@ void BlackjackGame::dealRound() {
         return;
     m_roundStake = m_bet;
     record(m_table.placeBets(m_bet));
-    record(m_table.deal());
     emit stateChanged();
     schedule();
 }
@@ -118,11 +126,15 @@ void BlackjackGame::newGame() {
     emit stateChanged();
 }
 
+// Most cards of the opening deal speak for themselves, so events without text
+// (they still drive the animation) leave the log alone.
 void BlackjackGame::record(const QVector<TableEvent> &events) {
-    if (events.isEmpty())
-        return;
+    const int before = m_log.size();
     for (const TableEvent &e : events)
-        m_log.append(e.text);
+        if (!e.text.isEmpty())
+            m_log.append(e.text);
+    if (m_log.size() == before)
+        return;
     while (m_log.size() > kLogLength)
         m_log.removeFirst();
     emit messageChanged();
@@ -133,10 +145,11 @@ void BlackjackGame::record(const QVector<TableEvent> &events) {
 void BlackjackGame::schedule() {
     if (m_table.waitingForHuman() || m_table.roundOver() || m_table.phase() == Table::Phase::Betting)
         return;
-    if (m_timer.interval() == 0)
+    const int ms = pace();
+    if (ms == 0)
         step();
     else
-        m_timer.start();
+        m_timer.start(ms);
 }
 
 void BlackjackGame::step() {
@@ -148,7 +161,7 @@ void BlackjackGame::step() {
         emit stateChanged();
         if (m_table.roundOver())
             finishRound();
-        if (m_timer.interval() > 0) {
+        if (m_stepMs > 0) {
             schedule();
             return;
         }

@@ -59,7 +59,7 @@ public:
     QStringList log() const { return m_log; }
     int handsPlayed() const { return m_handsPlayed; }
     int netResult() const { return m_netResult; }
-    int stepInterval() const { return m_timer.interval(); }
+    int stepInterval() const { return m_stepMs; }
     void setStepInterval(int ms);
     QVariantList seats() const;
     QVariantMap dealerHand() const;
@@ -88,6 +88,7 @@ signals:
 
 private:
     void humanAct(Table::Action action);
+    int pace() const;
     void record(const QVector<TableEvent> &events);
     void schedule();
     void step();
@@ -99,6 +100,7 @@ private:
     QRandomGenerator m_rng;
     QTimer m_timer;
     QStringList m_log;
+    int m_stepMs;
     int m_bet = 50;
     int m_handsPlayed = 0;
     int m_netResult = 0;
