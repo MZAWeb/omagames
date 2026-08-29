@@ -16,8 +16,9 @@ current Omarchy theme.
 - **Mode** (the segmented control under the keypad) decides what a digit does,
   typed or clicked: *Highlight*, *Note* or *Fill*. `N` cycles it and it is
   remembered between sessions; Highlight is the default. Holding a modifier
-  overrides it for one press without switching mode — `Alt` highlights, `Shift`
-  notes, `Ctrl` fills — and with no cell selected any digit just highlights.
+  overrides it for one press without switching mode, which is what each
+  segment's badge spells out: `Alt+1-9` highlights, `Shift+1-9` notes,
+  `Ctrl+1-9` fills — and with no cell selected any digit just highlights.
 - **Highlighting** lights up every cell holding that digit, givens included.
   The same digit again (or `Escape`) clears it, another digit switches it.
 - An unfinished puzzle is saved automatically and offered as *Resume* the next

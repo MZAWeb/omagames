@@ -2,12 +2,15 @@ import QtQuick
 
 // Small keycap badge ("H", "Enter", "Ctrl+N") that tells keyboard-first users
 // which key triggers a control. Set `onPrimary` when drawn over an accent
-// fill; `active: false` greys it out along with a disabled action.
+// fill; `active: false` greys it out along with a disabled action. The cap
+// always grows to its text; `fontPixelSize` is for callers whose slot cannot
+// grow, so they shrink the label rather than have it clipped.
 Rectangle {
     id: hint
     property string key: ""
     property bool active: true
     property bool onPrimary: false
+    property real fontPixelSize: 11 * theme.textScale
 
     visible: key !== ""
     implicitWidth: label.implicitWidth + 8 * theme.textScale
@@ -23,7 +26,7 @@ Rectangle {
         anchors.centerIn: parent
         text: hint.key
         color: hint.onPrimary ? theme.background : theme.foreground
-        font.pixelSize: 11 * theme.textScale
+        font.pixelSize: hint.fontPixelSize
         font.bold: true
     }
 }
