@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 
-// Title, session stats and the table controls (bot count, new game).
+// Title and the table controls (bot count, new game).
 RowLayout {
     id: header
     signal newGameRequested()
@@ -13,13 +13,6 @@ RowLayout {
         color: theme.foreground
         font.pixelSize: 20 * theme.textScale
         font.bold: true
-    }
-    Text {
-        text: game.handsPlayed + " hands  ·  " + (game.netResult >= 0 ? "+" : "−") + Math.abs(game.netResult) + " Ø"
-        color: game.netResult >= 0 ? theme.green : theme.red
-        opacity: 0.9
-        font.pixelSize: 12 * theme.textScale
-        Layout.leftMargin: 8 * theme.textScale
     }
 
     Item { Layout.fillWidth: true }

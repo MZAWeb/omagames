@@ -3,7 +3,8 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import OmaGames
 
-// Bottom bar: bankroll, bet stepper with typed entry, and the round buttons.
+// Bottom bar: bankroll with the session stats, bet stepper with typed entry,
+// and the round buttons.
 // Which buttons show depends on the phase; disabled ones stay disabled.
 RowLayout {
     id: bar
@@ -19,11 +20,30 @@ RowLayout {
         betField.selectAll();
     }
 
-    Text {
-        text: "Ø " + Number(game.bankroll).toLocaleString(Qt.locale(), "f", 0)
-        color: theme.accent
-        font.pixelSize: 20 * theme.textScale
-        font.bold: true
+    Column {
+        spacing: 2 * theme.textScale
+        Layout.alignment: Qt.AlignVCenter
+
+        Text {
+            text: "Ø " + Number(game.bankroll).toLocaleString(Qt.locale(), "f", 0)
+            color: theme.accent
+            font.pixelSize: 20 * theme.textScale
+            font.bold: true
+        }
+        Row {
+            spacing: 5 * theme.textScale
+            Text {
+                text: game.handsPlayed + " hands  ·"
+                color: theme.muted
+                font.pixelSize: 11 * theme.textScale
+            }
+            Text {
+                text: (game.netResult >= 0 ? "+" : "−") + Math.abs(game.netResult) + " Ø"
+                color: game.netResult >= 0 ? theme.green : theme.red
+                opacity: 0.9
+                font.pixelSize: 11 * theme.textScale
+            }
+        }
     }
 
     Item { Layout.fillWidth: true }
