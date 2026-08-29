@@ -14,15 +14,6 @@ OmaPanel {
     readonly property bool human: seatData ? seatData.human : false
     readonly property bool active: seatData ? seatData.active : false
     readonly property int handCount: seatData ? seatData.hands.length : 0
-    readonly property bool resultShown: {
-        if (!seatData)
-            return false;
-        for (var i = 0; i < seatData.hands.length; ++i)
-            if (seatData.hands[i].result !== "")
-                return true;
-        return false;
-    }
-
     width: targetWidth
     implicitHeight: Math.max(targetHeight, content.implicitHeight + 2 * padding)
     clip: true
@@ -45,14 +36,12 @@ OmaPanel {
         return sum;
     }
 
+    // Only a live hand says anything here: an idle seat is visibly at the
+    // table already, so an "at table" / "waiting" caption is pure noise.
     function statusText() {
-        if (active)
-            return human ? "your turn" : "playing";
-        if (resultShown)
+        if (!active)
             return "";
-        if (game.phase === "betting")
-            return human && game.isBroke ? "broke" : "waiting";
-        return "waiting";
+        return human ? "Your turn" : "Playing";
     }
 
     Column {
@@ -140,9 +129,11 @@ OmaPanel {
                     handCount: seat.handCount
                 }
             }
+            // Empty but present between rounds: it keeps the seat's height
+            // stable while the cards are away.
             Text {
                 visible: seat.handCount === 0
-                text: seat.seatData && seat.seatData.bankroll < game.minBet ? "Broke" : "Waiting for deal"
+                text: seat.seatData && seat.seatData.bankroll < game.minBet ? "Broke" : ""
                 color: theme.foreground
                 opacity: 0.72
                 font.pixelSize: 11 * theme.textScale
@@ -163,13 +154,15 @@ OmaPanel {
                 border.color: theme.yellow
                 Text {
                     anchors.centerIn: parent
-                    width: parent.width - 4 * theme.textScale
+                    width: parent.width - 6 * theme.textScale
                     text: "Bet\nØ" + seat.totalBet()
                     color: theme.background
                     font.pixelSize: 11 * theme.textScale
                     font.bold: true
                     horizontalAlignment: Text.AlignHCenter
                     lineHeight: 0.85
+                    fontSizeMode: Text.HorizontalFit
+                    minimumPixelSize: 7 * theme.textScale
                 }
             }
         }

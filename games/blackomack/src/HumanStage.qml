@@ -8,14 +8,6 @@ OmaPanel {
     id: seat
     property var seatData
     readonly property int handCount: seatData ? seatData.hands.length : 0
-    readonly property bool resultShown: {
-        if (!seatData)
-            return false;
-        for (var i = 0; i < seatData.hands.length; ++i)
-            if (seatData.hands[i].result !== "")
-                return true;
-        return false;
-    }
     padding: 8 * theme.textScale
     implicitHeight: content.implicitHeight + 2 * padding
     clip: true
@@ -34,14 +26,9 @@ OmaPanel {
         return sum;
     }
 
+    // Live status only: an idle seat says nothing rather than "waiting".
     function statusText() {
-        if (seatData && seatData.active)
-            return "your turn";
-        if (resultShown)
-            return "";
-        if (game.phase === "betting")
-            return game.isBroke ? "broke" : "waiting";
-        return "waiting";
+        return seatData && seatData.active ? "Your turn" : "";
     }
 
     Column {
@@ -116,7 +103,7 @@ OmaPanel {
                 visible: seat.handCount === 0
                 width: 120 * theme.textScale
                 height: 72 * theme.textScale
-                text: game.isBroke ? "Broke" : "Waiting for deal"
+                text: game.isBroke ? "Broke" : ""
                 color: theme.foreground
                 opacity: 0.72
                 font.pixelSize: 11 * theme.textScale
@@ -134,11 +121,15 @@ OmaPanel {
                 border.color: theme.yellow
                 Text {
                     anchors.centerIn: parent
+                    width: parent.width - 6 * theme.textScale
                     text: "Bet\nØ" + seat.totalBet()
                     color: theme.background
                     font.pixelSize: 11 * theme.textScale
                     font.bold: true
                     horizontalAlignment: Text.AlignHCenter
+                    lineHeight: 0.85
+                    fontSizeMode: Text.HorizontalFit
+                    minimumPixelSize: 7 * theme.textScale
                 }
             }
         }

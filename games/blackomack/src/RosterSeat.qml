@@ -51,8 +51,8 @@ OmaPanel {
                     Layout.fillWidth: true
                 }
                 Text {
-                    visible: row.seatData && row.seatData.active
-                    text: "playing"
+                    visible: row.seatData && row.seatData.active   // live status only
+                    text: "Playing"
                     color: theme.accent
                     font.pixelSize: 11 * theme.textScale
                     font.bold: true
@@ -120,7 +120,7 @@ OmaPanel {
                 visible: row.handCount === 0
                 width: 70 * theme.textScale
                 height: 40 * theme.textScale
-                text: row.seatData && row.seatData.bankroll < game.minBet ? "Broke" : "Waiting"
+                text: row.seatData && row.seatData.bankroll < game.minBet ? "Broke" : ""
                 color: theme.foreground
                 opacity: 0.72
                 font.pixelSize: 11 * theme.textScale
