@@ -16,6 +16,9 @@ private slots:
     void selectionMovesWithinTheGrid();
     void digitsGoIntoTheSelectedCellOnly();
     void notesModeWritesPencilMarks();
+    void ctrlAndShiftPathsIgnoreTheMode();
+    void highlightTogglesAndSwitchesDigits();
+    void padHighlightsWhenNothingIsSelected();
     void selectedValueFollowsTheSelection();
     void undoRestartAndEraseGoThroughTheBoard();
     void untouchedPuzzleIsNotInProgress();
