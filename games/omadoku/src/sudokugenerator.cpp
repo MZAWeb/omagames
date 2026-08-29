@@ -75,12 +75,12 @@ Sudoku::Grid carve(const Grid &solution, const std::vector<int> &order, int targ
     for (int index : order) {
         if (clues <= floorClues)
             break;
-        if (clues <= target && !(forbidSingles && SudokuGrader::solvableWithSingles(givens)))
+        if (clues <= target && !(forbidSingles && SudokuGrader::solvableWith(givens, SudokuGrader::Technique::HiddenSingle)))
             break;
         const int removed = givens[index];
         givens[index] = 0;
         const bool unique = Sudoku::countSolutions(givens, 2) == 1;
-        if (unique && (!requireSingles || SudokuGrader::solvableWithSingles(givens)))
+        if (unique && (!requireSingles || SudokuGrader::solvableWith(givens, SudokuGrader::Technique::HiddenSingle)))
             --clues;
         else
             givens[index] = removed;
@@ -119,7 +119,7 @@ Puzzle SudokuGenerator::generate(Difficulty difficulty, quint32 seed) {
                                   requireSingles, forbidSingles);
         if (attempt == 0)
             puzzle.givens = givens;
-        if (!forbidSingles || !SudokuGrader::solvableWithSingles(givens)) {
+        if (!forbidSingles || !SudokuGrader::solvableWith(givens, SudokuGrader::Technique::HiddenSingle)) {
             puzzle.givens = givens;
             break;
         }
