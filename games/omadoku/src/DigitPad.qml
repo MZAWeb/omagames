@@ -6,6 +6,8 @@ Grid {
     id: pad
 
     property real keySize: 44 * theme.textScale
+    // Matches the board's tint timing, so pad and cells settle together.
+    readonly property int tintMs: 90
     signal digitPressed(int digit)
 
     columns: 3
@@ -32,7 +34,7 @@ Grid {
             border.color: highlighted ? theme.alpha(theme.accent, 0.7)
                         : theme.alpha(theme.foreground, done ? 0.08 : 0.22)
             opacity: done ? 0.45 : 1.0
-            Behavior on color { ColorAnimation { duration: 90 } }
+            Behavior on color { ColorAnimation { duration: pad.tintMs } }
 
             Text {
                 anchors.centerIn: parent
