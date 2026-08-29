@@ -50,7 +50,7 @@ void GameTests::startsOnTheStartScreen() {
     QVERIFY(!game.hasSavedGame());
     QVERIFY(!game.canUndo());
     QCOMPARE(game.selectedIndex(), -1);
-    QVERIFY(game.validateAsYouGo());  // default on
+    QVERIFY(!game.validateAsYouGo());  // default off
 }
 
 void GameTests::newGameSelectsTheFirstEmptyCell() {
@@ -323,7 +323,8 @@ void GameTests::validateAsYouGoFlipsMidGame() {
     SudokuGame game;
     game.resumeSavedGame();
     const int cell = game.selectedIndex();
-    QVERIFY(game.validateAsYouGo());
+    QVERIFY(!game.validateAsYouGo());
+    game.setValidateAsYouGo(true);
 
     game.enterValue(expected.puzzle().solution[size_t(cell)] % 9 + 1);
     QVERIFY(cellBool(game.cells(), cell, CellModel::WrongRole));

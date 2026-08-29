@@ -7,10 +7,12 @@ current Omarchy theme.
 
 ## Playing
 
-- **Validate as I go** (the `Validate` toggle beside the board's actions,
-  remembered between sessions): wrong entries turn red as soon as you make
-  them. Switch it off to be told only once all 81 cells are filled; flip it
-  mid-game and the marks appear or vanish immediately.
+- **Validate as I go** (the `Validate` toggle in the rail, remembered between
+  sessions): wrong entries turn red, with a small marker in the corner of the
+  cell, as soon as you make them. It starts **off** — a first puzzle should not
+  correct you before you have finished thinking — so without it you are told
+  only once all 81 cells are filled; flip it mid-game and the marks appear or
+  vanish immediately.
 - **Notes** are pencil marks: up to nine small digits per empty cell. Placing a
   digit clears that cell's notes and retracts the digit from the notes of every
   cell in the same row, column and box. Notes are never checked.

@@ -63,12 +63,12 @@ void PersistenceTests::validateAsYouGoIsRemembered() {
     {
         SudokuGame game;
         game.newGame(QStringLiteral("easy"));
-        game.setValidateAsYouGo(false);
-        QVERIFY(!game.validateAsYouGo());
+        QVERIFY(!game.validateAsYouGo());  // off for a new install
+        game.setValidateAsYouGo(true);
         game.backToStart();
     }
     SudokuGame game;
-    QVERIFY(!game.validateAsYouGo());
+    QVERIFY(game.validateAsYouGo());  // the stored choice beats the default
 }
 
 void PersistenceTests::savedGameSurvivesRestart() {
