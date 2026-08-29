@@ -10,7 +10,9 @@
 namespace {
 
 const auto kStateKey = QStringLiteral("state/v1");
-const auto kCheckKey = QStringLiteral("play/checkAsYouGo");
+// Still the key it was first stored under, so an existing preference survives
+// the control's rename.
+const auto kValidateKey = QStringLiteral("play/checkAsYouGo");
 const auto kPadModeKey = QStringLiteral("play/padMode");
 const auto kGeometryKey = QStringLiteral("window/geometry");
 const auto kMaximizedKey = QStringLiteral("window/maximized");
@@ -166,13 +168,13 @@ void SudokuGame::cyclePadMode() {
     }
 }
 
-void SudokuGame::setCheckAsYouGo(bool checkAsYouGo) {
-    if (m_board.checkAsYouGo() == checkAsYouGo)
+void SudokuGame::setValidateAsYouGo(bool validateAsYouGo) {
+    if (m_board.validateAsYouGo() == validateAsYouGo)
         return;
-    m_board.setCheckAsYouGo(checkAsYouGo);
-    QSettings().setValue(kCheckKey, checkAsYouGo);
+    m_board.setValidateAsYouGo(validateAsYouGo);
+    QSettings().setValue(kValidateKey, validateAsYouGo);
     m_cells.refreshAll();
-    emit checkAsYouGoChanged();
+    emit validateAsYouGoChanged();
     emit boardChanged();
 }
 
@@ -284,9 +286,9 @@ void SudokuGame::backToStart() {
 void SudokuGame::applyChange(const std::vector<int> &changed) {
     if (changed.empty())
         return;
-    // Deferred checking can light up cells far from the edited one, so repaint
+    // Deferred validation can light up cells far from the edited one, so repaint
     // everything unless we know only these cells changed.
-    if (m_board.checkAsYouGo())
+    if (m_board.validateAsYouGo())
         m_cells.refresh(changed);
     else
         m_cells.refreshAll();
@@ -340,7 +342,7 @@ void SudokuGame::selectFirstEmptyCell() {
 
 void SudokuGame::loadSettings() {
     const QSettings settings;
-    m_board.setCheckAsYouGo(settings.value(kCheckKey, true).toBool());
+    m_board.setValidateAsYouGo(settings.value(kValidateKey, true).toBool());
     // Anything unrecognised (including the int this key held before the modes
     // got names) falls back to the default.
     m_padMode = modeFromId(settings.value(kPadModeKey).toString(), PadMode::Highlight);

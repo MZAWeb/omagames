@@ -1,9 +1,7 @@
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
-import OmaGames
 
-// Difficulty picker, the check mode setting and a way back into a saved game.
+// Difficulty picker and a way back into a saved game.
 FocusScope {
     id: root
 
@@ -17,8 +15,6 @@ FocusScope {
         } else if (event.key === Qt.Key_R) {
             if (game.hasSavedGame)
                 game.resumeSavedGame();
-        } else if (event.key === Qt.Key_C) {
-            game.checkAsYouGo = !game.checkAsYouGo;
         } else {
             return;
         }
@@ -67,33 +63,6 @@ FocusScope {
             text: qsTr("Resume saved game")
             keyHint: qsTr("R")
             onClicked: game.resumeSavedGame()
-        }
-
-        RowLayout {
-            Layout.alignment: Qt.AlignHCenter
-            Layout.topMargin: 12 * theme.textScale
-            spacing: 8 * theme.textScale
-
-            Switch {
-                id: checkSwitch
-                text: qsTr("Check as I go")
-                checked: game.checkAsYouGo
-                font.pixelSize: 14 * theme.textScale
-                onToggled: game.checkAsYouGo = checked
-
-                // The label is drawn by hand so it can take the theme's color;
-                // `parent` inside a contentItem is only a plain Item, so the
-                // control has to be reached through its id.
-                contentItem: Text {
-                    text: checkSwitch.text
-                    color: theme.foreground
-                    font: checkSwitch.font
-                    verticalAlignment: Text.AlignVCenter
-                    leftPadding: checkSwitch.indicator.width + checkSwitch.spacing
-                }
-            }
-
-            OmaKeyHint { key: qsTr("C") }
         }
     }
 }

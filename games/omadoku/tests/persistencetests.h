@@ -12,7 +12,7 @@ private slots:
     void init();
 
     void winningSwitchesStateAndClearsTheSave();
-    void checkAsYouGoIsRemembered();
+    void validateAsYouGoIsRemembered();
     void savedGameSurvivesRestart();
     void solvedSaveIsNotOffered();
 

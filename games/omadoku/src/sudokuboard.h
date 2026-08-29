@@ -28,10 +28,11 @@ public:
     int digitCount(int digit) const;  // placed digits, givens included
     bool isSolved() const;
 
-    // Off means "check when full": nothing is flagged until all 81 cells hold
-    // a value, then every mistake shows at once.
-    bool checkAsYouGo() const { return m_checkAsYouGo; }
-    void setCheckAsYouGo(bool checkAsYouGo);
+    // Off means "validate when full": nothing is flagged until all 81 cells
+    // hold a value, then every mistake shows at once. Flipping it mid-game
+    // re-evaluates every cell, so marks appear or vanish immediately.
+    bool validateAsYouGo() const { return m_validateAsYouGo; }
+    void setValidateAsYouGo(bool validateAsYouGo);
 
     // Mutations return the cells they touched so the QML model can refresh
     // exactly those rows. Givens and out-of-range indices are ignored.
@@ -61,5 +62,5 @@ private:
     Notes m_notes {};
     std::array<bool, Sudoku::kCells> m_wrong {};
     std::deque<std::vector<CellState>> m_undo;
-    bool m_checkAsYouGo = true;
+    bool m_validateAsYouGo = true;
 };

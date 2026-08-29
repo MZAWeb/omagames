@@ -17,7 +17,7 @@ private slots:
     void eraseClearsValueAndNotes();
     void undoRestoresValuesAndNotes();
     void undoKeepsAtLeastAHundredLevels();
-    void checkAsYouGoFlagsWrongEntries();
+    void validateAsYouGoFlagsWrongEntries();
     void checkWhenFullDefersFlagging();
     void solvedWhenEveryCellMatches();
     void restartClearsEntriesAndHistory();

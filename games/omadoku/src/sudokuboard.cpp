@@ -78,10 +78,10 @@ bool SudokuBoard::isSolved() const {
     return m_values == m_puzzle.solution;
 }
 
-void SudokuBoard::setCheckAsYouGo(bool checkAsYouGo) {
-    if (m_checkAsYouGo == checkAsYouGo)
+void SudokuBoard::setValidateAsYouGo(bool validateAsYouGo) {
+    if (m_validateAsYouGo == validateAsYouGo)
         return;
-    m_checkAsYouGo = checkAsYouGo;
+    m_validateAsYouGo = validateAsYouGo;
     refreshWrong();
 }
 
@@ -178,7 +178,7 @@ void SudokuBoard::applyState(const CellState &state) {
 
 void SudokuBoard::refreshWrong() {
     m_wrong.fill(false);
-    if (!m_checkAsYouGo && filledCount() < Sudoku::kCells)
+    if (!m_validateAsYouGo && filledCount() < Sudoku::kCells)
         return;
     for (int index : Sudoku::wrongCells(m_values, m_puzzle.solution))
         m_wrong[size_t(index)] = true;

@@ -23,6 +23,7 @@ private slots:
     void selectedValueFollowsTheSelection();
     void undoRestartAndEraseGoThroughTheBoard();
     void untouchedPuzzleIsNotInProgress();
+    void validateAsYouGoFlipsMidGame();
     void clockRunsOnlyWhilePlaying();
 
 private:

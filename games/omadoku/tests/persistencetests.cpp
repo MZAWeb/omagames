@@ -59,16 +59,16 @@ void PersistenceTests::winningSwitchesStateAndClearsTheSave() {
     QVERIFY(QSettings().value(QStringLiteral("state/v1")).toString().isEmpty());
 }
 
-void PersistenceTests::checkAsYouGoIsRemembered() {
+void PersistenceTests::validateAsYouGoIsRemembered() {
     {
         SudokuGame game;
         game.newGame(QStringLiteral("easy"));
-        game.setCheckAsYouGo(false);
-        QVERIFY(!game.checkAsYouGo());
+        game.setValidateAsYouGo(false);
+        QVERIFY(!game.validateAsYouGo());
         game.backToStart();
     }
     SudokuGame game;
-    QVERIFY(!game.checkAsYouGo());
+    QVERIFY(!game.validateAsYouGo());
 }
 
 void PersistenceTests::savedGameSurvivesRestart() {

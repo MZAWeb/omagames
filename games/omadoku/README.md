@@ -6,8 +6,10 @@ current Omarchy theme.
 
 ## Playing
 
-- **Check as I go** (start screen, remembered): wrong entries turn red as soon
-  as you make them. Switch it off to be told only once all 81 cells are filled.
+- **Validate as I go** (the `Validate` toggle beside the board's actions,
+  remembered between sessions): wrong entries turn red as soon as you make
+  them. Switch it off to be told only once all 81 cells are filled; flip it
+  mid-game and the marks appear or vanish immediately.
 - **Notes** are pencil marks: up to nine small digits per empty cell. Placing a
   digit clears that cell's notes and retracts the digit from the notes of every
   cell in the same row, column and box. Notes are never checked.
@@ -34,12 +36,12 @@ current Omarchy theme.
 | `Backspace`, `Delete`, `0` | erase the cell |
 | `Ctrl+Z` | undo |
 | `R` | restart the puzzle |
+| `V` | toggle *Validate as I go* |
 | `Escape` | clear the highlight, else back to the start screen (confirms mid-puzzle) |
 | `Ctrl+Q` | quit |
 
-On the start screen `1`, `2`, `3` pick a difficulty, `R` resumes and `C`
-toggles *Check as I go*. Every button shows its key, so nothing above needs
-memorising.
+On the start screen `1`, `2`, `3` pick a difficulty and `R` resumes. Every
+button shows its key, so nothing above needs memorising.
 
 ## Difficulty
 

@@ -49,7 +49,7 @@ void GameTests::startsOnTheStartScreen() {
     QVERIFY(!game.hasSavedGame());
     QVERIFY(!game.canUndo());
     QCOMPARE(game.selectedIndex(), -1);
-    QVERIFY(game.checkAsYouGo());  // default on
+    QVERIFY(game.validateAsYouGo());  // default on
 }
 
 void GameTests::newGameSelectsTheFirstEmptyCell() {
@@ -292,6 +292,26 @@ void GameTests::selectedValueFollowsTheSelection() {
 
     game.select(empty);
     QCOMPARE(game.selectedValue(), 6);
+}
+
+void GameTests::validateAsYouGoFlipsMidGame() {
+    // A saved game built from a known seed, so the solution is at hand to
+    // pick a digit that is certainly wrong.
+    const SudokuBoard expected = TestSupport::installSavedGame(3, 20260829u);
+    SudokuGame game;
+    game.resumeSavedGame();
+    const int cell = game.selectedIndex();
+    QVERIFY(game.validateAsYouGo());
+
+    game.enterValue(expected.puzzle().solution[size_t(cell)] % 9 + 1);
+    QVERIFY(cellBool(game.cells(), cell, CellModel::WrongRole));
+
+    QSignalSpy spy(&game, &SudokuGame::validateAsYouGoChanged);
+    game.setValidateAsYouGo(false);  // off: the mark vanishes until the grid is full
+    QVERIFY(!cellBool(game.cells(), cell, CellModel::WrongRole));
+    game.setValidateAsYouGo(true);   // on: it is back at once, no new entry needed
+    QVERIFY(cellBool(game.cells(), cell, CellModel::WrongRole));
+    QCOMPARE(spy.count(), 2);
 }
 
 void GameTests::untouchedPuzzleIsNotInProgress() {

@@ -67,6 +67,8 @@ FocusScope {
             game.moveSelection(1, 0);
         } else if (event.key === Qt.Key_N) {
             game.cyclePadMode();
+        } else if (event.key === Qt.Key_V) {
+            game.validateAsYouGo = !game.validateAsYouGo;
         } else if (event.key === Qt.Key_R) {
             game.restart();
         } else if (event.key === Qt.Key_Backspace || event.key === Qt.Key_Delete
@@ -178,6 +180,15 @@ FocusScope {
                 text: qsTr("Restart")
                 keyHint: qsTr("R")
                 onClicked: game.restart()
+            }
+            // A toggle drawn as a button: filled while on, outlined while off,
+            // so its state reads at a glance among the plain actions.
+            HintButton {
+                Layout.fillWidth: true
+                text: qsTr("Validate")
+                keyHint: qsTr("V")
+                primary: game.validateAsYouGo
+                onClicked: game.validateAsYouGo = !game.validateAsYouGo
             }
             HintButton {
                 Layout.fillWidth: true

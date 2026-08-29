@@ -151,7 +151,7 @@ void BoardTests::undoKeepsAtLeastAHundredLevels() {
     QVERIFY(!m_board.canUndo());
 }
 
-void BoardTests::checkAsYouGoFlagsWrongEntries() {
+void BoardTests::validateAsYouGoFlagsWrongEntries() {
     const int cell = emptyCell();
     const Sudoku::Grid &solution = m_board.puzzle().solution;
 
@@ -168,7 +168,7 @@ void BoardTests::checkAsYouGoFlagsWrongEntries() {
 }
 
 void BoardTests::checkWhenFullDefersFlagging() {
-    m_board.setCheckAsYouGo(false);
+    m_board.setValidateAsYouGo(false);
     const int cell = emptyCell();
     const Sudoku::Grid &solution = m_board.puzzle().solution;
 
@@ -184,7 +184,7 @@ void BoardTests::checkWhenFullDefersFlagging() {
     m_board.erase(cell);
     QVERIFY(!m_board.isWrong(cell));
     m_board.setValue(cell, wrongDigitFor(solution, cell));
-    m_board.setCheckAsYouGo(true);
+    m_board.setValidateAsYouGo(true);
     QVERIFY(m_board.isWrong(cell));
 }
 

@@ -24,7 +24,7 @@ class SudokuGame : public QObject {
     Q_PROPERTY(QString difficultyLabel READ difficultyLabel NOTIFY boardChanged)
     Q_PROPERTY(QVariantList difficulties READ difficulties CONSTANT)
     Q_PROPERTY(QString padMode READ padMode WRITE setPadMode NOTIFY padModeChanged)
-    Q_PROPERTY(bool checkAsYouGo READ checkAsYouGo WRITE setCheckAsYouGo NOTIFY checkAsYouGoChanged)
+    Q_PROPERTY(bool validateAsYouGo READ validateAsYouGo WRITE setValidateAsYouGo NOTIFY validateAsYouGoChanged)
     Q_PROPERTY(int selectedIndex READ selectedIndex WRITE select NOTIFY selectedIndexChanged)
     Q_PROPERTY(int selectedValue READ selectedValue NOTIFY selectedValueChanged)
     Q_PROPERTY(int highlightDigit READ highlightDigit NOTIFY highlightDigitChanged)
@@ -51,8 +51,8 @@ public:
     // "fill". Applies to the keypad and to the plain number keys alike.
     QString padMode() const;
     void setPadMode(const QString &padMode);
-    bool checkAsYouGo() const { return m_board.checkAsYouGo(); }
-    void setCheckAsYouGo(bool checkAsYouGo);
+    bool validateAsYouGo() const { return m_board.validateAsYouGo(); }
+    void setValidateAsYouGo(bool validateAsYouGo);
     int selectedIndex() const { return m_selectedIndex; }
     // Digit under the selection (0 when empty), so the UI can highlight twins.
     int selectedValue() const { return m_board.value(m_selectedIndex); }
@@ -90,7 +90,7 @@ signals:
     void stateChanged();
     void boardChanged();
     void padModeChanged();
-    void checkAsYouGoChanged();
+    void validateAsYouGoChanged();
     void selectedIndexChanged();
     void selectedValueChanged();
     void highlightDigitChanged();
