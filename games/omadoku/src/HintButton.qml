@@ -14,13 +14,16 @@ Item {
 
     signal clicked()
 
-    implicitWidth: button.implicitWidth + hint.implicitWidth
+    implicitWidth: button.implicitWidth
     implicitHeight: button.implicitHeight
 
     OmaButton {
         id: button
         anchors.fill: parent
         enabled: root.actionEnabled
+        // Reserve the badge's slot so a narrow button's label never runs
+        // underneath it.
+        rightPadding: hint.visible ? hint.implicitWidth + 14 * theme.textScale : padding
         onClicked: root.clicked()
     }
 
