@@ -34,6 +34,8 @@ class BlackjackGame : public QObject {
     Q_PROPERTY(QStringList log READ log NOTIFY messageChanged)
     Q_PROPERTY(int handsPlayed READ handsPlayed NOTIFY stateChanged)
     Q_PROPERTY(int netResult READ netResult NOTIFY stateChanged)
+    Q_PROPERTY(int bestBankroll READ bestBankroll NOTIFY stateChanged)
+    Q_PROPERTY(bool newBest READ newBest NOTIFY stateChanged)
     Q_PROPERTY(int stepInterval READ stepInterval WRITE setStepInterval NOTIFY stepIntervalChanged)
     Q_PROPERTY(QVariantList seats READ seats NOTIFY stateChanged)
     Q_PROPERTY(QVariantMap dealerHand READ dealerHand NOTIFY stateChanged)
@@ -67,6 +69,10 @@ public:
     QStringList log() const { return m_log; }
     int handsPlayed() const { return m_handsPlayed; }
     int netResult() const { return m_netResult; }
+    // The best bankroll ever held: kept across newGame(), so only clearing the
+    // settings wipes it. True for the round that set it, so the dock can celebrate.
+    int bestBankroll() const { return m_bestBankroll; }
+    bool newBest() const { return m_newBest; }
     int stepInterval() const { return m_stepMs; }
     void setStepInterval(int ms);
     QVariantList seats() const;
@@ -134,6 +140,8 @@ private:
     int m_bet = 50;
     int m_handsPlayed = 0;
     int m_netResult = 0;
+    int m_bestBankroll = BlackjackRules::kStartingBankroll;
+    bool m_newBest = false;
     int m_roundStake = 0;
     bool m_coachEnabled = false;
 };
