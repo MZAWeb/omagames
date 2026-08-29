@@ -7,11 +7,14 @@
 namespace BlackjackRules {
 
 constexpr int kDecks = 6;
+constexpr int kDealerStandTotal = 17;
+constexpr int kBlackjackPayoutNumerator = 3;
+constexpr int kBlackjackPayoutDenominator = 2;
 constexpr int kMinBet = 10;
 constexpr int kBetStep = 10;
 constexpr int kStartingBankroll = 1000;
-constexpr int kMaxBots = 5;       // seats at the table besides the human
-constexpr int kDefaultBots = 3;   // how many sit down at a fresh table
+constexpr int kMaxBots = 6;       // seats at the table besides the human
+constexpr int kDefaultBots = 4;   // how many sit down at a fresh table
 
 enum class Outcome { Blackjack, Win, Push, Lose };
 enum class Action { Hit, Stand, Double, Split };

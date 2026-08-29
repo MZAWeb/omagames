@@ -38,6 +38,11 @@ class BlackjackGame : public QObject {
     Q_PROPERTY(QVariantList seats READ seats NOTIFY stateChanged)
     Q_PROPERTY(QVariantMap dealerHand READ dealerHand NOTIFY stateChanged)
     Q_PROPERTY(int humanSeat READ humanSeat NOTIFY stateChanged)
+    Q_PROPERTY(int shoeRemaining READ shoeRemaining NOTIFY stateChanged)
+    Q_PROPERTY(int shoePercent READ shoePercent NOTIFY stateChanged)
+    Q_PROPERTY(QString rulesSummary READ rulesSummary CONSTANT)
+    Q_PROPERTY(bool coachEnabled READ coachEnabled WRITE setCoachEnabled NOTIFY coachEnabledChanged)
+    Q_PROPERTY(QString coachAdvice READ coachAdvice NOTIFY coachAdviceChanged)
 
 public:
     explicit BlackjackGame(QObject *parent = nullptr);
@@ -66,6 +71,15 @@ public:
     QVariantList seats() const;
     QVariantMap dealerHand() const;
     int humanSeat() const { return m_table.humanSeat(); }
+    int shoeRemaining() const { return m_table.shoeRemaining(); }
+    int shoePercent() const;
+    QString rulesSummary() const;
+    bool coachEnabled() const { return m_coachEnabled; }
+    void setCoachEnabled(bool enabled);
+    QString coachAdvice() const;
+
+    // Test seam for deterministic bridge scenarios; deliberately not exposed to QML.
+    void stackDeck(const QVector<Card> &cards) { m_table.stackDeck(cards); }
 
     Q_INVOKABLE void setBet(int amount);
     Q_INVOKABLE void adjustBet(int delta);
@@ -76,8 +90,10 @@ public:
     Q_INVOKABLE void doubleDown() { humanAct(Table::Action::Double); }
     Q_INVOKABLE void split() { humanAct(Table::Action::Split); }
     Q_INVOKABLE void nextRound();
+    Q_INVOKABLE void skipPacing();
     Q_INVOKABLE void setBotCount(int count);
     Q_INVOKABLE void newGame();
+    Q_INVOKABLE void toggleCoach() { setCoachEnabled(!m_coachEnabled); }
 
     Q_INVOKABLE QRect windowGeometry() const;
     Q_INVOKABLE void saveWindowGeometry(const QRect &geometry);
@@ -87,6 +103,8 @@ signals:
     void betChanged();
     void messageChanged();
     void stepIntervalChanged();
+    void coachEnabledChanged();
+    void coachAdviceChanged();
 
 private:
     void humanAct(Table::Action action);
@@ -94,6 +112,7 @@ private:
     void record(const QVector<TableEvent> &events);
     void schedule();
     void step();
+    bool advanceOnce();
     void finishRound();
     bool load();
     void save() const;
@@ -107,4 +126,5 @@ private:
     int m_handsPlayed = 0;
     int m_netResult = 0;
     int m_roundStake = 0;
+    bool m_coachEnabled = false;
 };

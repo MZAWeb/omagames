@@ -2,6 +2,7 @@
 
 #include <QSettings>
 
+#include "basicstrategy.h"
 #include "gamestate.h"
 
 using namespace BlackjackRules;
@@ -12,15 +13,69 @@ constexpr int kDefaultStepMs = 500;
 // cards are pitched faster than the bot and dealer steps.
 constexpr int kDealStepMs = 180;
 constexpr int kLogLength = 8;
+constexpr const char *kCoachEnabledKey = "coach/enabled";
+
+QString actionText(Action action) {
+    switch (action) {
+    case Action::Hit: return QStringLiteral("Hit");
+    case Action::Stand: return QStringLiteral("Stand");
+    case Action::Double: return QStringLiteral("Double");
+    case Action::Split: return QStringLiteral("Split");
+    }
+    return QString();
+}
+
+QString matchupText(const Hand &hand, bool pairAvailable) {
+    if (pairAvailable && hand.canSplit()) {
+        const Card &card = hand.cards.first();
+        const QString rank = card.isAce() ? QStringLiteral("A") : QString::number(card.value());
+        return QStringLiteral("pair %1s").arg(rank);
+    }
+    return QStringLiteral("%1 %2")
+        .arg(hand.isSoft() ? QStringLiteral("soft") : QStringLiteral("hard"))
+        .arg(hand.total());
+}
 }
 
 BlackjackGame::BlackjackGame(QObject *parent)
     : QObject(parent), m_rng(QRandomGenerator::global()->generate()), m_stepMs(kDefaultStepMs) {
     m_timer.setSingleShot(true);
     connect(&m_timer, &QTimer::timeout, this, &BlackjackGame::step);
+    connect(this, &BlackjackGame::stateChanged, this, &BlackjackGame::coachAdviceChanged);
+    m_coachEnabled = QSettings().value(QString::fromLatin1(kCoachEnabledKey), false).toBool();
     if (!load())
         setBotCount(kDefaultBots);   // a fresh table is no fun on your own
     m_bet = clampBet(m_bet, bankroll());
+}
+
+void BlackjackGame::setCoachEnabled(bool enabled) {
+    if (enabled == m_coachEnabled)
+        return;
+    m_coachEnabled = enabled;
+    QSettings().setValue(QString::fromLatin1(kCoachEnabledKey), enabled);
+    emit coachEnabledChanged();
+    emit coachAdviceChanged();
+}
+
+QString BlackjackGame::coachAdvice() const {
+    if (!m_coachEnabled || !m_table.waitingForHuman())
+        return QString();
+    const int handIndex = m_table.currentHand();
+    if (handIndex < 0 || handIndex >= m_table.human().hands.size())
+        return QString();
+    const Hand &hand = m_table.human().hands[handIndex];
+    const bool canDouble = m_table.canAct(m_table.humanSeat(), Action::Double);
+    const bool canSplit = m_table.canAct(m_table.humanSeat(), Action::Split);
+    const Action action = BasicStrategy::decide(hand, m_table.dealerUpCard(), canDouble, canSplit);
+    const Card dealer = m_table.dealerUpCard();
+    const QString dealerText = dealer.isAce() ? QStringLiteral("A") : QString::number(dealer.value());
+    QString advice = QStringLiteral("%1 — %2 vs %3")
+        .arg(actionText(action), matchupText(hand, canSplit), dealerText);
+    if (m_table.human().hands.size() > 1)
+        advice += QStringLiteral(" · Hand %1 of %2")
+            .arg(handIndex + 1)
+            .arg(m_table.human().hands.size());
+    return advice;
 }
 
 QString BlackjackGame::phase() const {
@@ -32,6 +87,17 @@ QString BlackjackGame::phase() const {
     case Table::Phase::Payout: return QStringLiteral("payout");
     }
     return QString();
+}
+
+int BlackjackGame::shoePercent() const {
+    return qRound(100.0 * shoeRemaining() / (kDecks * 52));
+}
+
+QString BlackjackGame::rulesSummary() const {
+    return QStringLiteral("Blackjack pays %1 to %2 · Dealer stands on all %3")
+        .arg(kBlackjackPayoutNumerator)
+        .arg(kBlackjackPayoutDenominator)
+        .arg(kDealerStandTotal);
 }
 
 bool BlackjackGame::canDeal() const {
@@ -99,6 +165,16 @@ void BlackjackGame::nextRound() {
     emit stateChanged();
 }
 
+void BlackjackGame::skipPacing() {
+    if (m_table.waitingForHuman() || m_table.roundOver() || m_table.phase() == Table::Phase::Betting)
+        return;
+    m_timer.stop();
+    while (!m_table.waitingForHuman() && !m_table.roundOver())
+        if (!advanceOnce())
+            break;
+    emit stateChanged();
+}
+
 void BlackjackGame::setBotCount(int count) {
     if (m_table.phase() != Table::Phase::Betting)
         return;
@@ -156,13 +232,7 @@ void BlackjackGame::schedule() {
 }
 
 void BlackjackGame::step() {
-    while (true) {
-        const auto events = m_table.advance();
-        if (events.isEmpty())
-            break;
-        record(events);
-        if (m_table.roundOver())
-            finishRound();   // before the signal, so the stats settle with the round
+    while (advanceOnce()) {
         emit stateChanged();
         if (m_stepMs > 0) {
             schedule();
@@ -170,6 +240,16 @@ void BlackjackGame::step() {
         }
     }
     emit stateChanged();
+}
+
+bool BlackjackGame::advanceOnce() {
+    const auto events = m_table.advance();
+    if (events.isEmpty())
+        return false;
+    record(events);
+    if (m_table.roundOver())
+        finishRound();   // before the signal, so the stats settle with the round
+    return true;
 }
 
 void BlackjackGame::finishRound() {
@@ -199,10 +279,15 @@ bool BlackjackGame::load() {
         return false;
     const GameState state = GameState::fromString(text);
     m_table.setHumanBankroll(state.bankroll);
-    for (const GameState::Bot &b : state.bots)
+    const int savedBots = qMin(state.bots.size(), kMaxBots);
+    for (int i = 0; i < savedBots; ++i) {
+        const GameState::Bot &b = state.bots[i];
         m_table.addBot(b.personality, b.bankroll, m_rng.generate());
+    }
     m_handsPlayed = state.handsPlayed;
     m_netResult = state.netResult;
+    if (state.bots.size() > kMaxBots)
+        save();   // permanently trim state written by a newer or invalid configuration
     return true;
 }
 

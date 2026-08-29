@@ -51,6 +51,7 @@ public:
     const Seat &human() const { return m_seats[m_humanSeat]; }
     int botCount() const { return m_seats.size() - 1; }
     const Hand &dealer() const { return m_dealer; }
+    int shoeRemaining() const { return m_shoe.remaining(); }
     bool holeHidden() const { return m_holeHidden; }
     Card dealerUpCard() const { return m_dealer.cards.value(0); }
     int currentSeat() const { return m_phase == Phase::PlayerTurns ? m_seat : -1; }
