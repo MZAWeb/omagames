@@ -1,6 +1,49 @@
 #include "blackjackrules.h"
 
+#include <QtGlobal>
+
 namespace BlackjackRules {
+namespace {
+
+// A bet bar reads best in the amounts a chip tray comes in: 1, 2 and 5 at
+// every order of magnitude. Both helpers work on that ladder.
+constexpr int kNiceLeads[] = {1, 2, 5};
+constexpr int kNiceCeiling = 100000000;
+
+int niceMagnitude(double value) {
+    int magnitude = 1;
+    while (magnitude < kNiceCeiling && value >= 10.0 * magnitude)
+        magnitude *= 10;
+    return magnitude;
+}
+
+// Nearest rung of the ladder, rounding a tie up so a quarter of Ø 60 reads
+// Ø 20 rather than the table minimum again.
+int niceNearest(double value) {
+    const int magnitude = niceMagnitude(value);
+    int best = magnitude;
+    double bestDelta = qAbs(value - magnitude);
+    for (int candidate : {2 * magnitude, 5 * magnitude, 10 * magnitude}) {
+        const double delta = qAbs(value - candidate);
+        if (delta <= bestDelta) {
+            best = candidate;
+            bestDelta = delta;
+        }
+    }
+    return best;
+}
+
+// The next rung strictly above a value, used to break a tie between presets.
+int niceAbove(int value) {
+    const int magnitude = niceMagnitude(value);
+    for (int lead : kNiceLeads) {
+        if (lead * magnitude > value)
+            return lead * magnitude;
+    }
+    return 10 * magnitude;
+}
+
+}
 
 bool dealerShouldHit(const Hand &dealer) {
     return dealer.total() < kDealerStandTotal;
@@ -46,6 +89,23 @@ int clampBet(int bet, int bankroll) {
         return 0;
     bet -= bet % kBetStep;
     return qBound(kMinBet, bet, bankroll - bankroll % kBetStep);
+}
+
+QVector<int> betPresets(int bankroll) {
+    // Shares of the bankroll, in percent: a nibble, a quarter and half of it.
+    constexpr int kShares[] = {10, 25, 50};
+    const int cap = clampBet(bankroll, bankroll);
+    QVector<int> presets;
+    if (cap < kMinBet)
+        return presets;
+    for (int share : kShares) {
+        int amount = qBound(kMinBet, niceNearest(bankroll * share / 100.0), cap);
+        if (!presets.isEmpty() && amount <= presets.last())
+            amount = qMin(niceAbove(presets.last()), cap);   // a collision steps up
+        if (presets.isEmpty() || amount > presets.last())
+            presets.append(amount);
+    }
+    return presets;
 }
 
 bool dealerPeeks(const Card &upCard) {

@@ -199,6 +199,34 @@ private slots:
         QCOMPARE(clampBet(500, 125), 120);
         QCOMPARE(clampBet(10, 5), 0);
     }
+    // The one-tap stakes follow the bankroll: a tenth, a quarter and a half of
+    // it, snapped to the {1, 2, 5} x 10^n ladder and kept inside the table's
+    // limits. A bankroll too small to keep them apart offers fewer.
+    void betPresetsFollowTheBankroll() {
+        using BlackjackRules::betPresets;
+        struct Case { int bankroll; QVector<int> presets; };
+        const QVector<Case> cases = {
+            {1000, {100, 200, 500}},
+            {1270, {100, 200, 500}},   // 127 / 318 / 635 snap down the ladder
+            {950,  {100, 200, 500}},   // 95 rounds up, 475 rounds up too
+            {10000, {1000, 2000, 5000}},
+            {123456, {10000, 20000, 50000}},
+            {60,   {10, 20, 50}},      // 30 would repeat Ø 20, so it steps up
+            {100,  {10, 20, 50}},
+            {30,   {10, 20, 30}},      // the top preset can only reach the cap
+            {20,   {10, 20}},
+            {10,   {10}},              // nothing left to separate them with
+            {19,   {10}},              // the cap is the largest legal bet, Ø 10
+            {9,    {}},                // cannot even cover the table minimum
+            {0,    {}},
+        };
+        for (const Case &test : cases) {
+            QCOMPARE(betPresets(test.bankroll), test.presets);
+            for (int preset : betPresets(test.bankroll))
+                QVERIFY2(BlackjackRules::validBet(preset, test.bankroll),
+                         qPrintable(QStringLiteral("Ø %1 of %2").arg(preset).arg(test.bankroll)));
+        }
+    }
     // --- Basic strategy ---
     void basicStrategySpotChecks() {
         using BlackjackRules::Action;

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <QVector>
+
 #include "hand.h"
 
 // Fixed v1 house rules: 6 decks, dealer stands on all 17s, blackjack pays 3:2,
@@ -32,6 +34,12 @@ int payout(const Hand &player, const Hand &dealer);
 bool validBet(int bet, int bankroll);
 // Nearest legal bet for a bankroll (0 when the player cannot afford the minimum).
 int clampBet(int bet, int bankroll);
+
+// The three one-tap stakes for a bankroll: roughly a tenth, a quarter and a
+// half of it, each snapped to the nearest round {1, 2, 5} x 10^n amount and
+// held inside [kMinBet, bankroll]. Ascending and distinct, so a bankroll too
+// small to separate them yields fewer than three.
+QVector<int> betPresets(int bankroll);
 
 // The side bet against a dealer ace: half the original stake, returning the
 // stake plus 2 to 1 when the dealer turns over a natural and nothing otherwise.
