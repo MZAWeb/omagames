@@ -40,8 +40,8 @@ Popup {
             Row {
                 spacing: 8 * theme.textScale
                 anchors.right: parent.right
-                HintButton { visible: dialog.cancellable; text: "Cancel"; hint: "N"; onClicked: dialog.close() }
-                HintButton { text: dialog.acceptText; hint: "Y"; primary: true; onClicked: dialog.accept() }
+                OmaHintButton { visible: dialog.cancellable; text: "Cancel"; hint: "N"; onClicked: dialog.close() }
+                OmaHintButton { text: dialog.acceptText; hint: "Y"; primary: true; onClicked: dialog.accept() }
             }
         }
     }
