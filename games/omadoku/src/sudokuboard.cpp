@@ -61,6 +61,15 @@ int SudokuBoard::filledCount() const {
     return int(std::count_if(m_values.begin(), m_values.end(), [](int value) { return value != 0; }));
 }
 
+int SudokuBoard::entryCount() const {
+    int entries = 0;
+    for (int i = 0; i < Sudoku::kCells; ++i) {
+        if (!isGiven(i) && (m_values[size_t(i)] != 0 || m_notes[size_t(i)] != 0))
+            ++entries;
+    }
+    return entries;
+}
+
 int SudokuBoard::digitCount(int digit) const {
     return int(std::count(m_values.begin(), m_values.end(), digit));
 }

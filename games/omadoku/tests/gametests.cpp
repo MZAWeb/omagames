@@ -285,3 +285,18 @@ void GameTests::selectedValueFollowsTheSelection() {
     game.select(empty);
     QCOMPARE(game.selectedValue(), 6);
 }
+
+void GameTests::untouchedPuzzleIsNotInProgress() {
+    SudokuGame game;
+    QVERIFY(!game.inProgress());
+    game.newGame(SudokuGame::Easy);
+    QVERIFY(!game.inProgress());  // givens alone are not progress
+
+    game.enterDigit(1);
+    QVERIFY(game.inProgress());
+    game.undo();
+    QVERIFY(!game.inProgress());
+
+    game.backToStart();
+    QVERIFY(!game.hasSavedGame());  // nothing worth resuming
+}

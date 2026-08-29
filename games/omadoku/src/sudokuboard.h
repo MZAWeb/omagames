@@ -24,6 +24,7 @@ public:
     bool isWrong(int index) const;
 
     int filledCount() const;
+    int entryCount() const;  // cells the player filled in or pencilled
     int digitCount(int digit) const;  // placed digits, givens included
     bool isSolved() const;
 

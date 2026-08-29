@@ -22,6 +22,7 @@ private slots:
     void solvedWhenEveryCellMatches();
     void restartClearsEntriesAndHistory();
     void countsFilledCellsAndDigits();
+    void countsOnlyPlayerEntries();
     void jsonRoundTripsBoardState();
 
 private:

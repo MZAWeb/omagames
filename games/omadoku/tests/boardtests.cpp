@@ -226,6 +226,20 @@ void BoardTests::countsFilledCellsAndDigits() {
     QCOMPARE(m_board.digitCount(3), threes);
 }
 
+void BoardTests::countsOnlyPlayerEntries() {
+    QCOMPARE(m_board.entryCount(), 0);  // a fresh puzzle is all givens
+    const int cell = emptyCell();
+    m_board.setValue(cell, 8);
+    QCOMPARE(m_board.entryCount(), 1);
+
+    const int noted = emptyCell(1);
+    m_board.toggleNote(noted, 4);
+    QCOMPARE(m_board.entryCount(), 2);  // pencil marks are work too
+
+    m_board.restart();
+    QCOMPARE(m_board.entryCount(), 0);
+}
+
 void BoardTests::jsonRoundTripsBoardState() {
     const int cell = emptyCell();
     const int other = emptyCell(1);

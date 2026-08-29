@@ -36,12 +36,14 @@ SudokuGame::SudokuGame(QObject *parent) : QObject(parent) {
 }
 
 SudokuGame::~SudokuGame() {
-    if (m_state == Playing)
+    if (inProgress())
         saveGame();
 }
 
 bool SudokuGame::inProgress() const {
-    return m_state == Playing && m_board.filledCount() > 0;
+    // Only the player's own work counts: leaving an untouched puzzle needs no
+    // confirmation and is not worth saving.
+    return m_state == Playing && m_board.entryCount() > 0;
 }
 
 QVariantList SudokuGame::digitCounts() const {
@@ -143,7 +145,7 @@ void SudokuGame::restart() {
 }
 
 void SudokuGame::backToStart() {
-    if (m_state == Playing && m_board.filledCount() > 0)
+    if (inProgress())
         saveGame();
     m_clock.stop();
     setState(Start);

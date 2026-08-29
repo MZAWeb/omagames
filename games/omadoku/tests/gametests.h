@@ -21,6 +21,7 @@ private slots:
     void undoRestartAndEraseGoThroughTheBoard();
     void winningSwitchesStateAndClearsTheSave();
     void checkAsYouGoIsRemembered();
+    void untouchedPuzzleIsNotInProgress();
     void savedGameSurvivesRestart();
     void solvedSaveIsNotOffered();
     void clockRunsOnlyWhilePlaying();
