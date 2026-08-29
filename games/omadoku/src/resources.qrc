@@ -1,8 +1,12 @@
 <RCC>
     <qresource prefix="/">
         <file alias="Main.qml">Main.qml</file>
+        <file alias="StartScreen.qml">StartScreen.qml</file>
+        <file alias="BoardScreen.qml">BoardScreen.qml</file>
         <file alias="SudokuBoardView.qml">SudokuBoardView.qml</file>
         <file alias="SudokuCell.qml">SudokuCell.qml</file>
         <file alias="DigitPad.qml">DigitPad.qml</file>
+        <file alias="WonOverlay.qml">WonOverlay.qml</file>
+        <file alias="ConfirmDialog.qml">ConfirmDialog.qml</file>
     </qresource>
 </RCC>
