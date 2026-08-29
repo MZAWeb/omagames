@@ -69,9 +69,7 @@ QVector<TableEvent> Table::placeBets(int humanBet) {
         return events;
     for (int i = 0; i < m_seats.size(); ++i) {
         Seat &seat = m_seats[i];
-        seat.hands.clear();
-        seat.insuranceBet = 0;
-        seat.insuranceReturned = 0;
+        seat.clearRound();
         const int bet = seat.isHuman ? humanBet : seat.bot.chooseBet(seat.bankroll);
         if (bet <= 0)
             continue;   // a broke bot sits this one out until replaced

@@ -1291,6 +1291,44 @@ private slots:
         QCOMPARE(g.bankroll(), 1000);      // the side bet exactly covered the lost hand
         QCOMPARE(g.netResult(), 0);
     }
+    // The seats model carries the side bet so the table can draw it as a chip:
+    // down and unsettled from the moment it is placed, then won or lost at the
+    // peek, and gone again the next round.
+    void seatsModelCarriesTheInsuranceSideBet() {
+        QSettings().clear();
+        BlackjackGame g;
+        g.setStepInterval(0);
+        g.setBotCount(0);
+        g.setBet(100);
+        g.stackDeck(cards({10, 1, 9, 13}));   // dealer shows an ace, holds a natural
+        g.dealRound();
+        auto humanSeat = [&g] { return g.seats()[g.humanSeat()].toMap(); };
+        QCOMPARE(humanSeat()[QStringLiteral("insuranceBet")].toInt(), 0);
+        QCOMPARE(humanSeat()[QStringLiteral("insuranceSettled")].toBool(), false);
+
+        g.insurance();
+        QCOMPARE(humanSeat()[QStringLiteral("insuranceBet")].toInt(), 50);
+        QCOMPARE(humanSeat()[QStringLiteral("insuranceSettled")].toBool(), true);
+        QCOMPARE(humanSeat()[QStringLiteral("insuranceNet")].toInt(), 100);   // pays 2 to 1
+
+        g.nextRound();
+        QCOMPARE(humanSeat()[QStringLiteral("insuranceBet")].toInt(), 0);
+        QCOMPARE(humanSeat()[QStringLiteral("insuranceSettled")].toBool(), false);
+        QCOMPARE(humanSeat()[QStringLiteral("insuranceNet")].toInt(), 0);
+
+        // and a side bet the dealer's hole card kills reads as a loss
+        BlackjackGame lost;
+        lost.setStepInterval(0);
+        lost.setBotCount(0);
+        lost.setBet(100);
+        lost.stackDeck(cards({10, 1, 9, 7}));
+        lost.dealRound();
+        lost.insurance();
+        const QVariantMap seat = lost.seats()[lost.humanSeat()].toMap();
+        QCOMPARE(seat[QStringLiteral("insuranceBet")].toInt(), 50);
+        QCOMPARE(seat[QStringLiteral("insuranceSettled")].toBool(), true);
+        QCOMPARE(seat[QStringLiteral("insuranceNet")].toInt(), -50);
+    }
     void bridgeDeclinedInsuranceCostsNothing() {
         QSettings().clear();
         BlackjackGame g;

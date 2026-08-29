@@ -164,6 +164,11 @@ OmaPanel {
                     minimumPixelSize: 7 * theme.textScale
                 }
             }
+
+            InsuranceChip {
+                seatData: seat.seatData
+                coinSize: (seat.human ? 40 : 32) * theme.textScale
+            }
         }
     }
 }

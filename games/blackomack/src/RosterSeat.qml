@@ -101,6 +101,21 @@ OmaPanel {
                 font.pixelSize: 11 * theme.textScale
                 elide: Text.ElideRight
             }
+            // The chip has no room here, so the side bet says the same in words.
+            Text {
+                visible: row.seatData && row.seatData.insuranceBet > 0
+                width: parent.width
+                text: !row.seatData ? ""
+                      : row.seatData.insuranceSettled
+                        ? "Ins " + (row.seatData.insuranceNet > 0 ? "+Ø" : "−Ø")
+                          + Math.abs(row.seatData.insuranceNet)
+                        : "Ins Ø" + row.seatData.insuranceBet
+                color: !row.seatData || !row.seatData.insuranceSettled ? theme.cyan
+                       : row.seatData.insuranceNet > 0 ? theme.green : theme.red
+                opacity: 0.9
+                font.pixelSize: 11 * theme.textScale
+                elide: Text.ElideRight
+            }
         }
 
         Column {

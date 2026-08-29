@@ -15,8 +15,10 @@ table seats four of them.
   card each, cannot hit and cannot be re-split.
 - When the dealer shows an ace, every seat with a bet is offered insurance
   before the peek: a side bet of half the original stake that pays 2 to 1 if
-  the dealer has blackjack and is lost otherwise. It is the one bet the coach
-  tells you to refuse.
+  the dealer has blackjack and is lost otherwise. A seat that takes it puts a
+  second, smaller "Ins" coin down beside its bet chip; at the peek the coin
+  turns green or red with what it won or lost and then leaves the table. It is
+  the one bet the coach tells you to refuse.
 - No surrender.
 - Bets from Ø 10 up to your whole bankroll, in steps of 10. `1`, `2` and `3`
   stake three presets sized to your stack — roughly a tenth, a quarter and a
