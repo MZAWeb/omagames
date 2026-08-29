@@ -80,6 +80,7 @@ void SudokuGame::newGame(int level) {
     m_elapsedSeconds = 0;
     emit elapsedSecondsChanged();
     setNotesMode(false);
+    clearHighlight();
     selectFirstEmptyCell();
     clearSavedGame();
     setState(Playing);
@@ -116,10 +117,38 @@ void SudokuGame::moveSelection(int deltaRow, int deltaColumn) {
 }
 
 void SudokuGame::enterDigit(int digit) {
+    if (m_notesMode)
+        toggleNote(digit);
+    else
+        enterValue(digit);
+}
+
+void SudokuGame::enterValue(int digit) {
     if (m_state != Playing || m_selectedIndex < 0)
         return;
-    applyChange(m_notesMode ? m_board.toggleNote(m_selectedIndex, digit)
-                            : m_board.setValue(m_selectedIndex, digit));
+    applyChange(m_board.setValue(m_selectedIndex, digit));
+}
+
+void SudokuGame::toggleNote(int digit) {
+    if (m_state != Playing || m_selectedIndex < 0)
+        return;
+    applyChange(m_board.toggleNote(m_selectedIndex, digit));
+}
+
+void SudokuGame::toggleHighlight(int digit) {
+    setHighlightDigit(digit >= 1 && digit <= 9 && digit != m_highlightDigit ? digit : -1);
+}
+
+void SudokuGame::clearHighlight() {
+    setHighlightDigit(-1);
+}
+
+void SudokuGame::pressPad(int digit) {
+    // With no cell to write into, the pad is a way to light up a digit.
+    if (m_state != Playing || m_selectedIndex < 0)
+        toggleHighlight(digit);
+    else
+        enterDigit(digit);
 }
 
 void SudokuGame::erase() {
@@ -145,6 +174,7 @@ void SudokuGame::restart() {
 }
 
 void SudokuGame::backToStart() {
+    clearHighlight();
     if (inProgress())
         saveGame();
     m_clock.stop();
@@ -182,6 +212,13 @@ void SudokuGame::setState(State state) {
     else
         m_clock.stop();
     emit stateChanged();
+}
+
+void SudokuGame::setHighlightDigit(int digit) {
+    if (m_highlightDigit == digit)
+        return;
+    m_highlightDigit = digit;
+    emit highlightDigitChanged();
 }
 
 void SudokuGame::setHasSavedGame(bool hasSavedGame) {

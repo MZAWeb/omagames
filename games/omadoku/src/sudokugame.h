@@ -19,6 +19,7 @@ class SudokuGame : public QObject {
     Q_PROPERTY(bool checkAsYouGo READ checkAsYouGo WRITE setCheckAsYouGo NOTIFY checkAsYouGoChanged)
     Q_PROPERTY(int selectedIndex READ selectedIndex WRITE select NOTIFY selectedIndexChanged)
     Q_PROPERTY(int selectedValue READ selectedValue NOTIFY selectedValueChanged)
+    Q_PROPERTY(int highlightDigit READ highlightDigit NOTIFY highlightDigitChanged)
     Q_PROPERTY(bool canUndo READ canUndo NOTIFY boardChanged)
     Q_PROPERTY(int filledCount READ filledCount NOTIFY boardChanged)
     Q_PROPERTY(bool inProgress READ inProgress NOTIFY boardChanged)
@@ -51,6 +52,8 @@ public:
     int filledCount() const { return m_board.filledCount(); }
     bool inProgress() const;
     QVariantList digitCounts() const;
+    // Digit the player asked to see everywhere on the board (-1 = none).
+    int highlightDigit() const { return m_highlightDigit; }
     int elapsedSeconds() const { return m_elapsedSeconds; }
     bool hasSavedGame() const { return m_hasSavedGame; }
 
@@ -58,7 +61,15 @@ public:
     Q_INVOKABLE void resumeSavedGame();
     Q_INVOKABLE void select(int index);
     Q_INVOKABLE void moveSelection(int deltaRow, int deltaColumn);
+    // Entry (Ctrl+digit), notes (Shift+digit) and highlighting (plain digit)
+    // are separate actions; enterDigit is the mode-governed one the digit pad
+    // uses when a cell is selected.
     Q_INVOKABLE void enterDigit(int digit);
+    Q_INVOKABLE void enterValue(int digit);
+    Q_INVOKABLE void toggleNote(int digit);
+    Q_INVOKABLE void toggleHighlight(int digit);
+    Q_INVOKABLE void clearHighlight();
+    Q_INVOKABLE void pressPad(int digit);
     Q_INVOKABLE void erase();
     Q_INVOKABLE void toggleNotesMode();
     Q_INVOKABLE void undo();
@@ -75,12 +86,14 @@ signals:
     void checkAsYouGoChanged();
     void selectedIndexChanged();
     void selectedValueChanged();
+    void highlightDigitChanged();
     void elapsedSecondsChanged();
     void hasSavedGameChanged();
 
 private:
     void applyChange(const std::vector<int> &changed);
     void setState(State state);
+    void setHighlightDigit(int digit);
     void setHasSavedGame(bool hasSavedGame);
     void selectFirstEmptyCell();
     void loadSettings();
@@ -93,6 +106,7 @@ private:
     QTimer m_saveTimer {this};
     State m_state = Start;
     int m_selectedIndex = -1;
+    int m_highlightDigit = -1;
     int m_elapsedSeconds = 0;
     bool m_notesMode = false;
     bool m_hasSavedGame = false;
