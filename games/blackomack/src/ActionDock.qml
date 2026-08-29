@@ -43,6 +43,17 @@ OmaPanel {
                     font.pixelSize: 11 * theme.textScale
                     font.bold: game.netResult !== 0
                 }
+                // The high score sits with the rest of the context and only
+                // brightens for the round that set it; nothing about it moves.
+                Text {
+                    text: "· Best Ø " + Number(game.bestBankroll).toLocaleString(Qt.locale(), "f", 0)
+                    color: game.newBest ? theme.accent : theme.foreground
+                    opacity: game.newBest ? 1 : 0.7
+                    font.pixelSize: 11 * theme.textScale
+                    font.bold: true
+                    Behavior on color { ColorAnimation { duration: 320 } }
+                    Behavior on opacity { NumberAnimation { duration: 320 } }
+                }
             }
             Text {
                 text: game.message
