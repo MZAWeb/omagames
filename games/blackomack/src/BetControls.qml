@@ -7,20 +7,35 @@ Item {
     id: bar
     readonly property bool typing: betField.activeFocus
     readonly property real gap: 7 * theme.textScale
-    readonly property real minimumFieldWidth: 112 * theme.textScale
-    readonly property real fixedButtonsWidth: presets.implicitWidth + decrease.implicitWidth
-                                                   + increase.implicitWidth + maximum.implicitWidth
-                                                   + deal.implicitWidth
-    implicitHeight: controls.childrenRect.height
+    // The typed bet is a slot, not the row's slack: it holds the widest stake
+    // anyone can reach plus the badge that sits inside it, and nothing more.
+    readonly property real fieldWidth: sample.width + hint.implicitWidth + 26 * theme.textScale
+    // Every control at its natural width, on one line, with five gaps. Buttons
+    // are never squeezed below this, so no label is ever elided.
+    readonly property real rowWidth: Math.ceil(presets.implicitWidth + decrease.implicitWidth
+                                               + bar.fieldWidth + increase.implicitWidth
+                                               + maximum.implicitWidth + deal.implicitWidth
+                                               + 5 * bar.gap)
+    // Wide enough for the whole row: centre it in the dock. Otherwise hand the
+    // Flow the dock's width and let it break onto a second line.
+    readonly property bool oneLine: width >= rowWidth
+    implicitHeight: controls.implicitHeight
 
     function focusBet() {
         betField.forceActiveFocus();
         betField.selectAll();
     }
 
+    TextMetrics {
+        id: sample
+        font: betField.font
+        text: "Ø 10,000"
+    }
+
     Flow {
         id: controls
-        width: parent.width
+        width: bar.oneLine ? bar.rowWidth : bar.width
+        x: bar.oneLine ? (bar.width - width) / 2 : 0
         spacing: bar.gap
 
         // The stakes behind 1, 2 and 3, sized to the bankroll by the bridge so
@@ -51,8 +66,7 @@ Item {
             onClicked: game.adjustBet(-10)
         }
         Item {
-            width: Math.max(bar.minimumFieldWidth,
-                            controls.width - bar.fixedButtonsWidth - 5 * bar.gap)
+            width: bar.fieldWidth
             height: 40 * theme.textScale
             TextField {
                 id: betField
@@ -75,6 +89,7 @@ Item {
                 }
             }
             OmaKeyHint {
+                id: hint
                 key: "B"
                 active: true
                 anchors.right: parent.right
