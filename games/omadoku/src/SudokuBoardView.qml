@@ -45,7 +45,8 @@ Item {
                           || game.selectedIndex % 9 === cellColumn
                           || (Math.floor(Math.floor(game.selectedIndex / 9) / 3) === Math.floor(cellRow / 3)
                               && Math.floor((game.selectedIndex % 9) / 3) === Math.floor(cellColumn / 3)))
-                sameDigit: !selected && model.value > 0 && model.value === game.selectedValue
+                highlighted: !selected && model.value > 0 && model.value === game.highlightDigit
+                sameDigit: !selected && !highlighted && model.value > 0 && model.value === game.selectedValue
                 onClicked: game.select(cellIndex)
             }
         }

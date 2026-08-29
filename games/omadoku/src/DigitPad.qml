@@ -17,15 +17,18 @@ Row {
             required property int index
             readonly property int digit: index + 1
             readonly property bool done: game.digitCounts[index] >= 9
+            readonly property bool highlighted: game.highlightDigit === digit
 
             width: (pad.width - pad.spacing * 8) / 9
             height: pad.keyHeight
             radius: Math.round(height * 0.22)
             color: mouse.pressed ? theme.alpha(theme.accent, 0.35)
+                 : highlighted ? theme.alpha(theme.accent, 0.28)
                  : mouse.containsMouse ? theme.alpha(theme.foreground, 0.12)
                  : theme.alpha(theme.foreground, 0.06)
             border.width: 1
-            border.color: theme.alpha(theme.foreground, done ? 0.08 : 0.22)
+            border.color: highlighted ? theme.alpha(theme.accent, 0.7)
+                        : theme.alpha(theme.foreground, done ? 0.08 : 0.22)
             opacity: done ? 0.45 : 1.0
             Behavior on color { ColorAnimation { duration: 90 } }
 

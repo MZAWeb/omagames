@@ -12,6 +12,7 @@ Item {
     property bool selected: false
     property bool peer: false
     property bool sameDigit: false
+    property bool highlighted: false
     property real cellSize: width
 
     signal clicked()
@@ -19,6 +20,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         color: cell.selected ? theme.alpha(theme.accent, 0.32)
+             : cell.highlighted ? theme.alpha(theme.accent, 0.26)
              : cell.sameDigit ? theme.alpha(theme.accent, 0.14)
              : cell.peer ? theme.alpha(theme.foreground, 0.10)
              : "transparent"
