@@ -32,6 +32,8 @@ ApplicationWindow {
     // Single-key shortcuts stay out of the way while a dialog is open or the
     // bet is being typed; Ctrl+Q always works.
     readonly property bool keysActive: !newGameDialog.opened && !brokeDialog.opened && !bets.typing
+    // The bet keys follow the bet controls: dead once the cards are out.
+    readonly property bool betKeysActive: keysActive && game.phase === "betting"
 
     Shortcut { sequence: "Ctrl+Q"; onActivated: window.close() }
     Shortcut { enabled: window.keysActive; sequence: "Ctrl+N"; onActivated: if (game.phase === "betting") newGameDialog.open() }
@@ -40,10 +42,10 @@ ApplicationWindow {
     Shortcut { enabled: window.keysActive; sequence: "D"; onActivated: game.doubleDown() }
     Shortcut { enabled: window.keysActive; sequence: "P"; onActivated: game.split() }
     Shortcut { enabled: window.keysActive; sequences: ["Return", "Enter", "Space"]; onActivated: game.roundOver ? game.nextRound() : game.dealRound() }
-    Shortcut { enabled: window.keysActive; sequences: ["Up", "+"]; onActivated: game.adjustBet(10) }
-    Shortcut { enabled: window.keysActive; sequences: ["Down", "-"]; onActivated: game.adjustBet(-10) }
-    Shortcut { enabled: window.keysActive; sequence: "M"; onActivated: game.betMax() }
-    Shortcut { enabled: window.keysActive; sequence: "B"; onActivated: bets.focusBet() }
+    Shortcut { enabled: window.betKeysActive; sequences: ["Up", "+"]; onActivated: game.adjustBet(10) }
+    Shortcut { enabled: window.betKeysActive; sequences: ["Down", "-"]; onActivated: game.adjustBet(-10) }
+    Shortcut { enabled: window.betKeysActive; sequence: "M"; onActivated: game.betMax() }
+    Shortcut { enabled: window.betKeysActive; sequence: "B"; onActivated: bets.focusBet() }
     Shortcut { enabled: window.keysActive; sequence: "["; onActivated: game.setBotCount(game.botCount - 1) }
     Shortcut { enabled: window.keysActive; sequence: "]"; onActivated: game.setBotCount(game.botCount + 1) }
 

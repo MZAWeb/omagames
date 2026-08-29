@@ -565,6 +565,26 @@ private slots:
         QVERIFY(g.canDeal());
         QCOMPARE(g.phase(), QStringLiteral("betting"));
     }
+    void bridgeLocksTheStakeOnceDealt() {
+        BlackjackGame g;
+        g.setStepInterval(0);
+        g.setBet(50);
+        g.dealRound();
+        QVERIFY(g.phase() != QStringLiteral("betting"));
+        g.setBet(100);
+        QCOMPARE(g.bet(), 50);
+        g.adjustBet(10);
+        QCOMPARE(g.bet(), 50);
+        g.betMax();
+        QCOMPARE(g.bet(), 50);
+        while (!g.roundOver())
+            g.stand();
+        g.setBet(80);                // still locked while the result is on the table
+        QCOMPARE(g.bet(), 50);
+        g.nextRound();
+        g.setBet(80);
+        QCOMPARE(g.bet(), 80);
+    }
     void bridgePlaysAndPersists() {
         {
             BlackjackGame g;

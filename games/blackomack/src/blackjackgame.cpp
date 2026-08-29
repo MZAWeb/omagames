@@ -52,6 +52,8 @@ int BlackjackGame::pace() const {
 }
 
 void BlackjackGame::setBet(int amount) {
+    if (m_table.phase() != Table::Phase::Betting)
+        return;   // the stake is locked from the deal until the round is settled
     const int clamped = clampBet(amount, bankroll());
     if (clamped == m_bet)
         return;

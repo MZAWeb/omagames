@@ -48,10 +48,16 @@ RowLayout {
 
     Item { Layout.fillWidth: true }
 
-    HintButton { text: "−10"; hint: "↓"; enabled: bar.betting && game.bet > game.minBet; onClicked: game.adjustBet(-10) }
+    HintButton {
+        text: "−10"; hint: "↓"; showHint: bar.betting
+        enabled: bar.betting && game.bet > game.minBet
+        onClicked: game.adjustBet(-10)
+    }
     Item {
         Layout.preferredWidth: betField.width
         Layout.preferredHeight: betField.height
+        // Greyed out like the buttons once the stake is locked.
+        opacity: bar.betting ? 1.0 : 0.5
         TextField {
             id: betField
             width: 100 * theme.textScale
@@ -71,7 +77,7 @@ RowLayout {
             Connections { target: game; function onBetChanged() { if (!betField.activeFocus) betField.text = game.bet; } }
         }
         OmaKeyHint {
-            key: "B"
+            key: bar.betting ? "B" : ""
             active: bar.betting
             anchors.right: betField.right
             anchors.top: betField.top
@@ -79,8 +85,16 @@ RowLayout {
             visible: !betField.activeFocus
         }
     }
-    HintButton { text: "+10"; hint: "↑"; enabled: bar.betting && game.bet < game.maxBet; onClicked: game.adjustBet(10) }
-    HintButton { text: "Max"; hint: "M"; enabled: bar.betting && game.bet < game.maxBet; onClicked: game.betMax() }
+    HintButton {
+        text: "+10"; hint: "↑"; showHint: bar.betting
+        enabled: bar.betting && game.bet < game.maxBet
+        onClicked: game.adjustBet(10)
+    }
+    HintButton {
+        text: "Max"; hint: "M"; showHint: bar.betting
+        enabled: bar.betting && game.bet < game.maxBet
+        onClicked: game.betMax()
+    }
 
     Item { Layout.fillWidth: true }
 
