@@ -1,0 +1,58 @@
+# Omagames CI. Everything runs in an archlinux:latest container because Omarchy
+# is Arch: the packages CI installs are the packages a player would have.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # base-devel brings gcc, make and fakeroot (makepkg needs the last one);
+  # git is required by actions/checkout.
+  ARCH_PACKAGES: base-devel git qt6-base qt6-declarative
+
+jobs:
+  discover:
+    name: Discover games
+    runs-on: ubuntu-latest
+    outputs:
+      games: ${{ steps.list.outputs.games }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: List games/
+        id: list
+        run: |
+          set -eu
+          games=$(find games -mindepth 1 -maxdepth 1 -type d -printf '%f\n' \
+                  | sort | jq -R . | jq -sc .)
+          [ "$games" != "[]" ] || { echo "No games found under games/."; exit 1; }
+          echo "games=$games" >> "$GITHUB_OUTPUT"
+          echo "Discovered: $games"
+
+  build-test:
+    name: build & test (${{ matrix.game }})
+    needs: discover
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    strategy:
+      fail-fast: false
+      matrix:
+        game: ${{ fromJson(needs.discover.outputs.games) }}
+    steps:
+      - name: Install Qt 6 and toolchain
+        run: pacman -Syu --noconfirm --needed $ARCH_PACKAGES
+
+      - uses: actions/checkout@v4
+
+      - name: Build ${{ matrix.game }}
+        run: bin/build ${{ matrix.game }}
+
+      # bin/test already runs the suites with QT_QPA_PLATFORM=offscreen.
+      - name: Test ${{ matrix.game }}
+        run: bin/test ${{ matrix.game }}
