@@ -1,6 +1,8 @@
 #include <QtTest>
 
 #include "basicstrategy.h"
+#include "blackjackgame.h"
+#include "gamestate.h"
 #include "blackjackrules.h"
 #include "botplayer.h"
 #include "cards.h"
@@ -32,7 +34,30 @@ BotPersonality perfect(const QString &name, quint32 seed = 1) { return {name, 1.
 
 class BlackOmackTest : public QObject {
     Q_OBJECT
+    QTemporaryDir m_settingsDir;
+
+    // Plays the human's hands by the book until the round is settled.
+    static void playRound(BlackjackGame &g) {
+        g.dealRound();
+        while (!g.roundOver()) {
+            QVERIFY(g.waitingForHuman());
+            if (g.canStand())
+                g.stand();
+        }
+    }
+
 private slots:
+    void initTestCase() {
+        QVERIFY(m_settingsDir.isValid());
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, m_settingsDir.path());
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QCoreApplication::setOrganizationName(QStringLiteral("Omacom"));
+        QCoreApplication::setApplicationName(QStringLiteral("blackomack-test"));
+    }
+    void cleanup() {
+        QSettings().clear();
+    }
+
     // --- Cards / hand ---
     void cardValues() {
         QCOMPARE(c(1).value(), 1);
@@ -432,6 +457,100 @@ private slots:
         t.placeBets(10);
         QVERIFY(t.nextRound(rng).isEmpty());
         QVERIFY(t.advance().isEmpty());              // nothing automatic before the deal
+    }
+
+    // --- Persistence / bridge ---
+    void gameStateRoundTrips() {
+        GameState state;
+        state.bankroll = 1230;
+        state.handsPlayed = 7;
+        state.netResult = 230;
+        state.bots.append({{QStringLiteral("Zed"), 0.25, 0.75, 4000000000u}, 880});
+        state.bots.append({{QStringLiteral("Mona"), 0.9, 0.1, 17}, 1500});
+        const GameState back = GameState::fromString(state.toString());
+        QCOMPARE(back.bankroll, 1230);
+        QCOMPARE(back.handsPlayed, 7);
+        QCOMPARE(back.netResult, 230);
+        QCOMPARE(back.bots.size(), 2);
+        QCOMPARE(back.bots[0].personality.name, QStringLiteral("Zed"));
+        QCOMPARE(back.bots[0].personality.skill, 0.25);
+        QCOMPARE(back.bots[0].personality.aggression, 0.75);
+        QCOMPARE(back.bots[0].personality.seed, 4000000000u);
+        QCOMPARE(back.bots[0].bankroll, 880);
+        QCOMPARE(back.bots[1].bankroll, 1500);
+        QCOMPARE(GameState::fromString(QString()).bankroll, 1000);   // fresh install
+    }
+    void bridgeBetting() {
+        BlackjackGame g;
+        g.setStepInterval(0);
+        QCOMPARE(g.bankroll(), 1000);
+        QCOMPARE(g.minBet(), 10);
+        QCOMPARE(g.maxBet(), 1000);
+        g.setBet(35);
+        QCOMPARE(g.bet(), 30);
+        g.adjustBet(-100);
+        QCOMPARE(g.bet(), 10);
+        g.betMax();
+        QCOMPARE(g.bet(), 1000);
+        g.setBet(5000);
+        QCOMPARE(g.bet(), 1000);
+        QVERIFY(g.canDeal());
+        QCOMPARE(g.phase(), QStringLiteral("betting"));
+    }
+    void bridgePlaysAndPersists() {
+        {
+            BlackjackGame g;
+            g.setStepInterval(0);
+            g.setBotCount(3);
+            QCOMPARE(g.botCount(), 3);
+            QCOMPARE(g.seats().size(), 4);
+            QCOMPARE(g.humanSeat(), 1);
+            g.setBet(20);
+            for (int i = 0; i < 5; ++i) {
+                playRound(g);
+                QVERIFY(!g.canDeal());
+                QCOMPARE(g.phase(), QStringLiteral("payout"));
+                QVERIFY(!g.dealerHand().value(QStringLiteral("cards")).toList().isEmpty());
+                g.nextRound();
+                QCOMPARE(g.phase(), QStringLiteral("betting"));
+            }
+            QCOMPARE(g.handsPlayed(), 5);
+            QCOMPARE(g.netResult(), g.bankroll() - 1000);
+            g.setBotCount(1);
+            QCOMPARE(g.botCount(), 1);
+        }
+        BlackjackGame again;
+        QCOMPARE(again.botCount(), 1);
+        QCOMPARE(again.handsPlayed(), 5);
+        QVERIFY(again.bankroll() != 0);
+        const QVariantMap bot = again.seats().at(again.humanSeat() == 0 ? 1 : 0).toMap();
+        QVERIFY(!bot.value(QStringLiteral("personality")).toString().isEmpty());
+        QVERIFY(!bot.value(QStringLiteral("human")).toBool());
+        again.newGame();
+        QCOMPARE(again.bankroll(), 1000);
+        QCOMPARE(again.handsPlayed(), 0);
+        QCOMPARE(again.botCount(), 1);
+        QVERIFY(!again.isBroke());
+    }
+    void bridgeBrokePlayerMustStartOver() {
+        BlackjackGame g;
+        g.setStepInterval(0);
+        int guard = 0;
+        while (!g.isBroke() && guard++ < 500) {
+            g.betMax();
+            g.dealRound();
+            while (!g.roundOver())
+                g.hit();                     // hitting until bust loses fast
+            g.nextRound();
+        }
+        QVERIFY(g.isBroke());
+        QVERIFY(!g.canDeal());
+        QVERIFY(g.bankroll() < 10);
+        BlackjackGame reloaded;
+        QVERIFY(reloaded.isBroke());
+        reloaded.newGame();
+        QVERIFY(!reloaded.isBroke());
+        QVERIFY(reloaded.canDeal());
     }
 
     void dealerPeekCards() {

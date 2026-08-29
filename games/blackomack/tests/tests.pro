@@ -11,7 +11,9 @@ HEADERS += \
     ../src/blackjackrules.h \
     ../src/basicstrategy.h \
     ../src/botplayer.h \
-    ../src/table.h
+    ../src/table.h \
+    ../src/gamestate.h \
+    ../src/blackjackgame.h
 SOURCES += tst_blackomack.cpp \
     ../src/cards.cpp \
     ../src/hand.cpp \
@@ -19,4 +21,7 @@ SOURCES += tst_blackomack.cpp \
     ../src/basicstrategy.cpp \
     ../src/botplayer.cpp \
     ../src/table.cpp \
-    ../src/tableround.cpp
+    ../src/tableround.cpp \
+    ../src/gamestate.cpp \
+    ../src/blackjackgame.cpp \
+    ../src/blackjackgamemodel.cpp
