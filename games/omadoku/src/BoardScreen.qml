@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 import OmaGames
-import Omadoku
 
 // The playing screen: status line, board and, beside it, the keypad with its
 // click mode and the remaining actions. All rules live in `game`; this only
@@ -10,8 +9,6 @@ FocusScope {
     id: root
 
     focus: true
-
-    property var difficultyNames: [qsTr("Easy"), qsTr("Medium"), qsTr("Hard")]
 
     signal leaveRequested()
 
@@ -85,7 +82,7 @@ FocusScope {
             Layout.fillWidth: true
 
             Text {
-                text: root.difficultyNames[game.difficulty]
+                text: game.difficultyLabel
                 color: theme.foreground
                 font.pixelSize: 17 * theme.textScale
                 font.bold: true

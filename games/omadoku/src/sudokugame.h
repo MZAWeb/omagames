@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QStringList>
 #include <QTimer>
 #include <QVariantList>
 #include <QVariantMap>
@@ -10,12 +11,19 @@
 
 // The only bridge between the engine and QML: state as properties, actions as
 // invokables. It owns no rules of its own beyond screen flow and persistence.
+//
+// Screen state, difficulty and pad mode cross to QML as lowercase id strings
+// rather than as enums: a C++-registered QML type would need a module for QML
+// tooling to resolve, and plain strings keep both sides (and qmllint) honest
+// without one. The matching display labels come from `difficulties`.
 class SudokuGame : public QObject {
     Q_OBJECT
     Q_PROPERTY(QAbstractListModel *cells READ cells CONSTANT)
-    Q_PROPERTY(State state READ state NOTIFY stateChanged)
-    Q_PROPERTY(int difficulty READ difficulty NOTIFY boardChanged)
-    Q_PROPERTY(PadMode padMode READ padMode WRITE setPadMode NOTIFY padModeChanged)
+    Q_PROPERTY(QString state READ state NOTIFY stateChanged)
+    Q_PROPERTY(QString difficulty READ difficulty NOTIFY boardChanged)
+    Q_PROPERTY(QString difficultyLabel READ difficultyLabel NOTIFY boardChanged)
+    Q_PROPERTY(QVariantList difficulties READ difficulties CONSTANT)
+    Q_PROPERTY(QString padMode READ padMode WRITE setPadMode NOTIFY padModeChanged)
     Q_PROPERTY(bool checkAsYouGo READ checkAsYouGo WRITE setCheckAsYouGo NOTIFY checkAsYouGoChanged)
     Q_PROPERTY(int selectedIndex READ selectedIndex WRITE select NOTIFY selectedIndexChanged)
     Q_PROPERTY(int selectedValue READ selectedValue NOTIFY selectedValueChanged)
@@ -28,26 +36,20 @@ class SudokuGame : public QObject {
     Q_PROPERTY(bool hasSavedGame READ hasSavedGame NOTIFY hasSavedGameChanged)
 
 public:
-    enum State { Start, Playing, Won };
-    Q_ENUM(State)
-
-    // What a click on the digit pad does, mirroring the modifier-free,
-    // Shift and Ctrl meanings of the number row.
-    enum PadMode { Highlight, Note, Fill };
-    Q_ENUM(PadMode)
-
-    // Mirrors Difficulty so QML can say SudokuGame.Medium.
-    enum Level { Easy = int(Difficulty::Easy), Medium = int(Difficulty::Medium), Hard = int(Difficulty::Hard) };
-    Q_ENUM(Level)
-
     explicit SudokuGame(QObject *parent = nullptr);
     ~SudokuGame() override;
 
     QAbstractListModel *cells() { return &m_cells; }
-    State state() const { return m_state; }
-    int difficulty() const { return int(m_board.puzzle().difficulty); }
-    PadMode padMode() const { return m_padMode; }
-    void setPadMode(PadMode padMode);
+    // "start" | "playing" | "won"
+    QString state() const;
+    // "easy" | "medium" | "hard", plus the label to show for it and the full
+    // list of {id, label} pairs the start screen offers.
+    QString difficulty() const;
+    QString difficultyLabel() const;
+    static QVariantList difficulties();
+    // "highlight" | "note" | "fill"
+    QString padMode() const;
+    void setPadMode(const QString &padMode);
     bool checkAsYouGo() const { return m_board.checkAsYouGo(); }
     void setCheckAsYouGo(bool checkAsYouGo);
     int selectedIndex() const { return m_selectedIndex; }
@@ -62,7 +64,7 @@ public:
     int elapsedSeconds() const { return m_elapsedSeconds; }
     bool hasSavedGame() const { return m_hasSavedGame; }
 
-    Q_INVOKABLE void newGame(int level);
+    Q_INVOKABLE void newGame(const QString &difficulty);
     Q_INVOKABLE void resumeSavedGame();
     Q_INVOKABLE void select(int index);
     Q_INVOKABLE void moveSelection(int deltaRow, int deltaColumn);
@@ -94,8 +96,14 @@ signals:
     void hasSavedGameChanged();
 
 private:
+    enum class Screen { Start, Playing, Won };
+
+    // What a click on the digit pad does, mirroring the modifier-free, Shift
+    // and Ctrl meanings of the number row.
+    enum class PadMode { Highlight, Note, Fill };
+
     void applyChange(const std::vector<int> &changed);
-    void setState(State state);
+    void setScreen(Screen screen);
     void setHighlightDigit(int digit);
     void setHasSavedGame(bool hasSavedGame);
     void selectFirstEmptyCell();
@@ -107,10 +115,10 @@ private:
     CellModel m_cells {&m_board, this};
     QTimer m_clock {this};
     QTimer m_saveTimer {this};
-    State m_state = Start;
+    Screen m_screen = Screen::Start;
     int m_selectedIndex = -1;
     int m_highlightDigit = -1;
     int m_elapsedSeconds = 0;
-    PadMode m_padMode = Fill;
+    PadMode m_padMode = PadMode::Fill;
     bool m_hasSavedGame = false;
 };

@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import OmaGames
-import Omadoku
 
 // Difficulty picker, the check mode setting and a way back into a saved game.
 FocusScope {
@@ -10,13 +9,18 @@ FocusScope {
 
     focus: true
     Keys.onPressed: function(event) {
-        switch (event.key) {
-        case Qt.Key_1: game.newGame(SudokuGame.Easy); break;
-        case Qt.Key_2: game.newGame(SudokuGame.Medium); break;
-        case Qt.Key_3: game.newGame(SudokuGame.Hard); break;
-        case Qt.Key_R: if (game.hasSavedGame) game.resumeSavedGame(); break;
-        case Qt.Key_C: game.checkAsYouGo = !game.checkAsYouGo; break;
-        default: return;
+        // The number keys pick the nth difficulty the game offers, so the list
+        // stays the engine's to define.
+        var level = event.key - Qt.Key_1;
+        if (level >= 0 && level < game.difficulties.length) {
+            game.newGame(game.difficulties[level].id);
+        } else if (event.key === Qt.Key_R) {
+            if (game.hasSavedGame)
+                game.resumeSavedGame();
+        } else if (event.key === Qt.Key_C) {
+            game.checkAsYouGo = !game.checkAsYouGo;
+        } else {
+            return;
         }
         event.accepted = true;
     }
@@ -42,24 +46,19 @@ FocusScope {
             font.pixelSize: 15 * theme.textScale
         }
 
-        HintButton {
-            Layout.fillWidth: true
-            text: qsTr("Easy")
-            primary: true
-            keyHint: qsTr("1")
-            onClicked: game.newGame(SudokuGame.Easy)
-        }
-        HintButton {
-            Layout.fillWidth: true
-            text: qsTr("Medium")
-            keyHint: qsTr("2")
-            onClicked: game.newGame(SudokuGame.Medium)
-        }
-        HintButton {
-            Layout.fillWidth: true
-            text: qsTr("Hard")
-            keyHint: qsTr("3")
-            onClicked: game.newGame(SudokuGame.Hard)
+        Repeater {
+            model: game.difficulties
+
+            HintButton {
+                required property var modelData
+                required property int index
+
+                Layout.fillWidth: true
+                text: modelData.label
+                primary: index === 0
+                keyHint: (index + 1).toString()
+                onClicked: game.newGame(modelData.id)
+            }
         }
         HintButton {
             Layout.fillWidth: true

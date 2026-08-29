@@ -45,7 +45,7 @@ void GameTests::init() {
 
 void GameTests::startsOnTheStartScreen() {
     SudokuGame game;
-    QCOMPARE(game.state(), SudokuGame::Start);
+    QCOMPARE(game.state(), QStringLiteral("start"));
     QVERIFY(!game.hasSavedGame());
     QVERIFY(!game.canUndo());
     QCOMPARE(game.selectedIndex(), -1);
@@ -55,11 +55,11 @@ void GameTests::startsOnTheStartScreen() {
 void GameTests::newGameSelectsTheFirstEmptyCell() {
     SudokuGame game;
     QSignalSpy stateSpy(&game, &SudokuGame::stateChanged);
-    game.newGame(SudokuGame::Hard);
+    game.newGame(QStringLiteral("hard"));
 
-    QCOMPARE(game.state(), SudokuGame::Playing);
+    QCOMPARE(game.state(), QStringLiteral("playing"));
     QCOMPARE(stateSpy.count(), 1);
-    QCOMPARE(game.difficulty(), int(Difficulty::Hard));
+    QCOMPARE(game.difficulty(), QStringLiteral("hard"));
     QVERIFY(game.selectedIndex() >= 0);
     QCOMPARE(cellInt(game.cells(), game.selectedIndex(), CellModel::ValueRole), 0);
 
@@ -69,7 +69,7 @@ void GameTests::newGameSelectsTheFirstEmptyCell() {
 
 void GameTests::selectionMovesWithinTheGrid() {
     SudokuGame game;
-    game.newGame(SudokuGame::Easy);
+    game.newGame(QStringLiteral("easy"));
 
     game.select(40);
     game.moveSelection(-1, 0);
@@ -90,7 +90,7 @@ void GameTests::selectionMovesWithinTheGrid() {
 
 void GameTests::digitsGoIntoTheSelectedCellOnly() {
     SudokuGame game;
-    game.newGame(SudokuGame::Easy);
+    game.newGame(QStringLiteral("easy"));
     const int empty = game.selectedIndex();  // the first empty cell
     const int given = firstGiven(game.cells());
     const int givenValue = cellInt(game.cells(), given, CellModel::ValueRole);
@@ -106,16 +106,37 @@ void GameTests::digitsGoIntoTheSelectedCellOnly() {
     QVERIFY(game.canUndo());
 }
 
+void GameTests::exposesDifficultiesWithLabels() {
+    SudokuGame game;
+    const QVariantList levels = game.difficulties();
+    QCOMPARE(levels.size(), 3);
+
+    const QVariantMap easy = levels.first().toMap();
+    QCOMPARE(easy.value(QStringLiteral("id")).toString(), QStringLiteral("easy"));
+    QVERIFY(!easy.value(QStringLiteral("label")).toString().isEmpty());
+
+    const QVariantMap hard = levels.last().toMap();
+    game.newGame(hard.value(QStringLiteral("id")).toString());
+    QCOMPARE(game.difficulty(), QStringLiteral("hard"));
+    QCOMPARE(game.difficultyLabel(), hard.value(QStringLiteral("label")).toString());
+
+    game.newGame(QStringLiteral("nonsense"));  // an unknown id lands on Easy
+    QCOMPARE(game.difficulty(), QStringLiteral("easy"));
+
+    game.setPadMode(QStringLiteral("nonsense"));  // and an unknown mode on Fill
+    QCOMPARE(game.padMode(), QStringLiteral("fill"));
+}
+
 void GameTests::padModeDispatchesClicks() {
     SudokuGame game;
-    game.newGame(SudokuGame::Easy);
+    game.newGame(QStringLiteral("easy"));
     const int cell = game.selectedIndex();
-    QCOMPARE(game.padMode(), SudokuGame::Fill);
+    QCOMPARE(game.padMode(), QStringLiteral("fill"));
 
     game.pressPad(4);
     QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 4);
 
-    game.setPadMode(SudokuGame::Note);
+    game.setPadMode(QStringLiteral("note"));
     game.erase();
     game.pressPad(3);
     game.pressPad(8);
@@ -125,13 +146,13 @@ void GameTests::padModeDispatchesClicks() {
     QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), 1 << 7);
     QCOMPARE(game.highlightDigit(), -1);
 
-    game.setPadMode(SudokuGame::Highlight);
+    game.setPadMode(QStringLiteral("highlight"));
     game.pressPad(6);
     QCOMPARE(game.highlightDigit(), 6);
     QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 0);
 
     // Without a selection there is nowhere to write, so the pad highlights.
-    game.setPadMode(SudokuGame::Fill);
+    game.setPadMode(QStringLiteral("fill"));
     game.select(-1);
     game.pressPad(2);
     QCOMPARE(game.highlightDigit(), 2);
@@ -141,45 +162,45 @@ void GameTests::padModeCyclesAndPersists() {
     {
         SudokuGame game;
         QSignalSpy spy(&game, &SudokuGame::padModeChanged);
-        game.newGame(SudokuGame::Easy);
-        QCOMPARE(game.padMode(), SudokuGame::Fill);  // the default
+        game.newGame(QStringLiteral("easy"));
+        QCOMPARE(game.padMode(), QStringLiteral("fill"));  // the default
 
         game.cyclePadMode();
-        QCOMPARE(game.padMode(), SudokuGame::Highlight);
+        QCOMPARE(game.padMode(), QStringLiteral("highlight"));
         game.cyclePadMode();
-        QCOMPARE(game.padMode(), SudokuGame::Note);
+        QCOMPARE(game.padMode(), QStringLiteral("note"));
         game.cyclePadMode();
-        QCOMPARE(game.padMode(), SudokuGame::Fill);
+        QCOMPARE(game.padMode(), QStringLiteral("fill"));
         QCOMPARE(spy.count(), 3);
 
-        game.setPadMode(SudokuGame::Note);
-        game.newGame(SudokuGame::Hard);
-        QCOMPARE(game.padMode(), SudokuGame::Note);  // a preference, not game state
+        game.setPadMode(QStringLiteral("note"));
+        game.newGame(QStringLiteral("hard"));
+        QCOMPARE(game.padMode(), QStringLiteral("note"));  // a preference, not game state
     }
     SudokuGame restarted;
-    QCOMPARE(restarted.padMode(), SudokuGame::Note);
+    QCOMPARE(restarted.padMode(), QStringLiteral("note"));
 }
 
 void GameTests::ctrlAndShiftPathsIgnoreThePadMode() {
     SudokuGame game;
-    game.newGame(SudokuGame::Easy);
+    game.newGame(QStringLiteral("easy"));
     const int cell = game.selectedIndex();
 
     // Shift+digit pencils a note even while the pad is in Fill mode...
-    QCOMPARE(game.padMode(), SudokuGame::Fill);
+    QCOMPARE(game.padMode(), QStringLiteral("fill"));
     game.toggleNote(7);
     QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), 1 << 6);
     QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 0);
 
     // ...and Ctrl+digit writes a value while it is in Note mode.
-    game.setPadMode(SudokuGame::Note);
+    game.setPadMode(QStringLiteral("note"));
     game.enterValue(3);
-    QCOMPARE(game.padMode(), SudokuGame::Note);
+    QCOMPARE(game.padMode(), QStringLiteral("note"));
     QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 3);
     QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), 0);
 
     // ...and a plain digit only ever highlights.
-    game.setPadMode(SudokuGame::Highlight);
+    game.setPadMode(QStringLiteral("highlight"));
     game.toggleHighlight(5);
     QCOMPARE(game.highlightDigit(), 5);
     QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 3);
@@ -187,7 +208,7 @@ void GameTests::ctrlAndShiftPathsIgnoreThePadMode() {
 
 void GameTests::highlightTogglesAndSwitchesDigits() {
     SudokuGame game;
-    game.newGame(SudokuGame::Easy);
+    game.newGame(QStringLiteral("easy"));
     QCOMPARE(game.highlightDigit(), -1);
 
     QSignalSpy spy(&game, &SudokuGame::highlightDigitChanged);
@@ -207,7 +228,7 @@ void GameTests::highlightTogglesAndSwitchesDigits() {
     QCOMPARE(game.highlightDigit(), -1);
 
     game.toggleHighlight(2);
-    game.newGame(SudokuGame::Easy);
+    game.newGame(QStringLiteral("easy"));
     QCOMPARE(game.highlightDigit(), -1);  // a new puzzle starts clean
 
     game.toggleHighlight(2);
@@ -217,7 +238,7 @@ void GameTests::highlightTogglesAndSwitchesDigits() {
 
 void GameTests::padHighlightsWhenNothingIsSelected() {
     SudokuGame game;
-    game.newGame(SudokuGame::Easy);
+    game.newGame(QStringLiteral("easy"));
     const int cell = game.selectedIndex();
 
     game.select(-1);
@@ -232,7 +253,7 @@ void GameTests::padHighlightsWhenNothingIsSelected() {
 
 void GameTests::undoRestartAndEraseGoThroughTheBoard() {
     SudokuGame game;
-    game.newGame(SudokuGame::Easy);
+    game.newGame(QStringLiteral("easy"));
     const int cell = game.selectedIndex();
     const int filled = game.filledCount();
 
@@ -256,7 +277,7 @@ void GameTests::undoRestartAndEraseGoThroughTheBoard() {
 void GameTests::clockRunsOnlyWhilePlaying() {
     SudokuGame game;
     QCOMPARE(game.elapsedSeconds(), 0);
-    game.newGame(SudokuGame::Easy);
+    game.newGame(QStringLiteral("easy"));
     QTRY_COMPARE_WITH_TIMEOUT(game.elapsedSeconds(), 1, 3000);
 
     game.backToStart();
@@ -267,7 +288,7 @@ void GameTests::clockRunsOnlyWhilePlaying() {
 
 void GameTests::selectedValueFollowsTheSelection() {
     SudokuGame game;
-    game.newGame(SudokuGame::Easy);
+    game.newGame(QStringLiteral("easy"));
     const int empty = game.selectedIndex();
     QCOMPARE(game.selectedValue(), 0);
 
@@ -286,7 +307,7 @@ void GameTests::selectedValueFollowsTheSelection() {
 void GameTests::untouchedPuzzleIsNotInProgress() {
     SudokuGame game;
     QVERIFY(!game.inProgress());
-    game.newGame(SudokuGame::Easy);
+    game.newGame(QStringLiteral("easy"));
     QVERIFY(!game.inProgress());  // givens alone are not progress
 
     game.enterValue(1);

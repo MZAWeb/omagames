@@ -43,18 +43,18 @@ void PersistenceTests::winningSwitchesStateAndClearsTheSave() {
     SudokuGame game;
     QVERIFY(game.hasSavedGame());
     game.resumeSavedGame();
-    QCOMPARE(game.state(), SudokuGame::Playing);
+    QCOMPARE(game.state(), QStringLiteral("playing"));
     QCOMPARE(game.elapsedSeconds(), 42);
     QCOMPARE(game.selectedIndex(), last);
 
     // A wrong entry is flagged immediately and does not win.
     game.enterValue(expected.puzzle().solution[size_t(last)] % 9 + 1);
     QVERIFY(cellBool(game.cells(), last, CellModel::WrongRole));
-    QCOMPARE(game.state(), SudokuGame::Playing);
+    QCOMPARE(game.state(), QStringLiteral("playing"));
 
     game.enterValue(expected.puzzle().solution[size_t(last)]);
     QVERIFY(!cellBool(game.cells(), last, CellModel::WrongRole));
-    QCOMPARE(game.state(), SudokuGame::Won);
+    QCOMPARE(game.state(), QStringLiteral("won"));
     QVERIFY(!game.hasSavedGame());
     QVERIFY(QSettings().value(QStringLiteral("state/v1")).toString().isEmpty());
 }
@@ -62,7 +62,7 @@ void PersistenceTests::winningSwitchesStateAndClearsTheSave() {
 void PersistenceTests::checkAsYouGoIsRemembered() {
     {
         SudokuGame game;
-        game.newGame(SudokuGame::Easy);
+        game.newGame(QStringLiteral("easy"));
         game.setCheckAsYouGo(false);
         QVERIFY(!game.checkAsYouGo());
         game.backToStart();
@@ -75,7 +75,7 @@ void PersistenceTests::savedGameSurvivesRestart() {
     int cell = -1;
     {
         SudokuGame game;
-        game.newGame(SudokuGame::Medium);
+        game.newGame(QStringLiteral("medium"));
         cell = game.selectedIndex();
         game.enterValue(7);
         game.backToStart();  // saves on the way out
@@ -84,13 +84,13 @@ void PersistenceTests::savedGameSurvivesRestart() {
 
     SudokuGame resumed;
     QVERIFY(resumed.hasSavedGame());
-    QCOMPARE(resumed.state(), SudokuGame::Start);
+    QCOMPARE(resumed.state(), QStringLiteral("start"));
     resumed.resumeSavedGame();
-    QCOMPARE(resumed.state(), SudokuGame::Playing);
-    QCOMPARE(resumed.difficulty(), int(Difficulty::Medium));
+    QCOMPARE(resumed.state(), QStringLiteral("playing"));
+    QCOMPARE(resumed.difficulty(), QStringLiteral("medium"));
     QCOMPARE(cellInt(resumed.cells(), cell, CellModel::ValueRole), 7);
 
-    resumed.newGame(SudokuGame::Easy);  // a new game drops the old save
+    resumed.newGame(QStringLiteral("easy"));  // a new game drops the old save
     QVERIFY(!resumed.hasSavedGame());
 }
 
@@ -98,5 +98,5 @@ void PersistenceTests::solvedSaveIsNotOffered() {
     TestSupport::installSavedGame(0, kSeed);
     SudokuGame game;
     QVERIFY(!game.hasSavedGame());
-    QCOMPARE(game.state(), SudokuGame::Start);
+    QCOMPARE(game.state(), QStringLiteral("start"));
 }

@@ -2,7 +2,6 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QUrl>
-#include <QtQml>
 
 #include "appsetup.h"
 #include "sudokugame.h"
@@ -14,10 +13,6 @@ int main(int argc, char *argv[]) {
     // Declared before the engine so it outlives it: QML bindings still touch
     // `game` while the engine tears its objects down.
     SudokuGame game;
-    // Registered only so QML can name the State and Level enums; the instance
-    // itself comes in as a context property.
-    qmlRegisterUncreatableType<SudokuGame>("Omadoku", 1, 0, "SudokuGame",
-                                           QStringLiteral("SudokuGame is provided as the `game` context property"));
 
     QQmlApplicationEngine engine;
     OmaGames::setupEngine(engine, theme);

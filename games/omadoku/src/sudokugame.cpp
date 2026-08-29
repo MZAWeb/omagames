@@ -16,11 +16,88 @@ const auto kGeometryKey = QStringLiteral("window/geometry");
 const auto kMaximizedKey = QStringLiteral("window/maximized");
 const auto kElapsedKey = QStringLiteral("elapsed");
 
+// Ids shared with QML. They are stable identifiers, never shown to the player:
+// the labels beside them are.
+const auto kStartId = QStringLiteral("start");
+const auto kPlayingId = QStringLiteral("playing");
+const auto kWonId = QStringLiteral("won");
+const auto kHighlightId = QStringLiteral("highlight");
+const auto kNoteId = QStringLiteral("note");
+const auto kFillId = QStringLiteral("fill");
+const auto kEasyId = QStringLiteral("easy");
+const auto kMediumId = QStringLiteral("medium");
+const auto kHardId = QStringLiteral("hard");
+
+QString idFor(Difficulty difficulty) {
+    switch (difficulty) {
+    case Difficulty::Easy:
+        return kEasyId;
+    case Difficulty::Medium:
+        return kMediumId;
+    case Difficulty::Hard:
+        return kHardId;
+    }
+    return kEasyId;
+}
+
 // Writing on every keystroke would hit the disk far too often; a short delay
 // still survives a crash or a kill in practice.
 constexpr int kSaveDelayMs = 500;
 
 }  // namespace
+
+QString SudokuGame::state() const {
+    switch (m_screen) {
+    case Screen::Playing:
+        return kPlayingId;
+    case Screen::Won:
+        return kWonId;
+    case Screen::Start:
+        break;
+    }
+    return kStartId;
+}
+
+QString SudokuGame::difficulty() const {
+    return idFor(m_board.puzzle().difficulty);
+}
+
+QString SudokuGame::difficultyLabel() const {
+    for (const QVariant &entry : difficulties()) {
+        const QVariantMap map = entry.toMap();
+        if (map.value(QStringLiteral("id")).toString() == difficulty())
+            return map.value(QStringLiteral("label")).toString();
+    }
+    return {};
+}
+
+QVariantList SudokuGame::difficulties() {
+    QVariantList list;
+    const QVector<QPair<QString, QString>> entries {
+        {kEasyId, tr("Easy")},
+        {kMediumId, tr("Medium")},
+        {kHardId, tr("Hard")},
+    };
+    for (const auto &entry : entries) {
+        list.append(QVariantMap {
+            {QStringLiteral("id"), entry.first},
+            {QStringLiteral("label"), entry.second},
+        });
+    }
+    return list;
+}
+
+QString SudokuGame::padMode() const {
+    switch (m_padMode) {
+    case PadMode::Highlight:
+        return kHighlightId;
+    case PadMode::Note:
+        return kNoteId;
+    case PadMode::Fill:
+        break;
+    }
+    return kFillId;
+}
 
 SudokuGame::SudokuGame(QObject *parent) : QObject(parent) {
     m_clock.setInterval(1000);
@@ -44,7 +121,7 @@ SudokuGame::~SudokuGame() {
 bool SudokuGame::inProgress() const {
     // Only the player's own work counts: leaving an untouched puzzle needs no
     // confirmation and is not worth saving.
-    return m_state == Playing && m_board.entryCount() > 0;
+    return m_screen == Screen::Playing && m_board.entryCount() > 0;
 }
 
 QVariantList SudokuGame::digitCounts() const {
@@ -54,16 +131,29 @@ QVariantList SudokuGame::digitCounts() const {
     return counts;
 }
 
-void SudokuGame::setPadMode(PadMode padMode) {
-    if (m_padMode == padMode)
+void SudokuGame::setPadMode(const QString &padMode) {
+    const PadMode mode = padMode == kHighlightId ? PadMode::Highlight
+        : padMode == kNoteId                     ? PadMode::Note
+                                                 : PadMode::Fill;
+    if (m_padMode == mode)
         return;
-    m_padMode = padMode;
-    QSettings().setValue(kPadModeKey, int(padMode));
+    m_padMode = mode;
+    QSettings().setValue(kPadModeKey, this->padMode());
     emit padModeChanged();
 }
 
 void SudokuGame::cyclePadMode() {
-    setPadMode(PadMode((int(m_padMode) + 1) % 3));
+    switch (m_padMode) {
+    case PadMode::Highlight:
+        setPadMode(kNoteId);
+        break;
+    case PadMode::Note:
+        setPadMode(kFillId);
+        break;
+    case PadMode::Fill:
+        setPadMode(kHighlightId);
+        break;
+    }
 }
 
 void SudokuGame::setCheckAsYouGo(bool checkAsYouGo) {
@@ -76,11 +166,13 @@ void SudokuGame::setCheckAsYouGo(bool checkAsYouGo) {
     emit boardChanged();
 }
 
-void SudokuGame::newGame(int level) {
-    const Difficulty difficulty = level >= int(Difficulty::Easy) && level <= int(Difficulty::Hard)
-        ? Difficulty(level)
-        : Difficulty::Easy;
-    m_board.setPuzzle(SudokuGenerator::generate(difficulty));
+void SudokuGame::newGame(const QString &difficulty) {
+    // An unknown id can only come from a caller with a stale idea of the
+    // levels; Easy is the safe landing.
+    const Difficulty level = difficulty == kHardId ? Difficulty::Hard
+        : difficulty == kMediumId                  ? Difficulty::Medium
+                                                   : Difficulty::Easy;
+    m_board.setPuzzle(SudokuGenerator::generate(level));
     m_cells.refreshAll();
 
     m_elapsedSeconds = 0;
@@ -88,7 +180,7 @@ void SudokuGame::newGame(int level) {
     clearHighlight();
     selectFirstEmptyCell();
     clearSavedGame();
-    setState(Playing);
+    setScreen(Screen::Playing);
     emit boardChanged();
 }
 
@@ -96,7 +188,7 @@ void SudokuGame::resumeSavedGame() {
     if (!m_hasSavedGame)
         return;
     selectFirstEmptyCell();
-    setState(Playing);
+    setScreen(Screen::Playing);
     emit boardChanged();
 }
 
@@ -109,7 +201,7 @@ void SudokuGame::select(int index) {
 }
 
 void SudokuGame::moveSelection(int deltaRow, int deltaColumn) {
-    if (m_state != Playing)
+    if (m_screen != Screen::Playing)
         return;
     if (m_selectedIndex < 0) {
         select(0);
@@ -122,13 +214,13 @@ void SudokuGame::moveSelection(int deltaRow, int deltaColumn) {
 }
 
 void SudokuGame::enterValue(int digit) {
-    if (m_state != Playing || m_selectedIndex < 0)
+    if (m_screen != Screen::Playing || m_selectedIndex < 0)
         return;
     applyChange(m_board.setValue(m_selectedIndex, digit));
 }
 
 void SudokuGame::toggleNote(int digit) {
-    if (m_state != Playing || m_selectedIndex < 0)
+    if (m_screen != Screen::Playing || m_selectedIndex < 0)
         return;
     applyChange(m_board.toggleNote(m_selectedIndex, digit));
 }
@@ -144,28 +236,28 @@ void SudokuGame::clearHighlight() {
 void SudokuGame::pressPad(int digit) {
     // With no cell to write into, the pad can only light a digit up, whatever
     // the mode says.
-    if (m_padMode == Highlight || m_state != Playing || m_selectedIndex < 0)
+    if (m_padMode == PadMode::Highlight || m_screen != Screen::Playing || m_selectedIndex < 0)
         toggleHighlight(digit);
-    else if (m_padMode == Note)
+    else if (m_padMode == PadMode::Note)
         toggleNote(digit);
     else
         enterValue(digit);
 }
 
 void SudokuGame::erase() {
-    if (m_state != Playing || m_selectedIndex < 0)
+    if (m_screen != Screen::Playing || m_selectedIndex < 0)
         return;
     applyChange(m_board.erase(m_selectedIndex));
 }
 
 void SudokuGame::undo() {
-    if (m_state != Playing)
+    if (m_screen != Screen::Playing)
         return;
     applyChange(m_board.undo());
 }
 
 void SudokuGame::restart() {
-    if (m_state != Playing)
+    if (m_screen != Screen::Playing)
         return;
     applyChange(m_board.restart());
 }
@@ -175,7 +267,7 @@ void SudokuGame::backToStart() {
     if (inProgress())
         saveGame();
     m_clock.stop();
-    setState(Start);
+    setScreen(Screen::Start);
 }
 
 void SudokuGame::applyChange(const std::vector<int> &changed) {
@@ -193,18 +285,18 @@ void SudokuGame::applyChange(const std::vector<int> &changed) {
     if (m_board.isSolved()) {
         m_clock.stop();
         clearSavedGame();
-        setState(Won);
+        setScreen(Screen::Won);
         return;
     }
     m_saveTimer.start();
 }
 
-void SudokuGame::setState(State state) {
-    if (m_state == state)
+void SudokuGame::setScreen(Screen screen) {
+    if (m_screen == screen)
         return;
-    m_state = state;
+    m_screen = screen;
     // The clock only runs while a puzzle is actually on screen.
-    if (m_state == Playing)
+    if (m_screen == Screen::Playing)
         m_clock.start();
     else
         m_clock.stop();
@@ -238,8 +330,12 @@ void SudokuGame::selectFirstEmptyCell() {
 void SudokuGame::loadSettings() {
     const QSettings settings;
     m_board.setCheckAsYouGo(settings.value(kCheckKey, true).toBool());
-    const int padMode = settings.value(kPadModeKey, int(Fill)).toInt();
-    m_padMode = padMode >= int(Highlight) && padMode <= int(Fill) ? PadMode(padMode) : Fill;
+    // Anything unrecognised (including the int this key held before the modes
+    // got names) falls back to the default.
+    const QString padMode = settings.value(kPadModeKey).toString();
+    m_padMode = padMode == kHighlightId ? PadMode::Highlight
+        : padMode == kNoteId            ? PadMode::Note
+                                        : PadMode::Fill;
 
     const QJsonObject json =
         QJsonDocument::fromJson(settings.value(kStateKey).toString().toUtf8()).object();

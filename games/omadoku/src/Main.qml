@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Window
-import Omadoku
 
 ApplicationWindow {
     id: win
@@ -16,8 +15,6 @@ ApplicationWindow {
     Material.accent: theme.accent
     Material.foreground: theme.foreground
     Material.background: theme.background
-
-    readonly property var difficultyNames: [qsTr("Easy"), qsTr("Medium"), qsTr("Hard")]
 
     // Escape unwinds one step at a time: first the digit highlight, then the
     // puzzle itself.
@@ -50,31 +47,28 @@ ApplicationWindow {
     Shortcut {
         sequences: ["Escape"]
         context: Qt.ApplicationShortcut
-        enabled: game.state !== SudokuGame.Start && !confirmLoader.active
+        enabled: game.state !== "start" && !confirmLoader.active
         onActivated: win.backOut()
     }
 
     Loader {
         id: screen
         anchors.fill: parent
-        sourceComponent: game.state === SudokuGame.Start ? startScreen : boardScreen
+        sourceComponent: game.state === "start" ? startScreen : boardScreen
         onLoaded: item.forceActiveFocus()
     }
 
     Component { id: startScreen; StartScreen {} }
     Component {
         id: boardScreen
-        BoardScreen {
-            difficultyNames: win.difficultyNames
-            onLeaveRequested: win.leaveGame()
-        }
+        BoardScreen { onLeaveRequested: win.leaveGame() }
     }
 
     Loader {
         anchors.fill: parent
-        active: game.state === SudokuGame.Won
+        active: game.state === "won"
         sourceComponent: WonOverlay {
-            difficultyName: win.difficultyNames[game.difficulty]
+            difficultyName: game.difficultyLabel
             seconds: game.elapsedSeconds
             onNewGameRequested: game.newGame(game.difficulty)
             onBackRequested: game.backToStart()

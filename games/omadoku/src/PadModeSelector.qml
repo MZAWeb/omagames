@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 import OmaGames
-import Omadoku
 
 // Picks what a click on the keypad does. The three modes mirror the number
 // row's plain, Shift and Ctrl meanings, which the badges spell out.
@@ -11,9 +10,9 @@ ColumnLayout {
     spacing: 5 * theme.textScale
 
     readonly property var modes: [
-        {mode: SudokuGame.Highlight, label: qsTr("Highlight"), hint: qsTr("1-9")},
-        {mode: SudokuGame.Note, label: qsTr("Note"), hint: qsTr("Shift+1-9")},
-        {mode: SudokuGame.Fill, label: qsTr("Fill"), hint: qsTr("Ctrl+1-9")},
+        {mode: "highlight", label: qsTr("Highlight"), hint: qsTr("1-9")},
+        {mode: "note", label: qsTr("Note"), hint: qsTr("Shift+1-9")},
+        {mode: "fill", label: qsTr("Fill"), hint: qsTr("Ctrl+1-9")},
     ]
 
     RowLayout {
