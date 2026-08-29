@@ -1,7 +1,6 @@
 # TODO
 
 ## Omadoku
-- [ ] **Focus Grid layout** (in progress) — board as hero, right rail with keypad, mode selector, validate toggle, actions; bottom sheet on narrow windows; placement/error micro-feedback.
 - [ ] **Sudoku coach** — like Black Omack's coach: opt-in, off by default, one panel that names the next logical step for the selected cell/board ("Naked single: only 5 fits in r5c5", up to X-wing/Y-wing/swordfish with the cells involved highlighted on request). Must be backed by the real technique ladder in `sudokugrader` so every explanation is a genuine deduction, never a lookup of the solution. Larger; needs the grader to report the cells/candidates behind each step.
 - [ ] Hints (next single), timer/stats per difficulty, best times
 - [ ] Extra hard almost always lands on Y-wing (swordfish 1/80); add XY-chain / uniqueness to widen the top band
