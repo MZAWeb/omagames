@@ -6,7 +6,6 @@
 - [ ] Extra hard almost always lands on Y-wing (swordfish 1/80); add XY-chain / uniqueness to widen the top band
 
 ## Black Omack
-- [ ] Best bankroll high score (PR in progress)
 - [ ] House Table follow-ups from the design: bet presets, Tab regions, paged roster at the hard minimum, sounds/table talk, card travel animations
 - [ ] Insurance, surrender, re-splits as optional rules
 - [ ] Speed setting in the UI (`stepInterval` already exists)
