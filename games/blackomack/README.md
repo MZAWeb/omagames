@@ -40,6 +40,13 @@ bankroll, bet, cards, total, active state, result and net payout remain visible
 in both layouts. Split and long hands grow or wrap instead of covering seat
 details.
 
+**Small windows.** Below roughly 1040×650 the oval has no room for a third
+seat, so the table caps at two mates: the header reads `n / 2` and neither `]`
+nor `+` seats another one. A bigger table you saved is never evicted — its
+mates move to the stage-and-roster layout, where `[` can still send them home
+one at a time — and the cap lifts as soon as the window grows again. The saved
+table itself is always 0–6 mates.
+
 **Seating.** Bot seats are 190×132 logical pixels and fill the arc from the
 dealer outward in deal order, left first, so an odd extra mate sits dealer-left.
 Up to four mates sit in two columns per side, spaced so a seat that grows with
@@ -64,7 +71,8 @@ and an `aggression` (bet sizing and appetite for risk: timid, steady, bold).
 Under its name it says how it bets and then how it plays — "timid pro",
 "bold rookie", "steady regular". A bot that goes broke leaves and a fresh one
 takes its seat. Change how many are at the table (0–6) between rounds with the
-`−`/`+` buttons in the header; the choice is saved.
+`−`/`+` buttons in the header; the choice is saved. A compact window caps the
+table at two mates — see **Small windows** above.
 
 ## Keyboard
 

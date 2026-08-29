@@ -81,6 +81,7 @@ ApplicationWindow {
             onNewGameRequested: newGameDialog.open()
         }
         HouseTable {
+            id: table
             Layout.fillWidth: true
             Layout.fillHeight: true
         }
@@ -88,6 +89,15 @@ ApplicationWindow {
             id: dock
             Layout.fillWidth: true
         }
+    }
+
+    // Only the window knows how much room the table has; the bridge turns that
+    // into the mate cap the header and the `]` key obey.
+    Binding {
+        target: game
+        property: "compactLayout"
+        value: table.compact
+        restoreMode: Binding.RestoreNone
     }
 
     ConfirmDialog {

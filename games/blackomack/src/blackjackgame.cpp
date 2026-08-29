@@ -188,7 +188,12 @@ void BlackjackGame::skipPacing() {
 void BlackjackGame::setBotCount(int count) {
     if (m_table.phase() != Table::Phase::Betting)
         return;
-    count = qBound(0, count, kMaxBots);
+    // Never past the cap, but a table that is already over it (saved larger
+    // than a compact window allows) may still shrink a seat at a time.
+    seatBots(qBound(0, count, qMax(maxBots(), m_table.botCount())));
+}
+
+void BlackjackGame::seatBots(int count) {
     while (m_table.botCount() > count)
         m_table.removeLastBot();
     while (m_table.botCount() < count) {
@@ -209,7 +214,7 @@ void BlackjackGame::newGame() {
     m_netResult = 0;
     m_newBest = false;   // m_bestBankroll deliberately survives: it is a high score
     m_log.clear();
-    setBotCount(bots);
+    seatBots(bots);   // a new game reseats the table it replaces, cap or no cap
     setBet(50);
     record({{TableEvent::BotJoined, QStringLiteral("New game: %1 Omabucks").arg(kStartingBankroll)}});
     save();
@@ -277,6 +282,13 @@ void BlackjackGame::finishRound() {
 }
 
 // --- Table layout ---
+
+void BlackjackGame::setCompactLayout(bool compact) {
+    if (compact == m_compactLayout)
+        return;
+    m_compactLayout = compact;
+    emit compactLayoutChanged();
+}
 
 QRectF BlackjackGame::seatRect(int count, int index, const QSizeF &table, const QSizeF &seat) const {
     return SeatLayout::rect(count, index, table, seat);

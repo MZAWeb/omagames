@@ -968,6 +968,42 @@ private slots:
         QVERIFY(BlackjackRules::dealerPeeks(c(13)));
         QVERIFY(!BlackjackRules::dealerPeeks(c(9)));
     }
+
+    // --- Compact window ---
+    // A window without room for a third seat caps the table at two mates. A
+    // larger table that was already saved keeps its mates and can only shrink.
+    void bridgeCapsTheTableWhileTheWindowIsCompact() {
+        BlackjackGame g;
+        g.setStepInterval(0);
+        g.setBotCount(4);
+        QCOMPARE(g.maxBots(), BlackjackRules::kMaxBots);
+        g.setCompactLayout(true);
+        QCOMPARE(g.maxBots(), 2);
+        QCOMPARE(g.botCount(), 4);   // nobody is evicted
+        g.setBotCount(5);
+        QCOMPARE(g.botCount(), 4);   // and nobody else may sit down
+        g.setBotCount(3);
+        QCOMPARE(g.botCount(), 3);   // leaving stays possible, a seat at a time
+        g.setBotCount(2);
+        g.setBotCount(3);
+        QCOMPARE(g.botCount(), 2);   // once at the cap it holds
+        g.setCompactLayout(false);
+        QCOMPARE(g.maxBots(), BlackjackRules::kMaxBots);
+        g.setBotCount(6);
+        QCOMPARE(g.botCount(), 6);
+    }
+    void bridgeKeepsASavedTableBiggerThanACompactWindow() {
+        {
+            BlackjackGame g;
+            g.setBotCount(5);
+        }
+        BlackjackGame reloaded;
+        reloaded.setCompactLayout(true);
+        QCOMPARE(reloaded.botCount(), 5);
+        QCOMPARE(reloaded.maxBots(), 2);
+        reloaded.newGame();
+        QCOMPARE(reloaded.botCount(), 5);   // a new game reseats the same table
+    }
 };
 
 QTEST_GUILESS_MAIN(BlackOmackTest)

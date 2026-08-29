@@ -5,9 +5,12 @@ import OmaGames
 // minimum geometry, it becomes a dealer/human stage plus deal-order roster.
 Item {
     id: root
+    // Too small for a third seat on the oval: the window reports this to the
+    // bridge, which caps the table at two mates while it holds.
+    readonly property bool compact: theme.textScale >= 1.6 || width < 1016 || height < 488
     property bool rosterMode: theme.textScale >= 1.6
                               || (game.botCount >= 5 && (width < 1240 || height < 600))
-                              || (game.botCount >= 3 && (width < 1000 || height < 450))
+                              || (game.botCount >= 3 && compact)
                               || (game.botCount > 0 && width < 720)
     readonly property var botSeats: {
         var bots = [];
