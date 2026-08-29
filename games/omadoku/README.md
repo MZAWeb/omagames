@@ -11,6 +11,9 @@ current Omarchy theme.
 - **Notes** are pencil marks: up to nine small digits per empty cell. Placing a
   digit clears that cell's notes and retracts the digit from the notes of every
   cell in the same row, column and box. Notes are never checked.
+- **Highlighting**: pressing a bare digit lights up every cell holding it,
+  givens included. Press it again (or `Escape`) to clear it, or another digit
+  to switch. The digit pad does the same when no cell is selected.
 - An unfinished puzzle is saved automatically and offered as *Resume* the next
   time you start the game.
 
@@ -19,14 +22,19 @@ current Omarchy theme.
 | Key | Action |
 | --- | --- |
 | Arrows or `h` `j` `k` `l` | move the selection |
-| `1`–`9` | enter a digit (or toggle a note in notes mode) |
-| `N` | notes mode on/off |
+| `1`–`9` | highlight every cell holding that digit |
+| `Ctrl+1`–`Ctrl+9` | enter the digit in the selected cell |
+| `Shift+1`–`Shift+9` | toggle the digit as a note in the selected cell |
+| `N` | notes mode on/off (governs what the digit pad does) |
 | `Backspace`, `Delete`, `0` | erase the cell |
 | `Ctrl+Z` | undo |
-| `Escape` | back to the start screen (confirms mid-puzzle) |
+| `R` | restart the puzzle |
+| `Escape` | clear the highlight, else back to the start screen (confirms mid-puzzle) |
 | `Ctrl+Q` | quit |
 
-On the start screen `1`, `2`, `3` pick a difficulty and `R` resumes.
+On the start screen `1`, `2`, `3` pick a difficulty, `R` resumes and `C`
+toggles *Check as I go*. Every button shows its key, so nothing above needs
+memorising.
 
 ## Difficulty
 
