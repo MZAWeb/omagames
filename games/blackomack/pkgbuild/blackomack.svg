@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <rect x="8" y="8" width="112" height="112" rx="24" fill="#1e2030"/>
+  <g transform="rotate(-12 56 66)">
+    <rect x="30" y="34" width="44" height="62" rx="6" fill="#f5f5f7"/>
+    <text x="36" y="54" font-family="sans-serif" font-size="18" font-weight="bold" fill="#d94b5c">A</text>
+    <text x="52" y="86" font-family="sans-serif" font-size="22" fill="#d94b5c">♥</text>
+  </g>
+  <g transform="rotate(10 78 66)">
+    <rect x="56" y="30" width="44" height="62" rx="6" fill="#f5f5f7" stroke="#1e2030" stroke-width="2"/>
+    <text x="62" y="50" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1e2030">K</text>
+    <text x="78" y="82" font-family="sans-serif" font-size="22" fill="#1e2030">♠</text>
+  </g>
+</svg>
