@@ -1,5 +1,8 @@
 <RCC>
     <qresource prefix="/">
         <file alias="Main.qml">Main.qml</file>
+        <file alias="SudokuBoardView.qml">SudokuBoardView.qml</file>
+        <file alias="SudokuCell.qml">SudokuCell.qml</file>
+        <file alias="DigitPad.qml">DigitPad.qml</file>
     </qresource>
 </RCC>
