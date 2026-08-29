@@ -16,7 +16,7 @@ Each game has its own README with rules and keyboard shortcuts.
 
 | Omadoku | Black Omack |
 |---|---|
-| <img src="screenshots/omadoku.png" alt="Omadoku, a Medium puzzle with the 7s highlighted, keypad and mode selector beside the board" width="100%"> | <img src="screenshots/blackomack.png" alt="Black Omack house table with four table mates, your turn, the coach suggesting Hit" width="100%"> |
+| <img src="screenshots/omadoku.png" alt="Omadoku, a Medium puzzle with the 7s highlighted and the control rail beside the board" width="100%"> | <img src="screenshots/blackomack.png" alt="Black Omack house table with four table mates, your turn, the coach suggesting Hit" width="100%"> |
 
 This is a monorepo: games live under `games/`, everything shared (theming,
 fonts, app bootstrap, common QML controls) lives under `common/` and is compiled
