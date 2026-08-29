@@ -11,13 +11,13 @@ current Omarchy theme.
 - **Notes** are pencil marks: up to nine small digits per empty cell. Placing a
   digit clears that cell's notes and retracts the digit from the notes of every
   cell in the same row, column and box. Notes are never checked.
-- **Click mode** (the keypad beside the board) decides what clicking a digit
-  does: *Highlight*, *Note* or *Fill*. `N` cycles it and it is remembered
-  between sessions; the keyboard's plain / `Shift` / `Ctrl` digits keep working
-  whatever the mode is. Fill is the default.
-- **Highlighting**: pressing a bare digit lights up every cell holding it,
-  givens included. Press it again (or `Escape`) to clear it, or another digit
-  to switch. The digit pad does the same when no cell is selected.
+- **Mode** (the segmented control under the keypad) decides what a digit does,
+  typed or clicked: *Highlight*, *Note* or *Fill*. `N` cycles it and it is
+  remembered between sessions; Highlight is the default. Holding a modifier
+  overrides it for one press without switching mode — `Alt` highlights, `Shift`
+  notes, `Ctrl` fills — and with no cell selected any digit just highlights.
+- **Highlighting** lights up every cell holding that digit, givens included.
+  The same digit again (or `Escape`) clears it, another digit switches it.
 - An unfinished puzzle is saved automatically and offered as *Resume* the next
   time you start the game.
 
@@ -26,10 +26,11 @@ current Omarchy theme.
 | Key | Action |
 | --- | --- |
 | Arrows or `h` `j` `k` `l` | move the selection |
-| `1`–`9` | highlight every cell holding that digit |
-| `Ctrl+1`–`Ctrl+9` | enter the digit in the selected cell |
+| `1`–`9` | do the selected mode's action with that digit |
+| `Alt+1`–`Alt+9` | highlight every cell holding that digit |
 | `Shift+1`–`Shift+9` | toggle the digit as a note in the selected cell |
-| `N` | cycle the click mode: Highlight → Note → Fill |
+| `Ctrl+1`–`Ctrl+9` | fill the digit into the selected cell |
+| `N` | cycle the mode: Highlight → Note → Fill |
 | `Backspace`, `Delete`, `0` | erase the cell |
 | `Ctrl+Z` | undo |
 | `R` | restart the puzzle |
