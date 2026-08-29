@@ -6,7 +6,7 @@ OverlayPanel {
     id: root
 
     Keys.onPressed: function(event) {
-        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_R)
+        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space || event.key === Qt.Key_R)
             game.newGame(game.difficulty);
         else if (event.key === Qt.Key_Escape)
             game.backToStart();
@@ -37,11 +37,12 @@ OverlayPanel {
     }
     Text {
         Layout.alignment: Qt.AlignHCenter
-        visible: game.newHighScoreRank >= 0
-        text: game.newHighScoreRank === 0 ? qsTr("New best score!") : qsTr("High score #%1").arg(game.newHighScoreRank + 1)
-        color: theme.yellow
+        readonly property bool ranked: game.newHighScoreRank >= 0
+        text: ranked ? qsTr("New high score · #%1").arg(game.newHighScoreRank + 1)
+                     : qsTr("Best %1").arg(game.bests[game.difficulty].toLocaleString(Qt.locale(), "f", 0))
+        color: ranked ? theme.yellow : theme.mix(theme.background, theme.foreground, 0.7)
         font.pixelSize: 16 * theme.textScale
-        font.bold: true
+        font.bold: ranked
     }
     OmaHintButton {
         Layout.fillWidth: true

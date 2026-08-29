@@ -12,6 +12,8 @@ RowLayout {
     Behavior on shownScore {
         NumberAnimation { duration: 350; easing.type: Easing.OutCubic }
     }
+    readonly property int best: game.bests[game.difficulty]
+    readonly property bool beatingBest: game.score > best
 
     Text {
         text: qsTr("Level %1").arg(game.level)
@@ -78,12 +80,23 @@ RowLayout {
         }
     }
 
-    Text {
-        Layout.minimumWidth: 90 * theme.textScale
-        horizontalAlignment: Text.AlignRight
-        text: root.shownScore.toLocaleString(Qt.locale(), "f", 0)
-        color: theme.foreground
-        font.pixelSize: 20 * theme.textScale
-        font.bold: true
+    ColumnLayout {
+        spacing: 0
+        Text {
+            Layout.alignment: Qt.AlignRight
+            Layout.minimumWidth: 90 * theme.textScale
+            horizontalAlignment: Text.AlignRight
+            text: root.shownScore.toLocaleString(Qt.locale(), "f", 0)
+            color: root.beatingBest ? theme.accent : theme.foreground
+            font.pixelSize: 20 * theme.textScale
+            font.bold: true
+            Behavior on color { ColorAnimation { duration: 200 } }
+        }
+        Text {
+            Layout.alignment: Qt.AlignRight
+            text: qsTr("Best %1").arg(root.best.toLocaleString(Qt.locale(), "f", 0))
+            color: theme.mix(theme.background, theme.foreground, 0.55)
+            font.pixelSize: 11 * theme.textScale
+        }
     }
 }
