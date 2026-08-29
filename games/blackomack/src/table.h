@@ -59,7 +59,8 @@ public:
 
     // Setup — only between rounds (Betting). The human keeps the middle seat.
     void setHumanBankroll(int bankroll);
-    bool addBot(const BotPersonality &personality, int bankroll = BlackjackRules::kStartingBankroll);
+    bool addBot(const BotPersonality &personality, int bankroll = BlackjackRules::kStartingBankroll,
+                quint32 salt = 0);
     bool removeLastBot();
     // Puts cards on top of the shoe, first one drawn first (tests script rounds with it).
     void stackDeck(const QVector<Card> &cards);
@@ -70,6 +71,7 @@ public:
     bool canAct(int seat, Action action) const;
     QVector<TableEvent> act(Action action);     // the human's current hand
     QVector<TableEvent> advance();              // next automatic step
+    // `rng` rolls replacements for broke bots and salts their decision streams.
     QVector<TableEvent> nextRound(QRandomGenerator &rng);
 
 private:

@@ -245,6 +245,26 @@ private slots:
         }
         QVERIFY(deviated);
     }
+    void launchSaltVariesDecisionsButNotPersonality() {
+        BotPersonality p{QStringLiteral("Bea"), 0.5, 0.5, 777};
+        BotPlayer unsalted(p), unsaltedAgain(p, 0), saltA(p, 0xA5A5), saltB(p, 0x5A5A);
+        QCOMPARE(saltA.personality().name, p.name);
+        QCOMPARE(saltA.personality().seed, p.seed);
+        Shoe shoe(6, 21);
+        bool aDiffersFromB = false, aDiffersFromUnsalted = false;
+        for (int i = 0; i < 300; ++i) {
+            const Hand h = hand({shoe.draw().rank, shoe.draw().rank});
+            const Card up = shoe.draw();
+            const auto base = unsalted.decide(h, up, true, true);
+            QCOMPARE(base, unsaltedAgain.decide(h, up, true, true));   // salt 0 == today's behaviour
+            const auto a = saltA.decide(h, up, true, true);
+            const auto b = saltB.decide(h, up, true, true);
+            aDiffersFromB |= a != b;
+            aDiffersFromUnsalted |= a != base;
+        }
+        QVERIFY(aDiffersFromB);
+        QVERIFY(aDiffersFromUnsalted);
+    }
     void botBetsStayInBand() {
         for (double aggression : {0.0, 0.5, 1.0}) {
             BotPlayer bot({QStringLiteral("Gus"), 0.5, aggression, 3});

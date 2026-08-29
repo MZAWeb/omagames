@@ -48,8 +48,8 @@ BotPersonality BotPersonality::roll(const QStringList &taken, QRandomGenerator &
     return p;
 }
 
-BotPlayer::BotPlayer(const BotPersonality &personality)
-    : m_personality(personality), m_rng(personality.seed) {}
+BotPlayer::BotPlayer(const BotPersonality &personality, quint32 salt)
+    : m_personality(personality), m_rng(personality.seed ^ salt) {}
 
 int BotPlayer::chooseBet(int bankroll) {
     // Cautious bots risk ~2% of their stack per hand, wild ones up to 25%.

@@ -96,7 +96,7 @@ void BlackjackGame::setBotCount(int count) {
         m_table.removeLastBot();
     while (m_table.botCount() < count) {
         const BotPersonality p = BotPersonality::roll(m_table.takenNames(), m_rng);
-        m_table.addBot(p);
+        m_table.addBot(p, kStartingBankroll, m_rng.generate());
         record({{TableEvent::BotJoined, QStringLiteral("%1 sits down (%2)").arg(p.name, p.label())}});
     }
     save();
@@ -183,7 +183,7 @@ void BlackjackGame::load() {
     const GameState state = GameState::fromString(text);
     m_table.setHumanBankroll(state.bankroll);
     for (const GameState::Bot &b : state.bots)
-        m_table.addBot(b.personality, b.bankroll);
+        m_table.addBot(b.personality, b.bankroll, m_rng.generate());
     m_handsPlayed = state.handsPlayed;
     m_netResult = state.netResult;
 }

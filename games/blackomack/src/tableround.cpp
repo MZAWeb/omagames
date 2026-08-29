@@ -120,7 +120,7 @@ QVector<TableEvent> Table::nextRound(QRandomGenerator &rng) {
             continue;
         events.append({TableEvent::BotLeft, QStringLiteral("%1 is broke and leaves the table").arg(seat.name()), i});
         const BotPersonality fresh = BotPersonality::roll(takenNames(), rng);
-        seat.bot = BotPlayer(fresh);
+        seat.bot = BotPlayer(fresh, rng.generate());
         seat.bankroll = kStartingBankroll;
         events.append({TableEvent::BotJoined, QStringLiteral("%1 sits down (%2)").arg(fresh.name, fresh.label()), i});
     }

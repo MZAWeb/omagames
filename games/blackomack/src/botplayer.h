@@ -23,12 +23,13 @@ struct BotPersonality {
 };
 
 // An AI seat: plays basic strategy with probability `skill`, otherwise makes
-// the mistakes typical of casual players. All randomness comes from the
-// personality seed so a bot behaves the same way across launches.
+// the mistakes typical of casual players. The personality is what persists;
+// `salt` varies the decision stream per launch so a bot does not replay the
+// exact same mistakes every session (tests leave it 0 for determinism).
 class BotPlayer {
 public:
     BotPlayer() = default;
-    explicit BotPlayer(const BotPersonality &personality);
+    explicit BotPlayer(const BotPersonality &personality, quint32 salt = 0);
 
     const BotPersonality &personality() const { return m_personality; }
 

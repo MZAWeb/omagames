@@ -24,11 +24,11 @@ void Table::setHumanBankroll(int bankroll) {
     m_seats[m_humanSeat].bankroll = bankroll;
 }
 
-bool Table::addBot(const BotPersonality &personality, int bankroll) {
+bool Table::addBot(const BotPersonality &personality, int bankroll, quint32 salt) {
     if (m_phase != Phase::Betting || botCount() >= 5)
         return false;
     Seat seat;
-    seat.bot = BotPlayer(personality);
+    seat.bot = BotPlayer(personality, salt);
     seat.bankroll = bankroll;
     m_seats.append(seat);
     rebalanceSeats();
