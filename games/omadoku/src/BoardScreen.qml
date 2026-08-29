@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Layouts
-import OmaGames
 
 // The playing screen: status line, board and, beside it, the keypad with its
 // click mode and the remaining actions. All rules live in `game`; this only
