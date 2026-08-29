@@ -49,17 +49,17 @@ Rectangle {
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 8 * theme.textScale
-                HintButton {
+                OmaHintButton {
                     Layout.fillWidth: true
                     text: root.rejectText
-                    keyHint: qsTr("Esc")
+                    hint: qsTr("Esc")
                     onClicked: root.rejected()
                 }
-                HintButton {
+                OmaHintButton {
                     Layout.fillWidth: true
                     text: root.acceptText
                     primary: true
-                    keyHint: qsTr("Enter")
+                    hint: qsTr("Enter")
                     onClicked: root.accepted()
                 }
             }

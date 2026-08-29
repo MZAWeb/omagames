@@ -49,23 +49,23 @@ FocusScope {
         Repeater {
             model: game.difficulties
 
-            HintButton {
+            OmaHintButton {
                 required property var modelData
                 required property int index
 
                 Layout.fillWidth: true
                 text: modelData.label
                 primary: index === 0
-                keyHint: (index + 1).toString()
+                hint: (index + 1).toString()
                 onClicked: game.newGame(modelData.id)
             }
         }
-        HintButton {
+        OmaHintButton {
             Layout.fillWidth: true
             Layout.topMargin: 10 * theme.textScale
             visible: game.hasSavedGame
             text: qsTr("Resume saved game")
-            keyHint: qsTr("R")
+            hint: qsTr("R")
             onClicked: game.resumeSavedGame()
         }
 

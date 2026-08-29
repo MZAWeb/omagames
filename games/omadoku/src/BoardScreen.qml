@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import OmaGames
 
 // The playing screen: status line, board and, beside it, the keypad with its
 // click mode and the remaining actions. All rules live in `game`; this only
@@ -160,29 +161,29 @@ FocusScope {
             Layout.fillWidth: true
             spacing: 8 * theme.textScale
 
-            HintButton {
+            OmaHintButton {
                 Layout.fillWidth: true
                 text: qsTr("Erase")
-                keyHint: qsTr("Bksp")
+                hint: qsTr("Bksp")
                 onClicked: game.erase()
             }
-            HintButton {
+            OmaHintButton {
                 Layout.fillWidth: true
                 text: qsTr("Undo")
-                keyHint: qsTr("Ctrl+Z")
-                actionEnabled: game.canUndo
+                hint: qsTr("Ctrl+Z")
+                enabled: game.canUndo
                 onClicked: game.undo()
             }
-            HintButton {
+            OmaHintButton {
                 Layout.fillWidth: true
                 text: qsTr("Restart")
-                keyHint: qsTr("R")
+                hint: qsTr("R")
                 onClicked: game.restart()
             }
-            HintButton {
+            OmaHintButton {
                 Layout.fillWidth: true
                 text: qsTr("New game")
-                keyHint: qsTr("Esc")
+                hint: qsTr("Esc")
                 onClicked: root.leaveRequested()
             }
         }
