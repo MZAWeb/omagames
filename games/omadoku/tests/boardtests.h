@@ -24,6 +24,7 @@ private slots:
     void countsFilledCellsAndDigits();
     void countsOnlyPlayerEntries();
     void jsonRoundTripsBoardState();
+    void jsonKeepsTheLevelAndTechnique();
 
 private:
     int emptyCell(int nth = 0) const;

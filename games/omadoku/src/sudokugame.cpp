@@ -29,6 +29,7 @@ const auto kFillId = QStringLiteral("fill");
 const auto kEasyId = QStringLiteral("easy");
 const auto kMediumId = QStringLiteral("medium");
 const auto kHardId = QStringLiteral("hard");
+const auto kExtraHardId = QStringLiteral("extrahard");
 
 QString idFor(Difficulty difficulty) {
     switch (difficulty) {
@@ -38,6 +39,8 @@ QString idFor(Difficulty difficulty) {
         return kMediumId;
     case Difficulty::Hard:
         return kHardId;
+    case Difficulty::ExtraHard:
+        return kExtraHardId;
     }
     return kEasyId;
 }
@@ -181,9 +184,11 @@ void SudokuGame::setValidateAsYouGo(bool validateAsYouGo) {
 void SudokuGame::newGame(const QString &difficulty) {
     // An unknown id can only come from a caller with a stale idea of the
     // levels; Easy is the safe landing.
-    const Difficulty level = difficulty == kHardId ? Difficulty::Hard
-        : difficulty == kMediumId                  ? Difficulty::Medium
-                                                   : Difficulty::Easy;
+    Difficulty level = Difficulty::Easy;
+    for (int i = 0; i < kDifficultyCount; ++i) {
+        if (idFor(Difficulty(i)) == difficulty)
+            level = Difficulty(i);
+    }
     m_board.setPuzzle(SudokuGenerator::generate(level));
     m_cells.refreshAll();
 

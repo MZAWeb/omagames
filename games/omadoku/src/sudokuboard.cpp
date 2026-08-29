@@ -2,6 +2,8 @@
 
 #include <QJsonArray>
 
+#include "sudokugrader.h"
+
 #include <algorithm>
 
 namespace {
@@ -195,6 +197,7 @@ QJsonObject SudokuBoard::toJson() const {
     json.insert(QStringLiteral("values"), gridToJson(m_values));
     json.insert(QStringLiteral("notes"), notes);
     json.insert(QStringLiteral("difficulty"), int(m_puzzle.difficulty));
+    json.insert(QStringLiteral("technique"), SudokuGrader::techniqueId(m_puzzle.hardest));
     json.insert(QStringLiteral("seed"), qint64(m_puzzle.seed));
     return json;
 }
@@ -216,10 +219,14 @@ bool SudokuBoard::fromJson(const QJsonObject &json, SudokuBoard *board) {
         return false;
 
     const int difficulty = json.value(QStringLiteral("difficulty")).toInt(int(Difficulty::Easy));
-    puzzle.difficulty = difficulty >= int(Difficulty::Easy) && difficulty <= int(Difficulty::Hard)
+    puzzle.difficulty = difficulty >= 0 && difficulty < kDifficultyCount
         ? Difficulty(difficulty)
         : Difficulty::Easy;
     puzzle.seed = quint32(json.value(QStringLiteral("seed")).toInteger(0));
+    // A save from before puzzles were graded names no technique; grading it
+    // now keeps the header honest for it too.
+    if (!SudokuGrader::techniqueFromId(json.value(QStringLiteral("technique")).toString(), &puzzle.hardest))
+        puzzle.hardest = SudokuGrader::grade(puzzle.givens).hardest;
 
     board->setPuzzle(puzzle);
     board->m_values = values;

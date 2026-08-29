@@ -4,6 +4,7 @@
 
 #include "sudoku.h"
 #include "sudokugenerator.h"
+#include "sudokugrader.h"
 
 namespace {
 
@@ -262,4 +263,24 @@ void BoardTests::jsonRoundTripsBoardState() {
     QJsonObject truncated = m_board.toJson();
     truncated.remove(QStringLiteral("values"));
     QVERIFY(!SudokuBoard::fromJson(truncated, &broken));
+}
+
+void BoardTests::jsonKeepsTheLevelAndTechnique() {
+    const Puzzle puzzle = SudokuGenerator::generate(Difficulty::ExtraHard, 5u);
+    m_board.setPuzzle(puzzle);
+    SudokuBoard restored;
+    QVERIFY(SudokuBoard::fromJson(m_board.toJson(), &restored));
+    QCOMPARE(restored.puzzle().difficulty, Difficulty::ExtraHard);
+    QCOMPARE(restored.puzzle().hardest, puzzle.hardest);
+    QCOMPARE(restored.puzzle().seed, puzzle.seed);
+
+    // A save from before puzzles were graded names no technique and knows
+    // only three levels: it is graded on the way in, and an unknown level
+    // lands on Easy rather than being refused.
+    QJsonObject old = m_board.toJson();
+    old.remove(QStringLiteral("technique"));
+    old.insert(QStringLiteral("difficulty"), 7);
+    QVERIFY(SudokuBoard::fromJson(old, &restored));
+    QCOMPARE(restored.puzzle().hardest, SudokuGrader::grade(puzzle.givens).hardest);
+    QCOMPARE(restored.puzzle().difficulty, Difficulty::Easy);
 }
