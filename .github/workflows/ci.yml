@@ -23,7 +23,7 @@ jobs:
     outputs:
       games: ${{ steps.list.outputs.games }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: List games/
         id: list
@@ -48,7 +48,7 @@ jobs:
       - name: Install Qt 6 and toolchain
         run: pacman -Syu --noconfirm --needed $ARCH_PACKAGES
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Build ${{ matrix.game }}
         run: bin/build ${{ matrix.game }}
@@ -65,7 +65,7 @@ jobs:
       - name: Install Qt 6 and toolchain
         run: pacman -Syu --noconfirm --needed $ARCH_PACKAGES
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Shell scripts parse (sh -n bin/*)
         run: |
@@ -137,7 +137,7 @@ jobs:
       - name: Install Qt 6 and toolchain
         run: pacman -Syu --noconfirm --needed $ARCH_PACKAGES
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       # makepkg refuses to run as root, and the container runs as root.
       - name: Create the build user
@@ -156,7 +156,7 @@ jobs:
           ls -l "$pkgdir"/*.pkg.tar.zst
 
       - name: Upload ${{ matrix.game }} package
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.game }}-pkg
           path: games/${{ matrix.game }}/pkgbuild/*.pkg.tar.zst
