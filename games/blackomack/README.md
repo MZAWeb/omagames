@@ -20,11 +20,12 @@ saved between launches. When you're broke you can only start a new game.
 
 ## Table mates
 
-Each bot is rolled with a `skill` (how often it follows basic strategy) and an
-`aggression` (bet sizing and appetite for risk), shown under its name as
-"cautious · sharp", "wild · reckless" and so on. A bot that goes broke leaves
-and a fresh one takes its seat. Change the number of bots (0–5) between rounds
-with the `−`/`+` buttons in the header.
+Each bot is rolled with a `skill` (how well it plays: rookie, regular, pro)
+and an `aggression` (bet sizing and appetite for risk: timid, steady, bold).
+Under its name it says how it bets and then how it plays — "timid pro",
+"bold rookie", "steady regular". A bot that goes broke leaves and a fresh one
+takes its seat. Change the number of bots (0–5) between rounds with the
+`−`/`+` buttons in the header.
 
 ## Keyboard
 

@@ -295,8 +295,10 @@ private slots:
             QVERIFY(p.seed != 0);
             taken.append(p.name);
         }
-        QCOMPARE(BotPersonality({QStringLiteral("x"), 0.9, 0.1, 1}).label(), QStringLiteral("cautious · sharp"));
-        QCOMPARE(BotPersonality({QStringLiteral("x"), 0.5, 0.9, 1}).label(), QStringLiteral("wild · average"));
+        // Bets first, then play: every combination reads as plain English.
+        QCOMPARE(BotPersonality({QStringLiteral("x"), 0.9, 0.1, 1}).label(), QStringLiteral("timid pro"));
+        QCOMPARE(BotPersonality({QStringLiteral("x"), 0.5, 0.9, 1}).label(), QStringLiteral("bold regular"));
+        QCOMPARE(BotPersonality({QStringLiteral("x"), 0.1, 0.5, 1}).label(), QStringLiteral("steady rookie"));
     }
 
     // --- Table ---

@@ -11,15 +11,16 @@ QString band(double v, const char *low, const char *mid, const char *high) {
 }
 
 QString BotPersonality::skillLabel() const {
-    return band(skill, "reckless", "average", "sharp");
+    return band(skill, "rookie", "regular", "pro");
 }
 
 QString BotPersonality::aggressionLabel() const {
-    return band(aggression, "cautious", "steady", "wild");
+    return band(aggression, "timid", "steady", "bold");
 }
 
+// How the bot bets, then how well it plays: "bold pro", "timid rookie".
 QString BotPersonality::label() const {
-    return aggressionLabel() + QStringLiteral(" · ") + skillLabel();
+    return aggressionLabel() + QLatin1Char(' ') + skillLabel();
 }
 
 const QStringList &BotPersonality::names() {
@@ -52,7 +53,7 @@ BotPlayer::BotPlayer(const BotPersonality &personality, quint32 salt)
     : m_personality(personality), m_rng(personality.seed ^ salt) {}
 
 int BotPlayer::chooseBet(int bankroll) {
-    // Cautious bots risk ~2% of their stack per hand, wild ones up to 25%.
+    // Timid bots risk ~2% of their stack per hand, bold ones up to 25%.
     const double fraction = 0.02 + 0.23 * m_personality.aggression;
     return BlackjackRules::clampBet(int(bankroll * fraction), bankroll);
 }
@@ -78,6 +79,6 @@ Action BotPlayer::deviate(const Hand &hand, const Card &dealerUp, Action strateg
         return Action::Hit;                                 // too timid to put more money down
     if (total >= 17)
         return Action::Stand;
-    // Gut feeling on the rest: wild bots chase 17, cautious ones freeze at 12.
+    // Gut feeling on the rest: bold bots chase 17, timid ones freeze at 12.
     return (m_personality.aggression > 0.5 ? total < 17 : total < 12) ? Action::Hit : Action::Stand;
 }
