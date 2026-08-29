@@ -168,6 +168,7 @@ void BlackjackGame::humanAct(Table::Action action) {
 void BlackjackGame::nextRound() {
     if (!roundOver())
         return;
+    m_newBest = false;   // the celebration lasts exactly one round
     record(m_table.nextRound(m_rng));
     setBet(m_bet);   // re-clamp to what is left
     emit stateChanged();
@@ -205,6 +206,7 @@ void BlackjackGame::newGame() {
     m_table = Table();
     m_handsPlayed = 0;
     m_netResult = 0;
+    m_newBest = false;   // m_bestBankroll deliberately survives: it is a high score
     m_log.clear();
     setBotCount(bots);
     setBet(50);
@@ -266,6 +268,10 @@ void BlackjackGame::finishRound() {
         returned += h.returned;
     ++m_handsPlayed;
     m_netResult += returned - m_roundStake;
+    if (bankroll() > m_bestBankroll) {
+        m_bestBankroll = bankroll();
+        m_newBest = true;
+    }
     save();
 }
 
@@ -294,6 +300,7 @@ bool BlackjackGame::load() {
     }
     m_handsPlayed = state.handsPlayed;
     m_netResult = state.netResult;
+    m_bestBankroll = qMax(state.bestBankroll, bankroll());
     if (state.bots.size() > kMaxBots)
         save();   // permanently trim state written by a newer or invalid configuration
     return true;
@@ -302,6 +309,7 @@ bool BlackjackGame::load() {
 void BlackjackGame::save() const {
     GameState state;
     state.bankroll = bankroll();
+    state.bestBankroll = m_bestBankroll;
     for (const Seat &s : m_table.seats())
         if (!s.isHuman)
             state.bots.append({s.bot.personality(), s.bankroll});

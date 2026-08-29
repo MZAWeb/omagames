@@ -547,12 +547,14 @@ private slots:
     void gameStateRoundTrips() {
         GameState state;
         state.bankroll = 1230;
+        state.bestBankroll = 1480;
         state.handsPlayed = 7;
         state.netResult = 230;
         state.bots.append({{QStringLiteral("Zed"), 0.25, 0.75, 4000000000u}, 880});
         state.bots.append({{QStringLiteral("Mona"), 0.9, 0.1, 17}, 1500});
         const GameState back = GameState::fromString(state.toString());
         QCOMPARE(back.bankroll, 1230);
+        QCOMPARE(back.bestBankroll, 1480);
         QCOMPARE(back.handsPlayed, 7);
         QCOMPARE(back.netResult, 230);
         QCOMPARE(back.bots.size(), 2);
@@ -563,6 +565,9 @@ private slots:
         QCOMPARE(back.bots[0].bankroll, 880);
         QCOMPARE(back.bots[1].bankroll, 1500);
         QCOMPARE(GameState::fromString(QString()).bankroll, 1000);   // fresh install
+        QCOMPARE(GameState::fromString(QString()).bestBankroll, 1000);
+        // a save written before the high score existed keeps the stack it held
+        QCOMPARE(GameState::fromString(QStringLiteral("{\"bankroll\":2400}")).bestBankroll, 2400);
     }
     void bridgeBetting() {
         BlackjackGame g;
@@ -818,6 +823,62 @@ private slots:
                 QVERIFY(seat.value(QStringLiteral("net")).toInt() > 0);
             }
         }
+    }
+    // The best bankroll ever held is a high score: only a bigger stack raises
+    // it, and starting over does not clear it.
+    void bridgeBestBankrollIsAHighScore() {
+        int best = 0;
+        {
+            BlackjackGame g;
+            g.setStepInterval(0);
+            g.setBotCount(0);
+            g.setBet(50);
+            QCOMPARE(g.bestBankroll(), 1000);   // the opening stake is the first record
+            QVERIFY(!g.newBest());
+
+            // player 19 against the dealer's 17: a payout that beats the record
+            g.stackDeck(cards({10, 10, 9, 7}));
+            playRound(g);
+            QCOMPARE(g.bankroll(), 1050);
+            QCOMPARE(g.bestBankroll(), 1050);
+            QVERIFY(g.newBest());
+            g.nextRound();
+            QVERIFY(!g.newBest());              // celebrated for exactly one round
+            QCOMPARE(g.bestBankroll(), 1050);
+
+            // 16 against 17: a loss leaves the record where it was
+            g.stackDeck(cards({10, 10, 6, 7}));
+            playRound(g);
+            QCOMPARE(g.bankroll(), 1000);
+            QCOMPARE(g.bestBankroll(), 1050);
+            QVERIFY(!g.newBest());
+            g.nextRound();
+
+            // 17 against 17: a push returns the bet and sets no record
+            g.stackDeck(cards({10, 10, 7, 7}));
+            playRound(g);
+            QCOMPARE(g.bankroll(), 1000);
+            QVERIFY(!g.newBest());
+            QCOMPARE(g.bestBankroll(), 1050);
+            g.nextRound();
+
+            // back to the record, which is matched rather than beaten
+            g.stackDeck(cards({10, 10, 9, 7}));
+            playRound(g);
+            QCOMPARE(g.bankroll(), 1050);
+            QVERIFY(!g.newBest());
+            QCOMPARE(g.bestBankroll(), 1050);
+            g.nextRound();
+
+            g.newGame();
+            QCOMPARE(g.bankroll(), 1000);
+            QCOMPARE(g.bestBankroll(), 1050);   // a high score outlives the game
+            QVERIFY(!g.newBest());
+            best = g.bestBankroll();
+        }
+        BlackjackGame relaunched;
+        QCOMPARE(relaunched.bestBankroll(), best);
+        QVERIFY(!relaunched.newBest());
     }
     void bridgeBrokePlayerMustStartOver() {
         BlackjackGame g;

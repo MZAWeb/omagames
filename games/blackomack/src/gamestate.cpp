@@ -16,6 +16,7 @@ QJsonObject GameState::toJson() const {
     }
     return {
         {QStringLiteral("bankroll"), bankroll},
+        {QStringLiteral("bestBankroll"), bestBankroll},
         {QStringLiteral("bots"), botArray},
         {QStringLiteral("handsPlayed"), handsPlayed},
         {QStringLiteral("netResult"), netResult},
@@ -25,6 +26,10 @@ QJsonObject GameState::toJson() const {
 GameState GameState::fromJson(const QJsonObject &json) {
     GameState state;
     state.bankroll = json.value(QStringLiteral("bankroll")).toInt(state.bankroll);
+    // A save from before the high score existed still held a record: whatever
+    // was on the table, or the stake everyone starts with.
+    state.bestBankroll = json.value(QStringLiteral("bestBankroll"))
+                             .toInt(qMax(state.bankroll, BlackjackRules::kStartingBankroll));
     state.handsPlayed = json.value(QStringLiteral("handsPlayed")).toInt();
     state.netResult = json.value(QStringLiteral("netResult")).toInt();
     const QJsonArray botArray = json.value(QStringLiteral("bots")).toArray();
