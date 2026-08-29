@@ -14,8 +14,12 @@ git worktree list
 ```
 
 - Worktrees live in `.worktrees/` (gitignored) inside the main checkout.
-- `main` stays untouched while work is in flight; only merge into it.
+- `main` stays untouched while work is in flight; changes reach it through PRs.
 - One branch per worktree; branch per game or per feature.
+- If an agent has to branch by itself inside its worktree, it must use
+  `git checkout -b <branch> --no-track origin/main`. A branch tracking
+  `origin/main` plus `git push -u` fast-forwards `main` (this happened once);
+  the repo sets `push.default=current` as a second guard.
 
 ## Briefing an agent
 
@@ -29,11 +33,23 @@ Be explicit that:
 - it makes atomic commits on its branch, every commit building and passing
   `bin/test <game>`,
 - it never touches `main`, never runs `git worktree`, never force-pushes,
-- it finishes with `rm -rf build build-tests && bin/build <game> && bin/test <game>`
-  and a report: done / missing / decisions / test totals / wishes outside its paths.
+  never merges its own PR,
+- it verifies with tests, `qmllint` (the exact command from
+  `.github/workflows/ci.yml`) and a run under `QT_FORCE_STDERR_LOGGING=1`
+  (Qt logs QML warnings to journald when stderr is not a tty) — and does
+  **not** take or update screenshots; those are refreshed by hand now and then,
+- it finishes with `rm -rf build build-tests && bin/build <game> && bin/test <game>`,
+  pushes, opens the PR with `gh pr create`, waits for `gh pr checks`, and reports:
+  done / missing / decisions / test totals / wishes outside its paths.
+
+The same brief works for non-Claude agents (e.g. `codex -m <model> -c
+model_reasoning_effort=high -s workspace-write`); Codex's sandbox cannot write
+`.git`, so commit its output yourself.
 
 Tip: when driving an agent through tmux, send prompts with
-`tmux send-keys -l "<text>"` followed by a separate `send-keys Enter`.
+`tmux send-keys -l "<text>"` followed by a separate `send-keys Enter` (Codex
+needs the Enter twice for a multi-line paste), and use `/model` and `/effort`
+in the agent's own session to switch models mid-task.
 
 ## Reviewing
 
@@ -45,19 +61,17 @@ git diff main...<branch> -- common/      # shared changes deserve a close look
 .worktrees/<branch>/bin/test <game>
 ```
 
-Or push and open a PR: `git push -u origin <branch>` then `gh pr create --base main`.
-Ask for fixes by re-prompting the same agent in its worktree.
+The normal path is a PR: `git push -u origin <branch>` then `gh pr create --base main`;
+review the diff there, let CI run, ask for fixes by re-prompting the same agent
+in its worktree (it pushes to the same branch), and merge on GitHub.
 
 ## Merging
 
-```sh
-git merge --no-ff <branch>
-bin/build && bin/test
-```
-
-If two branches both added controls to `common/`, the `qmldir` / `common.qrc`
-conflict is resolved by keeping both sides' lines. Bring a lagging branch up to
-date from inside its worktree with `git merge main`.
+Merge the PR on GitHub once checks are green. When two in-flight branches both
+touch `common/`, the `qmldir` / `common.qrc` conflict is resolved by keeping
+both sides' lines; bring a lagging branch up to date from inside its worktree
+with `git fetch origin && git merge origin/main`, then rebuild, retest and run
+the game once — a rename that merges cleanly can still fail at runtime.
 
 ## Cleanup
 

@@ -59,13 +59,16 @@ shortcuts, install line. Decide the rules before writing code.
    QSettings persistence (`state/v1` JSON + `window/geometry`).
 3. **UI** (`src/*.qml`, small components): renders the bridge's state, no rules,
    colors and sizes only from `theme`. Reuse `import OmaGames` controls; if you
-   build something generic (a card, a key badge, a dialog frame), put it in
+   build something generic (a card, a dialog frame), put it in
    `common/qml/OmaGames/` and register it in `qmldir` and `common/common.qrc`.
-   Every action gets a key and a visible key hint.
+   Every action gets a key and shows it: use `OmaHintButton` (an `OmaButton`
+   with an `OmaKeyHint` badge) for buttons and `OmaKeyHint` on custom controls.
 
 ## 4. Finish
 
 - Icon: flat SVG, rounded square, one glyph, same style as the other games.
 - `pkgbuild/PKGBUILD`: only paths/names change; verify with `makepkg -f` in `pkgbuild/`.
-- Add the game to the table in the root `README.md`.
+- Add the game to the table in the root `README.md` (and a screenshot).
 - From a clean state: `rm -rf build build-tests && bin/build && bin/test`.
+- Nothing else to register: CI, `bin/test`, `install.sh` and `bin/opr-pkgbuilds`
+  discover games from `games/*`.

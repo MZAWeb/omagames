@@ -26,8 +26,9 @@ inside `games/<game>/` unless you are deliberately changing shared code.
 - `OmarchyTheme` (`theme` in QML): every color from Omarchy's `colors.toml`,
   `darkMode`, `textScale`, plus `theme.mix(a, b, t)` and `theme.alpha(c, a)`.
 - `OmaGames::setupApplication` / `setupEngine`: see `common/src/appsetup.h`.
-- QML module `OmaGames` (`common/qml/OmaGames/`): generic controls such as
-  `OmaButton`, `OmaPanel`, `PlayingCard`. Add new *generic* controls there
+- QML module `OmaGames` (`common/qml/OmaGames/`): `OmaButton`, `OmaPanel`,
+  `OmaKeyHint` (keycap badge), `OmaHintButton` (button + badge), `PlayingCard`.
+  Add new *generic* controls there
   (register in `qmldir` **and** `common/common.qrc`, append-only); game-specific
   controls stay in the game.
 - Changing an existing `common/` API affects every game: build and test all of
@@ -35,7 +36,8 @@ inside `games/<game>/` unless you are deliberately changing shared code.
 
 ## Keyboard first
 - Everything must be playable without a mouse. Every action has a single-key
-  shortcut and the UI shows it (key badge on the control). `Ctrl+Q` quits,
+  shortcut and the UI shows it (`OmaHintButton`, or an `OmaKeyHint` badge on a
+  custom control; write chords in full, `Shift+1-9` not `Shift`). `Ctrl+Q` quits,
   `Escape` backs out / closes dialogs, dialogs also accept `Enter`/`Y`/`N`.
 
 ## Persistence
@@ -56,3 +58,7 @@ inside `games/<game>/` unless you are deliberately changing shared code.
 - Atomic commits, one logical change each, message `"<game>: <imperative summary>"`
   (`"common: ..."` for shared code). Every commit builds and passes tests.
 - Never commit `build/`, `build-tests/` or generated files.
+- Never push to `main` directly; work on a branch and open a PR. Create branches
+  with `git checkout -b <branch> --no-track origin/main` (or `git worktree add
+  -b`), and leave the repo's `push.default=current` alone — a tracking branch
+  plus `push -u` once fast-forwarded `main` by accident.

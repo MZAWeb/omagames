@@ -16,8 +16,10 @@ table seats three of them.
 - Bets from Ø 10 up to your whole bankroll, in steps of 10. Doubling and
   splitting require enough bankroll to cover the extra bet.
 
-You start with Ø 1,000. The bankroll, your table mates and session stats are
-saved between launches. When you're broke you can only start a new game.
+You start with Ø 1,000. The bankroll, your table mates and session stats
+(hands played and net, shown under your balance) are saved between launches.
+At the payout every hand shows what it paid. When you're broke you can only
+start a new game.
 
 ## Table mates
 
@@ -38,7 +40,7 @@ Everything is reachable without a mouse; each button shows its key as a badge.
 | `H` `S` `D` `P` | Hit / Stand / Double / Split |
 | `↑` `↓` or `+` `-` | Bet ±10 |
 | `M` | Bet max |
-| `B` | Type a bet (`Enter` deals, `Escape` reverts) |
+| `B` | Type a bet (`Enter` deals, `Escape` reverts) — bet controls only exist while betting |
 | `[` `]` | Fewer / more table mates (between rounds) |
 | `Ctrl+N` | New game (asks for confirmation) |
 | `Y` / `Enter`, `N` / `Escape` | Confirm / cancel a dialog |
@@ -57,5 +59,7 @@ Settings live in `~/.config/Omacom/blackomack.conf`.
 ## Install (Arch)
 
 ```sh
-cd games/blackomack/pkgbuild && makepkg -si
+curl -fsSL https://raw.githubusercontent.com/MZAWeb/omagames/main/install.sh | bash -s blackomack
 ```
+
+or from a checkout, `bin/install blackomack`.

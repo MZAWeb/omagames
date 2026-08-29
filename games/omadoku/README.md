@@ -88,8 +88,11 @@ is the narrowest.
 ## Build and install
 
 ```sh
+curl -fsSL https://raw.githubusercontent.com/MZAWeb/omagames/main/install.sh | bash -s omadoku   # install
 bin/build omadoku     # build
 bin/test omadoku      # run the test suite
 bin/run omadoku       # play
-cd games/omadoku/pkgbuild && makepkg -si
+bin/install omadoku   # build + install the Arch package from a checkout
 ```
+
+Settings and the saved puzzle live in `~/.config/Omacom/omadoku.conf`.

@@ -9,7 +9,7 @@ size.
 
 | Game | Directory | What |
 |---|---|---|
-| **Omadoku** | `games/omadoku` | Sudoku with generated puzzles, notes mode and optional instant checking |
+| **Omadoku** | `games/omadoku` | Sudoku with four technique-graded levels, notes, digit highlighting and validate-as-you-go |
 | **Black Omack** | `games/blackomack` | Casino blackjack with a persistent Omabucks bankroll and AI table mates |
 
 Each game has its own README with rules and keyboard shortcuts.
@@ -41,7 +41,7 @@ install them together.
 bin/build            # build every game -> build/games/<game>/<game>
 bin/build omadoku    # build one game
 bin/run omadoku      # build + launch
-bin/test             # run all QtTest suites headlessly (bin/test omadoku for one)
+bin/test             # run every QtTest suite headlessly (bin/test omadoku or bin/test common for one)
 bin/install omadoku  # build + makepkg -fsi the Arch package
 ```
 
@@ -54,10 +54,13 @@ Omarchy theme.
 ## Layout
 
 ```
-common/        shared C++ (OmarchyTheme, SystemTheme, OmaGames::setupApplication), QML module `OmaGames`, fonts
+common/        shared C++ (OmarchyTheme, SystemTheme, OmaGames::setupApplication), QML module `OmaGames`, fonts, tests/
 games/<name>/  <name>.pro, src/ (engine + QML), tests/, pkgbuild/, README.md
-docs/          ARCHITECTURE.md, NEW-GAME.md, PARALLEL-AGENTS.md
-bin/           build / run / test / install
+docs/          ARCHITECTURE.md, NEW-GAME.md, PARALLEL-AGENTS.md, RELEASING.md
+bin/           build / run / test / install / opr-pkgbuilds / release
+install.sh     the one-line installer above
+packaging/     OPR (omarchy-pkgs) directories generated at release time
+screenshots/   images used by this README
 ```
 
 ## Contributing

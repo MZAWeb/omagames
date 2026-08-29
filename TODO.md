@@ -1,13 +1,12 @@
 # TODO
 
 ## Omadoku
-- [ ] Mode badges show the full chord (`Shift+1-9`, …) — PR in progress
-- [ ] Design pass: animations, start screen, won overlay
+- [ ] Implement a design direction (proposals on the local `design` branch: Focus Grid recommended, Candidate Studio's optional assistance later)
 - [ ] Hints (next single), timer/stats per difficulty, best times
-- [ ] Difficulty grading with more techniques (pairs, pointing, X-wing) so Hard is truly hard
+- [ ] Extra hard almost always lands on Y-wing (swordfish 1/80); add XY-chain / uniqueness to widen the top band
 
 ## Black Omack
-- [ ] Design pass: table felt/layout (a lot of empty space at rest), card art, chip animations
+- [ ] Implement a design direction (proposals on the local `design` branch: House Table with the optional decision coach; scaling study in progress)
 - [ ] Insurance, surrender, re-splits as optional rules
 - [ ] Speed setting in the UI (`stepInterval` already exists)
 - [ ] Session stats screen (hands, net, streaks); bot chatter
@@ -15,6 +14,7 @@
 
 ## Shared
 - [ ] Promote `HandView.qml` to `common/` when a second card game needs it
+- [ ] Refresh `screenshots/` (both are behind: Omadoku's start screen/validate toggle, Black Omack's stats and badges)
 
 ## Release
 - [ ] Cut v0.1.0 with `bin/release` and submit `packaging/opr/*` to omarchy-pkgs (see docs/RELEASING.md) — when the games are ready
