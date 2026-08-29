@@ -1268,6 +1268,8 @@ private slots:
         QCOMPARE(events.first().text, expected ? QStringLiteral("Nina takes insurance") : QString());
         QCOMPARE(t.phase(), Table::Phase::PlayerTurns);
     }
+    // The dock picks its tray from exactly these five flags, so pinning them
+    // here pins what the player is offered: the insurance pair and nothing else.
     void bridgeOffersInsuranceAgainstAnAce() {
         QSettings().clear();
         BlackjackGame g;
@@ -1278,8 +1280,10 @@ private slots:
         g.stackDeck(cards({10, 1, 9, 13}));
         g.dealRound();
         QCOMPARE(g.phase(), QStringLiteral("insurance"));
-        QVERIFY(g.canInsure());
-        QVERIFY(!g.waitingForHuman());
+        QVERIFY(g.canInsure());          // the Insurance / No insurance pair shows
+        QVERIFY(!g.waitingForHuman());   // and the Hit / Stand / Double / Split row does not
+        QVERIFY(!g.roundOver());         // nor Next round
+        QVERIFY(!g.canDeal());           // nor the bet controls
         QCOMPARE(g.insuranceCost(), 50);
         QCOMPARE(g.coachAction(), QStringLiteral("No insurance"));
         QCOMPARE(g.coachSituation(), QStringLiteral("Dealer shows an ace"));

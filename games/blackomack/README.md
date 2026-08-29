@@ -29,8 +29,9 @@ table seats four of them.
   cover the extra bet.
 
 You start with Ø 1,000. The bankroll, your table mates and session stats are
-saved between launches. Your session net appears with round and shoe context
-in the action dock; every seat shows its own cumulative net beside its bankroll.
+saved between launches, as are the window's size and position. Your session net
+appears with round and shoe context in the action dock; every seat shows its own
+cumulative net beside its bankroll.
 At the payout every hand shows what it paid. Your best bankroll ever sits in the
 same line and lights up for the round that sets it; it survives new games and
 only a settings wipe clears it. When you're broke you can only start a new game.
@@ -41,8 +42,11 @@ The table is arranged around a themed oval: the dealer stays at top-center,
 AI table mates fill the upper arc symmetrically in deal order, and your
 larger accent-framed tray stays bottom-center. Dealt cards travel from the
 dealer's shoe to the seat they land on, one at a time as the deal paces them.
-Bets sit beside their hands as chips. The fixed action dock shows only the current phase's commands together
-with the round, shoe depth and latest table event.
+Bets sit beside their hands as chips, with the insurance coin next to them
+when a seat has taken the side bet. The felt itself carries the last three
+table events and, when there is room, the house rules line. The fixed action
+dock shows only the current phase's commands together with the round, shoe
+depth and latest table event.
 
 Heads-up and two-mate tables enlarge the dealer and player cards without
 drawing empty seats. The arc is re-spaced for the number of mates rather than
@@ -64,7 +68,7 @@ table itself is always 0–6 mates.
 dealer outward in deal order, left first, so an odd extra mate sits dealer-left.
 Up to four mates sit in two columns per side, spaced so a seat that grows with
 its cards can never cover its neighbour; five and six add a third row and need
-roughly a 1280×760 window, below which they reflow to the stage and scrollable
+roughly a 1280×800 window, below which they reflow to the stage and scrollable
 roster, where all six mates remain available in deal order. The seat minimums
 and the 430×181 human tray do not shrink.
 
@@ -73,7 +77,8 @@ and the 430×181 human tray do not shrink.
 The optional coach suggests the standard play for your hand against the
 dealer's card: on your turn it names the play and the spot it applies to —
 `Hit`, "16 against a 10" — and the rest of the time it says only `Coach on`.
-It starts off, remembers your choice, and toggles with `C`; the play itself
+It starts off, remembers your choice, and toggles with `C` or a click on the
+panel; the play itself
 comes from the same tested `BasicStrategy` engine the table mates use, in the
 C++ bridge rather than in QML.
 
@@ -104,7 +109,7 @@ Everything is reachable without a mouse; each button shows its key as a badge.
 | `B` | Type a bet (`Enter` deals, `Escape` reverts) — bet controls only exist while betting |
 | `[` `]` | Fewer / more table mates (between rounds) |
 | `C` | Toggle the Decision Coach (off by default) |
-| `Ctrl+N` | New game (asks for confirmation) |
+| `Ctrl+N` | New game, between rounds (asks for confirmation) |
 | `Y` / `Enter`, `N` / `Escape` | Confirm / cancel a dialog |
 | `Ctrl+Q` | Quit |
 

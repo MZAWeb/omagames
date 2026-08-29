@@ -118,7 +118,7 @@ Item {
             id: deal
             width: implicitWidth
             text: "Deal"
-            hint: "Enter"
+            hint: "Enter / Space"
             primary: true
             enabled: game.canDeal
             onClicked: game.dealRound()
