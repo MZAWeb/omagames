@@ -7,12 +7,14 @@ TEMPLATE = app
 HEADERS += \
     src/sudoku.h \
     src/sudokugenerator.h \
-    src/sudokugrader.h
+    src/sudokugrader.h \
+    src/sudokuboard.h
 
 SOURCES += \
     src/main.cpp \
     src/sudoku.cpp \
     src/sudokugenerator.cpp \
-    src/sudokugrader.cpp
+    src/sudokugrader.cpp \
+    src/sudokuboard.cpp
 
 RESOURCES += src/resources.qrc
