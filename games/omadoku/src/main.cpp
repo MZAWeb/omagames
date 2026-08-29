@@ -11,6 +11,8 @@ int main(int argc, char *argv[]) {
     QGuiApplication app(argc, argv);
     OmarchyTheme *theme = OmaGames::setupApplication(app, {QStringLiteral("omadoku"), QStringLiteral("Omadoku")});
 
+    // Declared before the engine so it outlives it: QML bindings still touch
+    // `game` while the engine tears its objects down.
     SudokuGame game;
     // Registered only so QML can name the State and Level enums; the instance
     // itself comes in as a context property.

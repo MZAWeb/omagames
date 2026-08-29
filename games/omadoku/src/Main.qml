@@ -118,9 +118,9 @@ ApplicationWindow {
     onHeightChanged: trackNormalGeometry()
 
     onVisibilityChanged: {
-        if (visibility === Window.Maximized || visibility === Window.FullScreen)
+        if (win.visibility === Window.Maximized || win.visibility === Window.FullScreen)
             wasMaximized = true;
-        else if (visibility === Window.Windowed)
+        else if (win.visibility === Window.Windowed)
             wasMaximized = false;
     }
 
