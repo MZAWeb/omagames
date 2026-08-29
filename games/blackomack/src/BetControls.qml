@@ -33,7 +33,6 @@ RowLayout {
         selectByMouse: true
         onEditingFinished: { game.setBet(parseInt(text) || 0); text = game.bet; focus = false; }
         Connections { target: game; function onBetChanged() { if (!betField.activeFocus) betField.text = game.bet; } }
-        Keys.onEscapePressed: { text = game.bet; focus = false; }
     }
     OmaButton { text: "+10"; enabled: bar.betting && game.bet < game.maxBet; onClicked: game.adjustBet(10) }
     OmaButton { text: "Max"; enabled: bar.betting && game.bet < game.maxBet; onClicked: game.betMax() }

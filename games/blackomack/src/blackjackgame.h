@@ -85,7 +85,6 @@ signals:
     void betChanged();
     void messageChanged();
     void stepIntervalChanged();
-    void cardDealt(int seat, int hand);   // for the UI's deal animation
 
 private:
     void humanAct(Table::Action action);

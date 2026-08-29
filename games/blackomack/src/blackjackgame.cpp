@@ -65,9 +65,6 @@ void BlackjackGame::dealRound() {
     m_roundStake = m_bet;
     record(m_table.placeBets(m_bet));
     record(m_table.deal());
-    for (int s = 0; s < m_table.seats().size(); ++s)
-        if (!m_table.seats()[s].hands.isEmpty())
-            emit cardDealt(s, 0);
     emit stateChanged();
     schedule();
 }
@@ -79,7 +76,6 @@ void BlackjackGame::humanAct(Table::Action action) {
     if (action == Table::Action::Double || action == Table::Action::Split)
         m_roundStake += m_bet;
     record(events);
-    emit cardDealt(m_table.humanSeat(), events.first().hand);
     emit stateChanged();
     schedule();
 }
@@ -149,10 +145,6 @@ void BlackjackGame::step() {
         if (events.isEmpty())
             break;
         record(events);
-        const TableEvent &first = events.first();
-        if (first.type == TableEvent::PlayerAction || first.type == TableEvent::DealerCard
-            || first.type == TableEvent::DealerReveal)
-            emit cardDealt(first.seat, first.hand);
         emit stateChanged();
         if (m_table.roundOver())
             finishRound();
