@@ -141,6 +141,8 @@ void OmanixGame::startGame(Difficulty difficulty, quint32 seed) {
     emit levelSecondsChanged();
     emit phaseChanged();
     emit pausedChanged();
+    emit levelIntroChanged();
+    syncDerivedState();
     emit frameChanged();
     syncTimer();
 }
@@ -204,6 +206,8 @@ void OmanixGame::restartLevel() {
     emit pausedChanged();
     emit claimedPercentChanged();
     emit levelSecondsChanged();
+    emit levelIntroChanged();
+    syncDerivedState();
     emit frameChanged();
     syncTimer();
 }
@@ -216,6 +220,8 @@ void OmanixGame::nextLevel() {
     emit claimedPercentChanged();
     emit levelSecondsChanged();
     emit phaseChanged();
+    emit levelIntroChanged();
+    syncDerivedState();
     emit frameChanged();
     syncTimer();
 }
@@ -227,6 +233,8 @@ void OmanixGame::backToStart() {
     m_timer.stop();
     emit phaseChanged();
     emit pausedChanged();
+    emit levelIntroChanged();
+    syncDerivedState();
     emit frameChanged();
 }
 
@@ -236,6 +244,7 @@ void OmanixGame::step() {
     const int score = m_game->score();
     const int lives = m_game->lives();
     const int seconds = levelSeconds();
+    const bool intro = m_game->inLevelIntro();
     const std::vector<Event> events = m_game->tick();
     for (const Event &event : events)
         handle(event);
@@ -245,7 +254,20 @@ void OmanixGame::step() {
         emit livesChanged();
     if (levelSeconds() != seconds)
         emit levelSecondsChanged();
+    if (m_game->inLevelIntro() != intro)
+        emit levelIntroChanged();
+    syncDerivedState();
     emit frameChanged();
+}
+
+// State the engine derives on demand, sampled once per tick so QML only
+// hears about changes.
+void OmanixGame::syncDerivedState() {
+    const bool threatened = m_game && m_game->trailThreatened();
+    if (threatened == m_trailThreatened)
+        return;
+    m_trailThreatened = threatened;
+    emit trailThreatenedChanged();
 }
 
 void OmanixGame::handle(const Event &event) {

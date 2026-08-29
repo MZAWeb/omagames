@@ -51,8 +51,10 @@ public:
     static constexpr double kGoalPercent = 75.0;
     static constexpr int kStartLives = 3;
     static constexpr int kExtraLifeScore = 10000;
-    // Everything holds still for a moment after a lost life.
+    // Everything holds still for a moment after a lost life, and for a
+    // little longer while a level announces itself.
     static constexpr int kRespawnTicks = Level::kTicksPerSecond;
+    static constexpr int kLevelIntroTicks = Level::kTicksPerSecond * 6 / 5;
 
     Game(Difficulty difficulty, quint32 seed);
 
@@ -62,6 +64,10 @@ public:
     int score() const { return m_score; }
     int lives() const { return m_lives; }
     bool paused() const { return m_paused; }
+    // True while the level intro holds everything still.
+    bool inLevelIntro() const { return m_introTicks > 0; }
+    // A ball is within kCloseCallDistance of the trail right now.
+    bool trailThreatened() const;
     int levelTicks() const { return m_levelTicks; }
     double claimedPercent() const { return m_field.claimedPercent(); }
     const LevelStats &lastLevel() const { return m_lastLevel; }
@@ -120,5 +126,6 @@ private:
     int m_ticks = 0;
     int m_levelTicks = 0;
     int m_freezeTicks = 0;
+    int m_introTicks = 0;
     bool m_paused = false;
 };

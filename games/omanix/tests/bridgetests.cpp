@@ -23,6 +23,8 @@ void quietStart(OmanixGame &game, int wallX = 40) {
         field.set({wallX, y}, Cell::Claimed);
     engine->placeBalls({{{wallX + 2, Field::kBorder}, {1, 1}}});
     engine->placePlayer({field.width() / 2, field.height() - 1});
+    for (int i = 0; i < Game::kLevelIntroTicks; ++i)
+        game.step();
 }
 
 void hold(OmanixGame &game, const QString &direction, int cells) {
@@ -123,6 +125,43 @@ void BridgeTests::directionsAndPauseGoThroughTheBridge() {
     QVERIFY(!game.paused());
     QVERIFY(!game.engine()->player().onTrail);
     QCOMPARE(game.level(), 1);
+}
+
+void BridgeTests::levelIntroAndThreatAreExposed() {
+    OmanixGame game;
+    game.setStepInterval(0);
+    QSignalSpy intros(&game, &OmanixGame::levelIntroChanged);
+    game.newGame(QStringLiteral("hard"));
+    QVERIFY(game.levelIntro());
+    QCOMPARE(game.ballCount(), 4);
+    QCOMPARE(game.chaserCount(), 1);
+    QCOMPARE(intros.count(), 1);
+    for (int i = 0; i < Game::kLevelIntroTicks; ++i)
+        game.step();
+    QVERIFY(!game.levelIntro());
+    QCOMPARE(intros.count(), 2);
+
+    OmanixGame quiet;
+    quietStart(quiet);
+    QSignalSpy threats(&quiet, &OmanixGame::trailThreatenedChanged);
+    const QPoint start = quiet.engine()->player().pos;
+    quiet.engineForTests()->placeBalls({{{start.x() + Game::kCloseCallDistance, start.y() - 6}, {1, -1}}});
+    Field &field = quiet.engineForTests()->mutableField();
+    for (int dy = -1; dy <= 1; ++dy) {
+        for (int dx = -1; dx <= 1; ++dx) {
+            if (dx != 0 || dy != 0)
+                field.set({start.x() + Game::kCloseCallDistance + dx, start.y() - 6 + dy}, Cell::Claimed);
+        }
+    }
+    hold(quiet, QStringLiteral("up"), 2);
+    QVERIFY(!quiet.trailThreatened());
+    hold(quiet, QStringLiteral("up"), 1);
+    QVERIFY(quiet.trailThreatened());
+    QCOMPARE(threats.count(), 1);
+    hold(quiet, QStringLiteral("left"), 1);
+    hold(quiet, QStringLiteral("down"), 2);
+    QVERIFY(!quiet.trailThreatened());
+    QCOMPARE(threats.count(), 2);
 }
 
 void BridgeTests::scriptedLevelCompletesAndContinues() {

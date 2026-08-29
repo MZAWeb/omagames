@@ -19,6 +19,10 @@ class OmanixGame : public QObject {
     // "start" | "playing" | "levelcomplete" | "gameover"
     Q_PROPERTY(QString phase READ phase NOTIFY phaseChanged)
     Q_PROPERTY(bool paused READ paused NOTIFY pausedChanged)
+    Q_PROPERTY(bool levelIntro READ levelIntro NOTIFY levelIntroChanged)
+    Q_PROPERTY(bool trailThreatened READ trailThreatened NOTIFY trailThreatenedChanged)
+    Q_PROPERTY(int ballCount READ ballCount NOTIFY levelChanged)
+    Q_PROPERTY(int chaserCount READ chaserCount NOTIFY levelChanged)
     Q_PROPERTY(int level READ level NOTIFY levelChanged)
     Q_PROPERTY(int score READ score NOTIFY scoreChanged)
     Q_PROPERTY(int lives READ lives NOTIFY livesChanged)
@@ -44,6 +48,12 @@ public:
 
     QString phase() const;
     bool paused() const { return m_game && m_game->paused(); }
+    // The banner moment at the start of a level, while nothing moves.
+    bool levelIntro() const { return m_game && m_game->inLevelIntro(); }
+    // A ball is close enough to the trail to make the close-call bonus.
+    bool trailThreatened() const { return m_trailThreatened; }
+    int ballCount() const { return m_game ? m_game->params().balls : 0; }
+    int chaserCount() const { return m_game ? m_game->params().chasers : 0; }
     int level() const { return m_game ? m_game->level() : 0; }
     int score() const { return m_game ? m_game->score() : 0; }
     int lives() const { return m_game ? m_game->lives() : 0; }
@@ -92,6 +102,8 @@ public:
 signals:
     void phaseChanged();
     void pausedChanged();
+    void levelIntroChanged();
+    void trailThreatenedChanged();
     void levelChanged();
     void scoreChanged();
     void livesChanged();
@@ -114,6 +126,7 @@ private:
     void handle(const Event &event);
     void finishGame();
     void syncTimer();
+    void syncDerivedState();
     void loadSettings();
 
     std::unique_ptr<Game> m_game;
@@ -122,4 +135,5 @@ private:
     Difficulty m_difficulty = Difficulty::Normal;
     int m_stepInterval = kDefaultStepIntervalMs;
     int m_newHighScoreRank = -1;
+    bool m_trailThreatened = false;
 };

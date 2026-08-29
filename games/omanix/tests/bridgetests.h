@@ -14,6 +14,7 @@ private slots:
     void startsOnTheStartScreenWithDifficulties();
     void newGameExposesEngineState();
     void directionsAndPauseGoThroughTheBridge();
+    void levelIntroAndThreatAreExposed();
     void scriptedLevelCompletesAndContinues();
     void scriptedGameOverRecordsAHighScore();
     void highScoresOrderAndCap();

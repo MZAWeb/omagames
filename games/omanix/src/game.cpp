@@ -20,6 +20,7 @@ void Game::startLevel() {
     m_field.reset();
     m_levelTicks = 0;
     m_freezeTicks = 0;
+    m_introTicks = kLevelIntroTicks;
     m_phase = Phase::Playing;
     spawnBalls();
     spawnChasers();
@@ -139,6 +140,10 @@ std::vector<Event> Game::tick() {
     std::vector<Event> events;
     if (m_phase != Phase::Playing || m_paused)
         return events;
+    if (m_introTicks > 0) {
+        --m_introTicks;
+        return events;
+    }
     ++m_ticks;
     ++m_levelTicks;
     if (m_freezeTicks > 0) {
@@ -220,6 +225,10 @@ void Game::closeTrail(std::vector<Event> &events) {
         m_phase = Phase::LevelComplete;
         events.push_back({Event::LevelComplete, {}, bonus, 1, false, {}, {}});
     }
+}
+
+bool Game::trailThreatened() const {
+    return m_player.onTrail && ballNearTrail(m_field.trailCells());
 }
 
 bool Game::ballNearTrail(const std::vector<int> &trail) const {

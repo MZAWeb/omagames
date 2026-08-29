@@ -30,4 +30,6 @@ private slots:
     void restartLevelKeepsScoreAndLives();
     void difficultyParametersRamp();
     void sameSeedSameEvents();
+    void levelStartsWithAnIntroFreeze();
+    void trailThreatenedWhileABallIsNear();
 };

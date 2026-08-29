@@ -33,6 +33,11 @@ const Event *find(const std::vector<Event> &events, Event::Type type) {
     return nullptr;
 }
 
+void skipIntro(Game &game) {
+    for (int i = 0; i < Game::kLevelIntroTicks; ++i)
+        game.tick();
+}
+
 // Walls a ball into a one-cell pocket so it stays exactly where a scenario
 // put it. Its region is then that single cell, so any claim afterwards takes
 // the whole rest of the field.
@@ -59,6 +64,7 @@ Game quietGame(int wallX = 40) {
         field.set({wallX, y}, Cell::Claimed);
     game.placeBalls({{{wallX + 2, Field::kBorder}, {1, 1}}});
     game.placePlayer({field.width() / 2, field.height() - 1});
+    skipIntro(game);
     return game;
 }
 
@@ -365,6 +371,7 @@ void EngineTests::levelCompletesAtGoal() {
     game.nextLevel();
     QCOMPARE(game.level(), 2);
     QCOMPARE(game.phase(), Phase::Playing);
+    QVERIFY(game.inLevelIntro());
     QCOMPARE(game.claimedPercent(), 0.0);
     QCOMPARE(int(game.balls().size()), Level::params(Difficulty::Normal, 2).balls);
 }
@@ -494,6 +501,7 @@ void EngineTests::difficultyParametersRamp() {
     QCOMPARE(Level::params(Difficulty::Hard, 40).ballPeriod, 3);
     // The starting positions follow the parameters.
     Game game(Difficulty::Hard, kSeed);
+    skipIntro(game);
     QCOMPARE(int(game.balls().size()), 4);
     QCOMPARE(int(game.chasers().size()), 1);
     for (const Ball &b : game.balls())
@@ -505,6 +513,7 @@ void EngineTests::difficultyParametersRamp() {
 void EngineTests::sameSeedSameEvents() {
     auto play = [](quint32 seed) {
         Game game(Difficulty::Normal, seed);
+        skipIntro(game);
         std::vector<Event> events;
         const Direction plan[] = {Direction::Up, Direction::Up, Direction::Left, Direction::Up, Direction::Right};
         for (Direction d : plan)
@@ -523,4 +532,46 @@ void EngineTests::sameSeedSameEvents() {
     };
     QCOMPARE(play(kSeed), play(kSeed));
     QVERIFY(play(kSeed) != play(kSeed + 1));
+}
+
+void EngineTests::levelStartsWithAnIntroFreeze() {
+    Game game(Difficulty::Normal, kSeed);
+    QVERIFY(game.inLevelIntro());
+    const QPoint ball = game.balls().front().pos;
+    game.setDirection(Direction::Up);
+    for (int i = 0; i < Game::kLevelIntroTicks; ++i) {
+        QVERIFY(game.inLevelIntro());
+        QVERIFY(game.tick().empty());
+    }
+    QVERIFY(!game.inLevelIntro());
+    QCOMPARE(game.balls().front().pos, ball);
+    QCOMPARE(game.levelTicks(), 0);
+    // The key pressed during the intro takes effect right after it.
+    for (int i = 0; i < game.params().playerPeriod; ++i)
+        game.tick();
+    QCOMPARE(game.player().pos.y(), game.field().height() - 2);
+    // A restart announces the level again.
+    game.restartLevel();
+    QVERIFY(game.inLevelIntro());
+}
+
+void EngineTests::trailThreatenedWhileABallIsNear() {
+    Game game = quietGame();
+    QVERIFY(!game.trailThreatened());
+    const QPoint start = game.player().pos;
+    const QPoint near {start.x() + Game::kCloseCallDistance, start.y() - 6};
+    game.placeBalls({{near, {1, -1}}});
+    fence(game, near);
+    walk(game, Direction::Up, 2);
+    QVERIFY(game.player().onTrail);
+    // Trail top at row 37 is 4 rows from the ball: not yet.
+    QVERIFY(!game.trailThreatened());
+    walk(game, Direction::Up, 1);
+    QVERIFY(game.trailThreatened());
+    // Closing ends the threat with the trail.
+    walk(game, Direction::Left, 1);
+    QVERIFY(game.player().onTrail);
+    walk(game, Direction::Down, 2);
+    QVERIFY(!game.player().onTrail);
+    QVERIFY(!game.trailThreatened());
 }
