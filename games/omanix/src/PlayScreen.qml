@@ -103,6 +103,11 @@ FocusScope {
                 anchors.fill: view
             }
 
+            LevelBanner {
+                anchors.centerIn: view
+                shown: game.levelIntro
+            }
+
             Component {
                 id: popupComponent
                 BonusPopup { onFinished: destroy() }
