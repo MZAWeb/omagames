@@ -75,17 +75,21 @@ FocusScope {
             spacing: 8 * theme.textScale
 
             Switch {
+                id: checkSwitch
                 text: qsTr("Check as I go")
                 checked: game.checkAsYouGo
                 font.pixelSize: 14 * theme.textScale
                 onToggled: game.checkAsYouGo = checked
 
+                // The label is drawn by hand so it can take the theme's color;
+                // `parent` inside a contentItem is only a plain Item, so the
+                // control has to be reached through its id.
                 contentItem: Text {
-                    text: parent.text
+                    text: checkSwitch.text
                     color: theme.foreground
-                    font: parent.font
+                    font: checkSwitch.font
                     verticalAlignment: Text.AlignVCenter
-                    leftPadding: parent.indicator.width + parent.spacing
+                    leftPadding: checkSwitch.indicator.width + checkSwitch.spacing
                 }
             }
 
