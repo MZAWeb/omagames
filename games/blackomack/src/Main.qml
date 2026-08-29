@@ -30,17 +30,23 @@ ApplicationWindow {
     }
     onClosing: game.saveWindowGeometry(normalGeometry)
 
+    // Single-key shortcuts stay out of the way while a dialog is open or the
+    // bet is being typed; Ctrl+Q always works.
+    readonly property bool keysActive: !newGameDialog.opened && !brokeDialog.opened && !bets.typing
+
     Shortcut { sequence: "Ctrl+Q"; onActivated: window.close() }
-    Shortcut { sequence: "Ctrl+N"; onActivated: if (game.phase === "betting") newGameDialog.open() }
-    Shortcut { sequence: "H"; onActivated: game.hit() }
-    Shortcut { sequence: "S"; onActivated: game.stand() }
-    Shortcut { sequence: "D"; onActivated: game.doubleDown() }
-    Shortcut { sequence: "P"; onActivated: game.split() }
-    Shortcut { sequences: ["Return", "Enter", "Space"]; onActivated: game.roundOver ? game.nextRound() : game.dealRound() }
-    Shortcut { sequences: ["Up", "+"]; onActivated: game.adjustBet(10) }
-    Shortcut { sequences: ["Down", "-"]; onActivated: game.adjustBet(-10) }
-    Shortcut { sequence: "M"; onActivated: game.betMax() }
-    Shortcut { sequence: "Escape"; onActivated: window.contentItem.forceActiveFocus() }
+    Shortcut { enabled: window.keysActive; sequence: "Ctrl+N"; onActivated: if (game.phase === "betting") newGameDialog.open() }
+    Shortcut { enabled: window.keysActive; sequence: "H"; onActivated: game.hit() }
+    Shortcut { enabled: window.keysActive; sequence: "S"; onActivated: game.stand() }
+    Shortcut { enabled: window.keysActive; sequence: "D"; onActivated: game.doubleDown() }
+    Shortcut { enabled: window.keysActive; sequence: "P"; onActivated: game.split() }
+    Shortcut { enabled: window.keysActive; sequences: ["Return", "Enter", "Space"]; onActivated: game.roundOver ? game.nextRound() : game.dealRound() }
+    Shortcut { enabled: window.keysActive; sequences: ["Up", "+"]; onActivated: game.adjustBet(10) }
+    Shortcut { enabled: window.keysActive; sequences: ["Down", "-"]; onActivated: game.adjustBet(-10) }
+    Shortcut { enabled: window.keysActive; sequence: "M"; onActivated: game.betMax() }
+    Shortcut { enabled: window.keysActive; sequence: "B"; onActivated: bets.focusBet() }
+    Shortcut { enabled: window.keysActive; sequence: "["; onActivated: game.setBotCount(game.botCount - 1) }
+    Shortcut { enabled: window.keysActive; sequence: "]"; onActivated: game.setBotCount(game.botCount + 1) }
 
     ColumnLayout {
         anchors.fill: parent
@@ -86,7 +92,7 @@ ApplicationWindow {
 
         MessageLog { Layout.fillWidth: true; Layout.preferredHeight: implicitHeight }
 
-        BetControls { Layout.fillWidth: true }
+        BetControls { id: bets; Layout.fillWidth: true }
     }
 
     ConfirmDialog {
