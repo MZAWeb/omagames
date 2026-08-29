@@ -1,5 +1,13 @@
 <RCC>
     <qresource prefix="/">
         <file alias="Main.qml">Main.qml</file>
+        <file alias="TableHeader.qml">TableHeader.qml</file>
+        <file alias="DealerArea.qml">DealerArea.qml</file>
+        <file alias="TableSeat.qml">TableSeat.qml</file>
+        <file alias="HandView.qml">HandView.qml</file>
+        <file alias="BetControls.qml">BetControls.qml</file>
+        <file alias="MessageLog.qml">MessageLog.qml</file>
+        <file alias="ConfirmDialog.qml">ConfirmDialog.qml</file>
+        <file alias="HintButton.qml">HintButton.qml</file>
     </qresource>
 </RCC>

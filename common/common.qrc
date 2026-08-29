@@ -9,5 +9,7 @@
         <file alias="OmaGames/qmldir">qml/OmaGames/qmldir</file>
         <file alias="OmaGames/OmaButton.qml">qml/OmaGames/OmaButton.qml</file>
         <file alias="OmaGames/OmaPanel.qml">qml/OmaGames/OmaPanel.qml</file>
+        <file alias="OmaGames/PlayingCard.qml">qml/OmaGames/PlayingCard.qml</file>
+        <file alias="OmaGames/OmaKeyHint.qml">qml/OmaGames/OmaKeyHint.qml</file>
     </qresource>
 </RCC>
