@@ -22,6 +22,7 @@ class SudokuGame : public QObject {
     Q_PROPERTY(QString state READ state NOTIFY stateChanged)
     Q_PROPERTY(QString difficulty READ difficulty NOTIFY boardChanged)
     Q_PROPERTY(QString difficultyLabel READ difficultyLabel NOTIFY boardChanged)
+    Q_PROPERTY(QString techniqueLabel READ techniqueLabel NOTIFY boardChanged)
     Q_PROPERTY(QVariantList difficulties READ difficulties CONSTANT)
     Q_PROPERTY(QString padMode READ padMode WRITE setPadMode NOTIFY padModeChanged)
     Q_PROPERTY(bool validateAsYouGo READ validateAsYouGo WRITE setValidateAsYouGo NOTIFY validateAsYouGoChanged)
@@ -42,11 +43,15 @@ public:
     QAbstractListModel *cells() { return &m_cells; }
     // "start" | "playing" | "won"
     QString state() const;
-    // "easy" | "medium" | "hard", plus the label to show for it and the full
-    // list of {id, label} pairs the start screen offers.
+    // "easy" | "medium" | "hard" | "extrahard", plus the label to show for
+    // it, and the full list the start screen offers: {id, label, techniques,
+    // description}, where `techniques` names the rungs of the ladder the
+    // level introduces, in the order a player would learn them.
     QString difficulty() const;
     QString difficultyLabel() const;
     static QVariantList difficulties();
+    // The hardest technique the current puzzle needs, by name.
+    QString techniqueLabel() const;
     // What a digit does when no modifier overrides it: "highlight" | "note" |
     // "fill". Applies to the keypad and to the plain number keys alike.
     QString padMode() const;

@@ -6,6 +6,7 @@
 #include <QSettings>
 
 #include "sudoku.h"
+#include "sudokugrader.h"
 
 namespace {
 
@@ -45,6 +46,45 @@ QString idFor(Difficulty difficulty) {
     return kEasyId;
 }
 
+QString techniqueName(SudokuGrader::Technique technique) {
+    using SudokuGrader::Technique;
+    switch (technique) {
+    case Technique::NakedSingle:
+        return SudokuGame::tr("Naked single");
+    case Technique::HiddenSingle:
+        return SudokuGame::tr("Hidden single");
+    case Technique::NakedPair:
+        return SudokuGame::tr("Naked pair");
+    case Technique::HiddenPair:
+        return SudokuGame::tr("Hidden pair");
+    case Technique::PointingPair:
+        return SudokuGame::tr("Pointing pair");
+    case Technique::Claiming:
+        return SudokuGame::tr("Claiming");
+    case Technique::NakedTriple:
+        return SudokuGame::tr("Naked triple");
+    case Technique::XWing:
+        return SudokuGame::tr("X-wing");
+    case Technique::YWing:
+        return SudokuGame::tr("Y-wing");
+    case Technique::Swordfish:
+        break;
+    }
+    return SudokuGame::tr("Swordfish");
+}
+
+// The rungs a level adds on top of the level below: everything between the
+// two ceilings, which is exactly what its puzzles can demand and the easier
+// level's never do.
+QStringList techniquesIntroducedBy(Difficulty difficulty) {
+    const int from = difficulty == Difficulty::Easy
+        ? 0 : int(SudokuGenerator::ceiling(Difficulty(int(difficulty) - 1))) + 1;
+    QStringList names;
+    for (int t = from; t <= int(SudokuGenerator::ceiling(difficulty)); ++t)
+        names << techniqueName(SudokuGrader::Technique(t));
+    return names;
+}
+
 // Writing on every keystroke would hit the disk far too often; a short delay
 // still survives a crash or a kill in practice.
 constexpr int kSaveDelayMs = 500;
@@ -76,17 +116,29 @@ QString SudokuGame::difficultyLabel() const {
     return {};
 }
 
+QString SudokuGame::techniqueLabel() const {
+    return techniqueName(m_board.puzzle().hardest);
+}
+
 QVariantList SudokuGame::difficulties() {
-    QVariantList list;
-    const QVector<QPair<QString, QString>> entries {
-        {kEasyId, tr("Easy")},
-        {kMediumId, tr("Medium")},
-        {kHardId, tr("Hard")},
+    struct Level {
+        Difficulty difficulty;
+        QString label;
+        QString description;
     };
-    for (const auto &entry : entries) {
+    const QVector<Level> levels {
+        {Difficulty::Easy, tr("Easy"), tr("Singles only: every step is a digit with one place left.")},
+        {Difficulty::Medium, tr("Medium"), tr("Adds pairs and box-line eliminations.")},
+        {Difficulty::Hard, tr("Hard"), tr("Adds naked triples and X-wings.")},
+        {Difficulty::ExtraHard, tr("Extra hard"), tr("Needs a Y-wing or a swordfish somewhere.")},
+    };
+    QVariantList list;
+    for (const Level &level : levels) {
         list.append(QVariantMap {
-            {QStringLiteral("id"), entry.first},
-            {QStringLiteral("label"), entry.second},
+            {QStringLiteral("id"), idFor(level.difficulty)},
+            {QStringLiteral("label"), level.label},
+            {QStringLiteral("techniques"), techniquesIntroducedBy(level.difficulty)},
+            {QStringLiteral("description"), level.description},
         });
     }
     return list;

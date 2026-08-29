@@ -1,7 +1,8 @@
 # Omadoku
 
-Sudoku for Omarchy: pick Easy, Medium or Hard and a puzzle with exactly one
-solution is generated on the spot. Colors, dark mode and text scale follow the
+Sudoku for Omarchy: pick Easy, Medium, Hard or Extra hard and a puzzle with
+exactly one solution is generated on the spot, graded by the solving
+techniques it actually needs. Colors, dark mode and text scale follow the
 current Omarchy theme.
 
 ## Playing
@@ -41,16 +42,48 @@ current Omarchy theme.
 | `Escape` | clear the highlight, else back to the start screen (confirms mid-puzzle) |
 | `Ctrl+Q` | quit |
 
-On the start screen `1`, `2`, `3` pick a difficulty and `R` resumes. Every
-button shows its key, so nothing above needs memorising.
+On the start screen `1`, `2`, `3`, `4` pick a difficulty and `R` resumes.
+Every button shows its key, so nothing above needs memorising.
 
 ## Difficulty
 
-| | Clues | Requires |
+Every level is defined by the human solving techniques its puzzles need, and
+the generator guarantees the claim both ways: a puzzle at a level is fully
+solvable with that level's techniques and **not** solvable with the level
+below's, so each level really asks for something new. The start screen lists
+the techniques under each level; the board header shows the hardest one the
+current puzzle needs.
+
+| Level | Techniques it adds | Typical clues |
 | --- | --- | --- |
-| Easy | 38–42 | naked/hidden singles only |
-| Medium | 30–34 | — |
-| Hard | 24–28 | more than singles |
+| Easy | naked single, hidden single | 38–42 |
+| Medium | naked pair, hidden pair, pointing pair, claiming | 22–34 |
+| Hard | naked triple, X-wing | 21–30 |
+| Extra hard | Y-wing, swordfish | 23–28 |
+
+Clue counts are a target the generator aims for, not a promise: the
+technique requirement always wins.
+
+### How grading works
+
+The grader is a human-technique solver that never guesses. It climbs a fixed
+ladder — naked single, hidden single, naked pair, hidden pair, pointing pair,
+claiming, naked triple, X-wing, Y-wing, swordfish — always trying the easiest
+rung first and starting over from the bottom after every step, exactly as a
+player would. The hardest rung it has to climb is the puzzle's grade. A grid
+it cannot finish is beyond the ladder (that is where chains, uniqueness
+arguments and the like would begin) and is never handed out.
+
+The generator carves clues out of a random complete grid, removing one only
+while the puzzle stays unique and the ladder can still finish it within the
+level's ceiling. It carves past the clue target until the level below can no
+longer solve the puzzle, and when a removal would jump straight over a
+narrow band (Hard's, mostly) it puts a different clue back to land inside
+it. Each level's promise is checked in the test suite over fixed seeds, and
+every technique has a test on a crafted position where nothing easier makes
+progress. Generation takes well under a second on a laptop: Easy and Medium
+are instant, Extra hard about 20 ms, Hard about 100–150 ms because its band
+is the narrowest.
 
 ## Build and install
 

@@ -23,8 +23,8 @@ FocusScope {
 
     ColumnLayout {
         anchors.centerIn: parent
-        width: Math.min(parent.width - 48 * theme.textScale, 320 * theme.textScale)
-        spacing: 14 * theme.textScale
+        width: Math.min(parent.width - 48 * theme.textScale, 340 * theme.textScale)
+        spacing: 10 * theme.textScale
 
         Text {
             Layout.alignment: Qt.AlignHCenter
@@ -45,15 +45,33 @@ FocusScope {
         Repeater {
             model: game.difficulties
 
-            HintButton {
+            // A level is its button and, under it, the techniques it asks for
+            // beyond the level above: the promise the generator keeps.
+            ColumnLayout {
                 required property var modelData
                 required property int index
 
                 Layout.fillWidth: true
-                text: modelData.label
-                primary: index === 0
-                keyHint: (index + 1).toString()
-                onClicked: game.newGame(modelData.id)
+                spacing: 3 * theme.textScale
+
+                HintButton {
+                    Layout.fillWidth: true
+                    text: parent.modelData.label
+                    primary: parent.index === 0
+                    keyHint: (parent.index + 1).toString()
+                    onClicked: game.newGame(parent.modelData.id)
+                }
+                Text {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 12 * theme.textScale
+                    Layout.rightMargin: 12 * theme.textScale
+                    Layout.bottomMargin: 4 * theme.textScale
+                    text: parent.modelData.techniques.join(" · ")
+                    color: theme.mix(theme.background, theme.foreground, 0.55)
+                    font.pixelSize: 11 * theme.textScale
+                    wrapMode: Text.WordWrap
+                    horizontalAlignment: Text.AlignHCenter
+                }
             }
         }
         HintButton {

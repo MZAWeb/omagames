@@ -94,6 +94,12 @@ FocusScope {
                 font.pixelSize: 17 * theme.textScale
                 font.bold: true
             }
+            Text {
+                Layout.leftMargin: 10 * theme.textScale
+                text: qsTr("needs %1").arg(game.techniqueLabel)
+                color: theme.mix(theme.background, theme.foreground, 0.6)
+                font.pixelSize: 14 * theme.textScale
+            }
             Item { Layout.fillWidth: true }
             Text {
                 text: game.filledCount + "/81"
