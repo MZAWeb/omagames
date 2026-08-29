@@ -23,21 +23,26 @@ OmaPanel {
         RowLayout {
             width: parent.width
             spacing: 10 * theme.textScale
-            Text {
-                text: "Round " + (game.handsPlayed + 1) + " · Shoe " + game.shoePercent + "%"
-                color: theme.foreground
-                opacity: 0.78
-                font.pixelSize: 11 * theme.textScale
-                font.bold: true
-            }
-            Text {
-                text: "· " + (game.netResult > 0 ? "+Ø" : game.netResult < 0 ? "−Ø" : "Ø")
-                      + Math.abs(game.netResult)
-                color: game.netResult > 0 ? theme.green
-                       : game.netResult < 0 ? theme.red : theme.foreground
-                opacity: 0.9
-                font.pixelSize: 11 * theme.textScale
-                font.bold: game.netResult !== 0
+            // Round, shoe depth and your session net read as one sentence, so
+            // they sit in their own tight row rather than spread across the dock.
+            Row {
+                spacing: 5 * theme.textScale
+                Text {
+                    text: "Round " + (game.handsPlayed + 1) + " · Shoe " + game.shoePercent + "%"
+                    color: theme.foreground
+                    opacity: 0.78
+                    font.pixelSize: 11 * theme.textScale
+                    font.bold: true
+                }
+                Text {
+                    text: "· " + (game.netResult > 0 ? "+Ø" : game.netResult < 0 ? "−Ø" : "Ø")
+                          + Math.abs(game.netResult)
+                    color: game.netResult > 0 ? theme.green
+                           : game.netResult < 0 ? theme.red : theme.foreground
+                    opacity: 0.9
+                    font.pixelSize: 11 * theme.textScale
+                    font.bold: game.netResult !== 0
+                }
             }
             Text {
                 text: game.message

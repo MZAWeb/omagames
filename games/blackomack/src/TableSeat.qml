@@ -100,7 +100,7 @@ OmaPanel {
                 opacity: 0.82
                 font.pixelSize: (seat.human ? 12 : 11) * theme.textScale
                 elide: Text.ElideRight
-                Layout.fillWidth: true
+                Layout.fillWidth: false
             }
             Text {
                 text: seat.seatData ? "· " + (seat.seatData.net > 0 ? "+" : seat.seatData.net < 0 ? "−" : "")
@@ -113,6 +113,7 @@ OmaPanel {
                 elide: Text.ElideRight
                 Layout.maximumWidth: (seat.human ? 90 : 70) * theme.textScale
             }
+            Item { Layout.fillWidth: true }   // the pair stays left, together
         }
 
         Flow {

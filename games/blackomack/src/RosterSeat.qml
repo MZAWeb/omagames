@@ -77,7 +77,7 @@ OmaPanel {
                     opacity: 0.82
                     font.pixelSize: 11 * theme.textScale
                     elide: Text.ElideRight
-                    Layout.fillWidth: true
+                    Layout.fillWidth: false
                 }
                 Text {
                     text: row.seatData ? "· " + (row.seatData.net > 0 ? "+" : row.seatData.net < 0 ? "−" : "")
@@ -90,6 +90,7 @@ OmaPanel {
                     elide: Text.ElideRight
                     Layout.maximumWidth: 62 * theme.textScale
                 }
+                Item { Layout.fillWidth: true }   // the pair stays left, together
             }
             Text {
                 visible: row.totalBet() > 0
