@@ -6,8 +6,10 @@ import QtQuick.Window
 ApplicationWindow {
     id: win
 
-    minimumWidth: Math.round(620 * theme.textScale)
-    minimumHeight: Math.round(460 * theme.textScale)
+    // Enough for the board beside its rail; below this the rail folds under
+    // the board instead, and the board would start losing more than it gains.
+    minimumWidth: Math.round(700 * theme.textScale)
+    minimumHeight: Math.round(560 * theme.textScale)
     visible: true
     title: qsTr("Omadoku")
     color: theme.background
