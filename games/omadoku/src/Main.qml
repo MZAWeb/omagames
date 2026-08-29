@@ -19,6 +19,15 @@ ApplicationWindow {
 
     readonly property var difficultyNames: [qsTr("Easy"), qsTr("Medium"), qsTr("Hard")]
 
+    // Escape unwinds one step at a time: first the digit highlight, then the
+    // puzzle itself.
+    function backOut() {
+        if (game.highlightDigit >= 0)
+            game.clearHighlight();
+        else
+            leaveGame();
+    }
+
     // Leaving mid-puzzle is confirmed, because it looks destructive even though
     // the game is saved.
     function leaveGame() {
@@ -42,7 +51,7 @@ ApplicationWindow {
         sequences: ["Escape"]
         context: Qt.ApplicationShortcut
         enabled: game.state !== SudokuGame.Start && !confirmLoader.active
-        onActivated: win.leaveGame()
+        onActivated: win.backOut()
     }
 
     Loader {
