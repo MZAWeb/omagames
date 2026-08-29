@@ -124,6 +124,12 @@ private slots:
             if (shoe.draw().isAce())
                 ++aces;
         QCOMPARE(aces, 24);
+
+        Table table(42);
+        QCOMPARE(table.shoeRemaining(), BlackjackRules::kDecks * 52);
+        table.placeBets(10);
+        table.advance();
+        QCOMPARE(table.shoeRemaining(), BlackjackRules::kDecks * 52 - 1);
     }
     void shoeIsDeterministicPerSeed() {
         Shoe a(6, 7), b(6, 7), other(6, 8);
@@ -456,13 +462,14 @@ private slots:
         t.addBot(perfect(QStringLiteral("Bucky")));
         t.addBot(perfect(QStringLiteral("Ivy")));
         t.addBot(perfect(QStringLiteral("Rex")));
-        QCOMPARE(t.botCount(), 5);
-        QVERIFY(!t.addBot(perfect(QStringLiteral("Lola"))));
-        QCOMPARE(t.humanSeat(), 2);
+        QVERIFY(t.addBot(perfect(QStringLiteral("Lola"))));
+        QCOMPARE(t.botCount(), 6);
+        QVERIFY(!t.addBot(perfect(QStringLiteral("Nina"))));
+        QCOMPARE(t.humanSeat(), 3);
         QVERIFY(t.removeLastBot());
-        QCOMPARE(t.botCount(), 4);
+        QCOMPARE(t.botCount(), 5);
         QVERIFY(t.human().isHuman);
-        QCOMPARE(t.takenNames(), QStringList({QStringLiteral("Zed"), QStringLiteral("Mona"), QStringLiteral("Bucky"), QStringLiteral("Ivy")}));
+        QCOMPARE(t.takenNames(), QStringList({QStringLiteral("Zed"), QStringLiteral("Mona"), QStringLiteral("Bucky"), QStringLiteral("Ivy"), QStringLiteral("Rex")}));
     }
     void fullRoundsWithBotsBalanceTheBooks() {
         Table t(2024);
@@ -503,8 +510,16 @@ private slots:
         Table t(3);
         QRandomGenerator rng(9);
         t.addBot(perfect(QStringLiteral("Zed")), 5);
+        for (int i = 1; i < BlackjackRules::kMaxBots; ++i)
+            QVERIFY(t.addBot(perfect(QStringLiteral("Mate %1").arg(i))));
+        QCOMPARE(t.botCount(), BlackjackRules::kMaxBots);
         t.placeBets(10);
-        QVERIFY(t.seats()[1].hands.isEmpty());     // can't afford the minimum: sits out
+        int brokeSeat = -1;
+        for (int i = 0; i < t.seats().size(); ++i)
+            if (t.seats()[i].name() == QStringLiteral("Zed"))
+                brokeSeat = i;
+        QVERIFY(brokeSeat >= 0);
+        QVERIFY(t.seats()[brokeSeat].hands.isEmpty());   // can't afford the minimum: sits out
         dealOut(t);
         while (!t.roundOver()) {
             autoplay(t);
@@ -515,8 +530,9 @@ private slots:
         QCOMPARE(events.size(), 2);
         QCOMPARE(events[0].type, TableEvent::BotLeft);
         QCOMPARE(events[1].type, TableEvent::BotJoined);
-        QVERIFY(t.seats()[1].bot.personality().name != QStringLiteral("Zed"));
-        QCOMPARE(t.seats()[1].bankroll, 1000);
+        QCOMPARE(t.botCount(), BlackjackRules::kMaxBots);
+        QVERIFY(t.seats()[brokeSeat].bot.personality().name != QStringLiteral("Zed"));
+        QCOMPARE(t.seats()[brokeSeat].bankroll, 1000);
     }
     void nextRoundOnlyAfterPayout() {
         Table t(1);
@@ -564,19 +580,136 @@ private slots:
         QCOMPARE(g.bet(), 1000);
         QVERIFY(g.canDeal());
         QCOMPARE(g.phase(), QStringLiteral("betting"));
+        QCOMPARE(g.shoeRemaining(), 312);
+        QCOMPARE(g.shoePercent(), 100);
+        QCOMPARE(g.rulesSummary(),
+                 QStringLiteral("Blackjack pays 3 to 2 · Dealer stands on all 17"));
     }
     void bridgeSeatsBotsOnAFreshTable() {
         {
             BlackjackGame fresh;
-            QCOMPARE(fresh.botCount(), 3);
-            QCOMPARE(fresh.maxBots(), 5);
+            QCOMPARE(fresh.botCount(), 4);
+            QCOMPARE(fresh.maxBots(), 6);
             fresh.setBotCount(9);
-            QCOMPARE(fresh.botCount(), 5);      // the table only has five other seats
+            QCOMPARE(fresh.botCount(), 6);      // the table only has six other seats
             fresh.setBotCount(-2);
             QCOMPARE(fresh.botCount(), 0);      // playing alone is a choice
         }
         BlackjackGame again;                    // ... and it survives a relaunch
         QCOMPARE(again.botCount(), 0);
+    }
+    void bridgeTrimsOversizedSavedTableOnLoad() {
+        GameState state;
+        for (int i = 0; i < 5; ++i) {
+            const BotPersonality p{QStringLiteral("Saved %1").arg(i + 1), 0.5, 0.5, quint32(i + 1)};
+            state.bots.append({p, 900 + i});
+        }
+        QSettings().setValue(QString::fromLatin1(GameState::kKey), state.toString());
+        {
+            BlackjackGame fiveMateTable;
+            QCOMPARE(fiveMateTable.botCount(), 5);   // existing five-mate saves remain valid
+        }
+
+        for (int i = 5; i < BlackjackRules::kMaxBots + 2; ++i) {
+            const BotPersonality p{QStringLiteral("Saved %1").arg(i + 1), 0.5, 0.5, quint32(i + 1)};
+            state.bots.append({p, 900 + i});
+        }
+        QSettings().setValue(QString::fromLatin1(GameState::kKey), state.toString());
+        BlackjackGame trimmed;
+        QCOMPARE(trimmed.botCount(), BlackjackRules::kMaxBots);
+        const GameState persisted = GameState::fromString(
+            QSettings().value(QString::fromLatin1(GameState::kKey)).toString());
+        QCOMPARE(persisted.bots.size(), BlackjackRules::kMaxBots);
+        QCOMPARE(persisted.bots.last().personality.name, QStringLiteral("Saved 6"));
+    }
+    void bridgeCoachDefaultsOffAndPersists() {
+        {
+            BlackjackGame fresh;
+            QVERIFY(!fresh.coachEnabled());
+            QVERIFY(fresh.coachAction().isEmpty());
+            QVERIFY(fresh.coachSituation().isEmpty());
+            fresh.setCoachEnabled(true);
+            QVERIFY(fresh.coachEnabled());
+        }
+        {
+            BlackjackGame restored;
+            QVERIFY(restored.coachEnabled());
+            restored.toggleCoach();
+            QVERIFY(!restored.coachEnabled());
+        }
+        BlackjackGame restoredOff;
+        QVERIFY(!restoredOff.coachEnabled());
+    }
+    void bridgeCoachDescribesKnownHandsOnlyOnYourTurn() {
+        struct Case {
+            QVector<Card> deck;
+            QString action;
+            QString situation;
+        };
+        // The wording is the player's, not the strategy table's: a verb and
+        // the spot it applies to, with the article the dealer's card takes.
+        const QVector<Case> cases = {
+            {cards({10, 10, 6, 7}), QStringLiteral("Hit"), QStringLiteral("16 against a 10")},
+            {cards({10, 8, 6, 7}), QStringLiteral("Hit"), QStringLiteral("16 against an 8")},
+            {cards({10, 1, 6, 7}), QStringLiteral("Hit"), QStringLiteral("16 against an ace")},
+            {cards({1, 3, 7, 9}), QStringLiteral("Double"), QStringLiteral("Soft 18 against a 3")},
+            {cards({8, 10, 8, 7}), QStringLiteral("Split"), QStringLiteral("Pair of 8s against a 10")},
+            {cards({1, 6, 1, 9}), QStringLiteral("Split"), QStringLiteral("Pair of aces against a 6")},
+        };
+        for (const Case &test : cases) {
+            QSettings().clear();
+            BlackjackGame g;
+            g.setStepInterval(0);
+            g.setBotCount(0);
+            g.setCoachEnabled(true);
+            g.stackDeck(test.deck);
+            QVERIFY(g.coachAction().isEmpty());
+            QVERIFY(g.coachSituation().isEmpty());
+            g.dealRound();
+            QVERIFY(g.waitingForHuman());
+            QCOMPARE(g.shoeRemaining(), 312);   // scripted cards do not consume the real shoe
+            QCOMPARE(g.shoePercent(), 100);
+            QCOMPARE(g.coachAction(), test.action);
+            QCOMPARE(g.coachSituation(), test.situation);
+            g.stand();
+            QVERIFY(g.coachAction().isEmpty());
+            QVERIFY(g.coachSituation().isEmpty());
+        }
+
+        QSettings().clear();
+        BlackjackGame splitGame;
+        splitGame.setStepInterval(0);
+        splitGame.setBotCount(0);
+        splitGame.setCoachEnabled(true);
+        splitGame.stackDeck(cards({8, 6, 8, 10, 3, 2}));
+        splitGame.dealRound();
+        splitGame.split();
+        QCOMPARE(splitGame.coachAction(), QStringLiteral("Double"));
+        QCOMPARE(splitGame.coachSituation(), QStringLiteral("Hand 1 of 2 · 11 against a 6"));
+    }
+    void bridgeCoachSaysNothingWhileItIsOff() {
+        QSettings().clear();
+        BlackjackGame g;
+        g.setStepInterval(0);
+        g.setBotCount(0);
+        g.stackDeck(cards({10, 10, 6, 7}));
+        g.dealRound();
+        QVERIFY(g.waitingForHuman());
+        QVERIFY(g.coachAction().isEmpty());     // off is off, even mid-decision
+        g.setCoachEnabled(true);
+        QCOMPARE(g.coachAction(), QStringLiteral("Hit"));
+    }
+    void bridgeSkipPacingStopsBeforeTheHumanDecision() {
+        BlackjackGame g;
+        g.setBotCount(2);
+        g.stackDeck(cards({10, 10, 10, 6, 7, 6, 7, 10}));
+        g.dealRound();
+        QCOMPARE(g.phase(), QStringLiteral("dealing"));
+        QVERIFY(!g.waitingForHuman());
+        g.skipPacing();
+        QCOMPARE(g.phase(), QStringLiteral("playing"));
+        QVERIFY(g.waitingForHuman());
+        QVERIFY(g.canHit());
     }
     void bridgeLocksTheStakeOnceDealt() {
         BlackjackGame g;
@@ -649,7 +782,7 @@ private slots:
                 const int bet = hand.value(QStringLiteral("bet")).toInt();
                 const int net = hand.value(QStringLiteral("net")).toInt();
                 const QString result = hand.value(QStringLiteral("result")).toString();
-                if (result == QStringLiteral("BLACKJACK"))
+                if (result == QStringLiteral("BJ"))
                     QCOMPARE(net, bet * 3 / 2);          // 3:2, and doubles carry the doubled bet
                 else if (result == QStringLiteral("WIN"))
                     QCOMPARE(net, bet);
@@ -661,6 +794,30 @@ private slots:
             }
         }
         QVERIFY(handsSeen > 0);
+    }
+    void bridgeReportsCumulativeNetPerSeat() {
+        BlackjackGame g;
+        g.setStepInterval(0);
+        g.setBotCount(1);
+        g.setBet(50);
+        g.stackDeck(cards({10, 10, 9, 10, 8, 7, 10}));
+        g.dealRound();
+        QVERIFY(g.waitingForHuman());
+        g.stand();                              // dealer draws on 16 and busts
+        QVERIFY(g.roundOver());
+        QCOMPARE(g.netResult(), 50);
+
+        for (const QVariant &seatValue : g.seats()) {
+            const QVariantMap seat = seatValue.toMap();
+            if (seat.value(QStringLiteral("human")).toBool()) {
+                QCOMPARE(seat.value(QStringLiteral("net")).toInt(), g.netResult());
+            } else {
+                const int bankroll = seat.value(QStringLiteral("bankroll")).toInt();
+                QCOMPARE(seat.value(QStringLiteral("net")).toInt(),
+                         bankroll - BlackjackRules::kStartingBankroll);
+                QVERIFY(seat.value(QStringLiteral("net")).toInt() > 0);
+            }
+        }
     }
     void bridgeBrokePlayerMustStartOver() {
         BlackjackGame g;

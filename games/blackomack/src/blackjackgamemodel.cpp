@@ -17,9 +17,9 @@ QString resultText(const Hand &hand, const Hand &dealer) {
     if (hand.isBust())
         return QStringLiteral("BUST");
     if (!hand.resolved)
-        return hand.isBlackjack() ? QStringLiteral("BLACKJACK") : QString();
+        return hand.isBlackjack() ? QStringLiteral("BJ") : QString();
     switch (outcome(hand, dealer)) {
-    case Outcome::Blackjack: return QStringLiteral("BLACKJACK");
+    case Outcome::Blackjack: return QStringLiteral("BJ");
     case Outcome::Win: return QStringLiteral("WIN");
     case Outcome::Push: return QStringLiteral("PUSH");
     case Outcome::Lose: return QStringLiteral("LOSE");
@@ -60,6 +60,7 @@ QVariantList BlackjackGame::seats() const {
             {QStringLiteral("human"), seat.isHuman},
             {QStringLiteral("personality"), seat.isHuman ? QString() : seat.bot.personality().label()},
             {QStringLiteral("bankroll"), seat.bankroll},
+            {QStringLiteral("net"), seat.isHuman ? m_netResult : seat.bankroll - kStartingBankroll},
             {QStringLiteral("hands"), hands},
             {QStringLiteral("active"), s == m_table.currentSeat()},
         });

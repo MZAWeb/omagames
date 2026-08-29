@@ -3,7 +3,7 @@
 namespace BlackjackRules {
 
 bool dealerShouldHit(const Hand &dealer) {
-    return dealer.total() < 17;
+    return dealer.total() < kDealerStandTotal;
 }
 
 Outcome outcome(const Hand &player, const Hand &dealer) {
@@ -20,7 +20,8 @@ Outcome outcome(const Hand &player, const Hand &dealer) {
 
 int payout(const Hand &player, const Hand &dealer) {
     switch (outcome(player, dealer)) {
-    case Outcome::Blackjack: return player.bet + player.bet * 3 / 2;
+    case Outcome::Blackjack:
+        return player.bet + player.bet * kBlackjackPayoutNumerator / kBlackjackPayoutDenominator;
     case Outcome::Win: return player.bet * 2;
     case Outcome::Push: return player.bet;
     case Outcome::Lose: return 0;

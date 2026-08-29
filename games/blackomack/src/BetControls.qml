@@ -1,107 +1,92 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Layouts
 import OmaGames
 
-// Bottom bar: bankroll with the session stats, bet stepper with typed entry,
-// and the round buttons.
-// Which buttons show depends on the phase; disabled ones stay disabled.
-RowLayout {
+// Pre-deal controls only. The dock swaps this whole tray out after the deal.
+Item {
     id: bar
-    spacing: 8 * theme.textScale
-    readonly property bool betting: game.phase === "betting"
-    // While the bet is being typed the single-letter shortcuts stay quiet.
     readonly property bool typing: betField.activeFocus
+    readonly property real gap: 7 * theme.textScale
+    readonly property real minimumFieldWidth: 112 * theme.textScale
+    readonly property real fixedButtonsWidth: decrease.implicitWidth + increase.implicitWidth
+                                                   + maximum.implicitWidth + deal.implicitWidth
+    implicitHeight: controls.childrenRect.height
 
     function focusBet() {
-        if (!bar.betting)
-            return;
         betField.forceActiveFocus();
         betField.selectAll();
     }
 
-    Column {
-        spacing: 2 * theme.textScale
-        Layout.alignment: Qt.AlignVCenter
+    Flow {
+        id: controls
+        width: parent.width
+        spacing: bar.gap
 
-        Text {
-            text: "Ø " + Number(game.bankroll).toLocaleString(Qt.locale(), "f", 0)
-            color: theme.accent
-            font.pixelSize: 20 * theme.textScale
-            font.bold: true
+        OmaHintButton {
+            id: decrease
+            width: implicitWidth
+            text: "−10"
+            hint: "↓"
+            enabled: game.bet > game.minBet
+            onClicked: game.adjustBet(-10)
         }
-        Row {
-            spacing: 5 * theme.textScale
-            Text {
-                text: game.handsPlayed + " hands  ·"
-                color: theme.muted
-                font.pixelSize: 11 * theme.textScale
+        Item {
+            width: Math.max(bar.minimumFieldWidth,
+                            controls.width - bar.fixedButtonsWidth - 4 * bar.gap)
+            height: 40 * theme.textScale
+            TextField {
+                id: betField
+                anchors.fill: parent
+                text: game.bet
+                color: theme.foreground
+                font.pixelSize: 14 * theme.textScale
+                font.bold: true
+                horizontalAlignment: Text.AlignHCenter
+                validator: IntValidator { bottom: 0; top: 1000000 }
+                selectByMouse: true
+                function commit() { game.setBet(parseInt(text) || 0); text = game.bet; }
+                onEditingFinished: commit()
+                Keys.onReturnPressed: { commit(); focus = false; game.dealRound(); }
+                Keys.onEnterPressed: { commit(); focus = false; game.dealRound(); }
+                Keys.onEscapePressed: { text = game.bet; focus = false; }
+                Connections {
+                    target: game
+                    function onBetChanged() { if (!betField.activeFocus) betField.text = game.bet; }
+                }
             }
-            Text {
-                text: (game.netResult >= 0 ? "+" : "−") + Math.abs(game.netResult) + " Ø"
-                color: game.netResult >= 0 ? theme.green : theme.red
-                opacity: 0.9
-                font.pixelSize: 11 * theme.textScale
+            OmaKeyHint {
+                key: "B"
+                active: true
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: 4 * theme.textScale
+                visible: !betField.activeFocus
             }
         }
-    }
-
-    Item { Layout.fillWidth: true }
-
-    OmaHintButton {
-        text: "−10"; hint: "↓"; showHint: bar.betting
-        enabled: bar.betting && game.bet > game.minBet
-        onClicked: game.adjustBet(-10)
-    }
-    Item {
-        Layout.preferredWidth: betField.width
-        Layout.preferredHeight: betField.height
-        // Greyed out like the buttons once the stake is locked.
-        opacity: bar.betting ? 1.0 : 0.5
-        TextField {
-            id: betField
-            width: 100 * theme.textScale
-            enabled: bar.betting
-            text: game.bet
-            color: theme.foreground
-            font.pixelSize: 16 * theme.textScale
-            font.bold: true
-            horizontalAlignment: Text.AlignHCenter
-            validator: IntValidator { bottom: 0; top: 1000000 }
-            selectByMouse: true
-            function commit() { game.setBet(parseInt(text) || 0); text = game.bet; }
-            onEditingFinished: commit()
-            Keys.onReturnPressed: { commit(); focus = false; game.dealRound(); }
-            Keys.onEnterPressed: { commit(); focus = false; game.dealRound(); }
-            Keys.onEscapePressed: { text = game.bet; focus = false; }
-            Connections { target: game; function onBetChanged() { if (!betField.activeFocus) betField.text = game.bet; } }
+        OmaHintButton {
+            id: increase
+            width: implicitWidth
+            text: "+10"
+            hint: "↑"
+            enabled: game.bet < game.maxBet
+            onClicked: game.adjustBet(10)
         }
-        OmaKeyHint {
-            key: bar.betting ? "B" : ""
-            active: bar.betting
-            anchors.right: betField.right
-            anchors.top: betField.top
-            anchors.margins: 4 * theme.textScale
-            visible: !betField.activeFocus
+        OmaHintButton {
+            id: maximum
+            width: implicitWidth
+            text: "Max"
+            hint: "M"
+            enabled: game.bet < game.maxBet
+            onClicked: game.betMax()
+        }
+        OmaHintButton {
+            id: deal
+            width: implicitWidth
+            text: "Deal"
+            hint: "Enter"
+            primary: true
+            enabled: game.canDeal
+            onClicked: game.dealRound()
         }
     }
-    OmaHintButton {
-        text: "+10"; hint: "↑"; showHint: bar.betting
-        enabled: bar.betting && game.bet < game.maxBet
-        onClicked: game.adjustBet(10)
-    }
-    OmaHintButton {
-        text: "Max"; hint: "M"; showHint: bar.betting
-        enabled: bar.betting && game.bet < game.maxBet
-        onClicked: game.betMax()
-    }
-
-    Item { Layout.fillWidth: true }
-
-    OmaHintButton { visible: bar.betting; text: "Deal"; hint: "Enter"; primary: true; enabled: game.canDeal; onClicked: game.dealRound() }
-    OmaHintButton { visible: game.roundOver; text: "Next round"; hint: "Enter"; primary: true; onClicked: game.nextRound() }
-    OmaHintButton { visible: !bar.betting && !game.roundOver; text: "Hit"; hint: "H"; primary: true; enabled: game.canHit; onClicked: game.hit() }
-    OmaHintButton { visible: !bar.betting && !game.roundOver; text: "Stand"; hint: "S"; enabled: game.canStand; onClicked: game.stand() }
-    OmaHintButton { visible: !bar.betting && !game.roundOver; text: "Double"; hint: "D"; enabled: game.canDouble; onClicked: game.doubleDown() }
-    OmaHintButton { visible: !bar.betting && !game.roundOver; text: "Split"; hint: "P"; enabled: game.canSplit; onClicked: game.split() }
 }
