@@ -8,8 +8,12 @@ INCLUDEPATH += ../src
 HEADERS += \
     ../src/cards.h \
     ../src/hand.h \
-    ../src/blackjackrules.h
+    ../src/blackjackrules.h \
+    ../src/basicstrategy.h \
+    ../src/botplayer.h
 SOURCES += tst_blackomack.cpp \
     ../src/cards.cpp \
     ../src/hand.cpp \
-    ../src/blackjackrules.cpp
+    ../src/blackjackrules.cpp \
+    ../src/basicstrategy.cpp \
+    ../src/botplayer.cpp
