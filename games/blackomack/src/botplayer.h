@@ -13,9 +13,9 @@ struct BotPersonality {
     double aggression = 0.5;   // bet sizing and appetite for risky plays
     quint32 seed = 1;          // drives the bot's private generator
 
-    QString skillLabel() const;       // reckless / average / sharp
-    QString aggressionLabel() const;  // cautious / steady / wild
-    QString label() const;            // "cautious · sharp"
+    QString skillLabel() const;       // rookie / regular / pro
+    QString aggressionLabel() const;  // timid / steady / bold
+    QString label() const;            // "timid pro"
 
     static const QStringList &names();
     // Random personality with a name not in `taken`.

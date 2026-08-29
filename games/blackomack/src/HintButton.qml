@@ -2,9 +2,11 @@ import QtQuick
 import OmaGames
 
 // OmaButton with its keyboard shortcut shown as a keycap after the label.
+// `showHint: false` hides the keycap for a key that is not live right now.
 OmaButton {
     id: control
     property string hint: ""
+    property bool showHint: true
 
     contentItem: Row {
         spacing: 8 * theme.textScale
@@ -16,7 +18,7 @@ OmaButton {
             height: parent.height
         }
         OmaKeyHint {
-            key: control.hint
+            key: control.showHint ? control.hint : ""
             active: control.enabled
             onPrimary: control.primary
             anchors.verticalCenter: parent.verticalCenter

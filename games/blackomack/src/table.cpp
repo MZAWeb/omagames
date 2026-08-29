@@ -25,7 +25,7 @@ void Table::setHumanBankroll(int bankroll) {
 }
 
 bool Table::addBot(const BotPersonality &personality, int bankroll, quint32 salt) {
-    if (m_phase != Phase::Betting || botCount() >= 5)
+    if (m_phase != Phase::Betting || botCount() >= kMaxBots)
         return false;
     Seat seat;
     seat.bot = BotPlayer(personality, salt);
@@ -82,27 +82,55 @@ QVector<TableEvent> Table::placeBets(int humanBet) {
     m_dealer = Hand();
     m_holeHidden = true;
     m_resolved = false;
+    m_dealt = 0;
     m_phase = Phase::Dealing;
     return events;
 }
 
-QVector<TableEvent> Table::deal() {
+// Cards go out the way a dealer pitches them: one to every seat that has a
+// bet, then the dealer, twice around. `kDealerSeat` marks the dealer's turn.
+QVector<int> Table::dealOrder() const {
+    QVector<int> order;
+    for (int round = 0; round < 2; ++round) {
+        for (int i = 0; i < m_seats.size(); ++i)
+            if (!m_seats[i].hands.isEmpty())
+                order.append(i);
+        order.append(kDealerSeat);
+    }
+    return order;
+}
+
+// One card per step, so the bridge can pace the deal and the UI can animate
+// each arrival; the last card hands the round over to the players.
+QVector<TableEvent> Table::dealStep() {
     QVector<TableEvent> events;
-    if (m_phase != Phase::Dealing)
-        return events;
-    if (m_shoe.needsShuffle()) {
+    if (m_dealt == 0 && m_shoe.needsShuffle()) {
         m_shoe.shuffle();
         events.append({TableEvent::Shuffled, QStringLiteral("The dealer shuffles a fresh shoe")});
     }
-    for (int round = 0; round < 2; ++round) {
-        for (Seat &seat : m_seats)
-            if (!seat.hands.isEmpty())
-                seat.hands[0].cards.append(draw());
+    const QVector<int> order = dealOrder();
+    const int target = order.at(m_dealt++);
+    QString text;
+    if (target == kDealerSeat) {
         m_dealer.cards.append(draw());
+        if (m_dealer.cards.size() == 1) {
+            const Card up = dealerUpCard();
+            text = QStringLiteral("Dealer shows %1%2").arg(up.rankText(), up.suitGlyph());
+        }
+    } else {
+        m_seats[target].hands[0].cards.append(draw());
     }
-    const Card up = dealerUpCard();
-    events.append({TableEvent::Dealt, QStringLiteral("Dealer shows %1%2").arg(up.rankText(), up.suitGlyph())});
-    if (dealerPeeks(up) && m_dealer.isBlackjack()) {
+    events.append({TableEvent::Dealt, text, target, target == kDealerSeat ? -1 : 0});
+    if (m_dealt == order.size())
+        events += openTurns();
+    return events;
+}
+
+// The deal is complete: the dealer peeks on a ten or an ace, otherwise the
+// first hand that still needs a decision gets the cursor.
+QVector<TableEvent> Table::openTurns() {
+    QVector<TableEvent> events;
+    if (dealerPeeks(dealerUpCard()) && m_dealer.isBlackjack()) {
         m_holeHidden = false;
         m_phase = Phase::Payout;
         events.append({TableEvent::DealerBlackjack, QStringLiteral("Dealer has blackjack")});
@@ -164,10 +192,10 @@ QVector<TableEvent> Table::advance() {
                                               canAct(m_seat, Action::Double), canAct(m_seat, Action::Split));
         return apply(m_seat, action);
     }
+    case Phase::Dealing: return dealStep();
     case Phase::DealerTurn: return dealerStep();
     case Phase::Payout: return resolve();
-    case Phase::Betting:
-    case Phase::Dealing: return {};
+    case Phase::Betting: return {};
     }
     return {};
 }

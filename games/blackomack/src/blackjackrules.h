@@ -10,6 +10,8 @@ constexpr int kDecks = 6;
 constexpr int kMinBet = 10;
 constexpr int kBetStep = 10;
 constexpr int kStartingBankroll = 1000;
+constexpr int kMaxBots = 5;       // seats at the table besides the human
+constexpr int kDefaultBots = 3;   // how many sit down at a fresh table
 
 enum class Outcome { Blackjack, Win, Push, Lose };
 enum class Action { Hit, Stand, Double, Split };

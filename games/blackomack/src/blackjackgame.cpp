@@ -8,15 +8,18 @@ using namespace BlackjackRules;
 
 namespace {
 constexpr int kDefaultStepMs = 500;
+// The opening deal is a formality rather than a decision to follow, so the
+// cards are pitched faster than the bot and dealer steps.
+constexpr int kDealStepMs = 180;
 constexpr int kLogLength = 8;
 }
 
 BlackjackGame::BlackjackGame(QObject *parent)
-    : QObject(parent), m_rng(QRandomGenerator::global()->generate()) {
+    : QObject(parent), m_rng(QRandomGenerator::global()->generate()), m_stepMs(kDefaultStepMs) {
     m_timer.setSingleShot(true);
-    m_timer.setInterval(kDefaultStepMs);
     connect(&m_timer, &QTimer::timeout, this, &BlackjackGame::step);
-    load();
+    if (!load())
+        setBotCount(kDefaultBots);   // a fresh table is no fun on your own
     m_bet = clampBet(m_bet, bankroll());
 }
 
@@ -36,13 +39,22 @@ bool BlackjackGame::canDeal() const {
 }
 
 void BlackjackGame::setStepInterval(int ms) {
-    if (ms == m_timer.interval())
+    ms = qMax(0, ms);
+    if (ms == m_stepMs)
         return;
-    m_timer.setInterval(qMax(0, ms));
+    m_stepMs = ms;
     emit stepIntervalChanged();
 }
 
+int BlackjackGame::pace() const {
+    if (m_stepMs == 0)
+        return 0;
+    return m_table.phase() == Table::Phase::Dealing ? qMin(kDealStepMs, m_stepMs) : m_stepMs;
+}
+
 void BlackjackGame::setBet(int amount) {
+    if (m_table.phase() != Table::Phase::Betting)
+        return;   // the stake is locked from the deal until the round is settled
     const int clamped = clampBet(amount, bankroll());
     if (clamped == m_bet)
         return;
@@ -64,7 +76,6 @@ void BlackjackGame::dealRound() {
         return;
     m_roundStake = m_bet;
     record(m_table.placeBets(m_bet));
-    record(m_table.deal());
     emit stateChanged();
     schedule();
 }
@@ -91,7 +102,7 @@ void BlackjackGame::nextRound() {
 void BlackjackGame::setBotCount(int count) {
     if (m_table.phase() != Table::Phase::Betting)
         return;
-    count = qBound(0, count, 5);
+    count = qBound(0, count, kMaxBots);
     while (m_table.botCount() > count)
         m_table.removeLastBot();
     while (m_table.botCount() < count) {
@@ -118,11 +129,15 @@ void BlackjackGame::newGame() {
     emit stateChanged();
 }
 
+// Most cards of the opening deal speak for themselves, so events without text
+// (they still drive the animation) leave the log alone.
 void BlackjackGame::record(const QVector<TableEvent> &events) {
-    if (events.isEmpty())
-        return;
+    const int before = m_log.size();
     for (const TableEvent &e : events)
-        m_log.append(e.text);
+        if (!e.text.isEmpty())
+            m_log.append(e.text);
+    if (m_log.size() == before)
+        return;
     while (m_log.size() > kLogLength)
         m_log.removeFirst();
     emit messageChanged();
@@ -133,10 +148,11 @@ void BlackjackGame::record(const QVector<TableEvent> &events) {
 void BlackjackGame::schedule() {
     if (m_table.waitingForHuman() || m_table.roundOver() || m_table.phase() == Table::Phase::Betting)
         return;
-    if (m_timer.interval() == 0)
+    const int ms = pace();
+    if (ms == 0)
         step();
     else
-        m_timer.start();
+        m_timer.start(ms);
 }
 
 void BlackjackGame::step() {
@@ -145,10 +161,10 @@ void BlackjackGame::step() {
         if (events.isEmpty())
             break;
         record(events);
-        emit stateChanged();
         if (m_table.roundOver())
-            finishRound();
-        if (m_timer.interval() > 0) {
+            finishRound();   // before the signal, so the stats settle with the round
+        emit stateChanged();
+        if (m_stepMs > 0) {
             schedule();
             return;
         }
@@ -175,17 +191,19 @@ void BlackjackGame::saveWindowGeometry(const QRect &geometry) {
     settings.setValue(QStringLiteral("window/geometry"), geometry);
 }
 
-void BlackjackGame::load() {
+// False when there is nothing saved yet, so the caller can set a table up.
+bool BlackjackGame::load() {
     QSettings settings;
     const QString text = settings.value(QString::fromLatin1(GameState::kKey)).toString();
     if (text.isEmpty())
-        return;
+        return false;
     const GameState state = GameState::fromString(text);
     m_table.setHumanBankroll(state.bankroll);
     for (const GameState::Bot &b : state.bots)
         m_table.addBot(b.personality, b.bankroll, m_rng.generate());
     m_handsPlayed = state.handsPlayed;
     m_netResult = state.netResult;
+    return true;
 }
 
 void BlackjackGame::save() const {

@@ -18,6 +18,7 @@ class BlackjackGame : public QObject {
     Q_PROPERTY(int bankroll READ bankroll NOTIFY stateChanged)
     Q_PROPERTY(int bet READ bet NOTIFY betChanged)
     Q_PROPERTY(int minBet READ minBet CONSTANT)
+    Q_PROPERTY(int maxBots READ maxBots CONSTANT)
     Q_PROPERTY(int maxBet READ maxBet NOTIFY stateChanged)
     Q_PROPERTY(QString phase READ phase NOTIFY stateChanged)
     Q_PROPERTY(int botCount READ botCount NOTIFY stateChanged)
@@ -44,6 +45,7 @@ public:
     int bankroll() const { return m_table.human().bankroll; }
     int bet() const { return m_bet; }
     int minBet() const { return BlackjackRules::kMinBet; }
+    int maxBots() const { return BlackjackRules::kMaxBots; }
     int maxBet() const { return bankroll() - bankroll() % BlackjackRules::kBetStep; }
     QString phase() const;
     int botCount() const { return m_table.botCount(); }
@@ -59,7 +61,7 @@ public:
     QStringList log() const { return m_log; }
     int handsPlayed() const { return m_handsPlayed; }
     int netResult() const { return m_netResult; }
-    int stepInterval() const { return m_timer.interval(); }
+    int stepInterval() const { return m_stepMs; }
     void setStepInterval(int ms);
     QVariantList seats() const;
     QVariantMap dealerHand() const;
@@ -88,17 +90,19 @@ signals:
 
 private:
     void humanAct(Table::Action action);
+    int pace() const;
     void record(const QVector<TableEvent> &events);
     void schedule();
     void step();
     void finishRound();
-    void load();
+    bool load();
     void save() const;
 
     Table m_table;
     QRandomGenerator m_rng;
     QTimer m_timer;
     QStringList m_log;
+    int m_stepMs;
     int m_bet = 50;
     int m_handsPlayed = 0;
     int m_netResult = 0;
