@@ -3,8 +3,9 @@ import QtQuick.Layouts
 import OmaGames
 import Omadoku
 
-// The playing screen: status line, board, digit pad and actions. All rules
-// live in `game`; this only renders state and forwards intent.
+// The playing screen: status line, board and, beside it, the keypad with its
+// click mode and the remaining actions. All rules live in `game`; this only
+// renders state and forwards intent.
 FocusScope {
     id: root
 
@@ -47,6 +48,7 @@ FocusScope {
     Keys.onPressed: function(event) {
         var digit = root.digitFor(event);
         if (digit > 0) {
+            // The modifiers mean the same thing whatever the pad's mode is.
             if (event.modifiers & Qt.ControlModifier)
                 game.enterValue(digit);
             else if (event.modifiers & Qt.ShiftModifier)
@@ -62,7 +64,7 @@ FocusScope {
         } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
             game.moveSelection(1, 0);
         } else if (event.key === Qt.Key_N) {
-            game.toggleNotesMode();
+            game.cyclePadMode();
         } else if (event.key === Qt.Key_R) {
             game.restart();
         } else if (event.key === Qt.Key_Backspace || event.key === Qt.Key_Delete
@@ -102,31 +104,60 @@ FocusScope {
             }
         }
 
-        SudokuBoardView {
+        Item {
+            id: content
             Layout.fillWidth: true
             Layout.fillHeight: true
-            Layout.minimumHeight: 200
-        }
 
-        DigitPad {
-            Layout.fillWidth: true
-            keyHeight: Math.max(32, Math.min(52 * theme.textScale, root.width / 9))
-            onDigitPressed: function(digit) { game.pressPad(digit); }
-        }
+            // One cell of the board is the unit the keypad beside it is sized
+            // from, so board and pad always scale together: 9 units of board,
+            // half a unit of gap and roughly four units of side column.
+            readonly property real unit: Math.floor(Math.min(width / 13.6, height / 9))
 
-        DigitLegend { Layout.alignment: Qt.AlignHCenter }
+            SudokuBoardView {
+                id: boardView
+                width: content.unit * 9
+                height: width
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            ColumnLayout {
+                id: side
+                anchors.left: boardView.right
+                anchors.leftMargin: content.unit * 0.5
+                anchors.right: parent.right
+                anchors.top: boardView.top
+                anchors.bottom: boardView.bottom
+                spacing: 10 * theme.textScale
+
+                // Room left for the keypad once the mode selector has taken
+                // its share. A key plus its gap is 1.08 keys wide, hence the
+                // 3.24: expressing it that way keeps the keypad's own spacing
+                // out of the binding and avoids a loop.
+                readonly property real keyBudget: height - modes.implicitHeight - 2 * spacing
+
+                DigitPad {
+                    Layout.alignment: Qt.AlignHCenter
+                    keySize: Math.max(18, Math.min(content.unit * 1.2,
+                                                   side.keyBudget / 3.24,
+                                                   side.width / 3.24))
+                    onDigitPressed: function(digit) { game.pressPad(digit); }
+                }
+
+                PadModeSelector {
+                    id: modes
+                    Layout.fillWidth: true
+                }
+
+                Item { Layout.fillHeight: true }
+            }
+        }
 
         RowLayout {
             Layout.fillWidth: true
             spacing: 8 * theme.textScale
 
-            HintButton {
-                Layout.fillWidth: true
-                text: game.notesMode ? qsTr("Notes on") : qsTr("Notes")
-                primary: game.notesMode
-                keyHint: qsTr("N")
-                onClicked: game.toggleNotesMode()
-            }
             HintButton {
                 Layout.fillWidth: true
                 text: qsTr("Erase")

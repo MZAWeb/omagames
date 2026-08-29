@@ -1,14 +1,16 @@
 import QtQuick
 
-// 1-9 in one row. A digit that is fully placed dims itself so the player can
-// see at a glance what is left to do.
-Row {
+// The digits as a phone-style 3x3 keypad beside the board. A digit that is
+// fully placed dims itself; the highlighted one stays lit.
+Grid {
     id: pad
 
-    property real keyHeight: 44 * theme.textScale
+    property real keySize: 44 * theme.textScale
     signal digitPressed(int digit)
 
-    spacing: Math.round(keyHeight * 0.12)
+    columns: 3
+    rows: 3
+    spacing: Math.round(keySize * 0.12)
 
     Repeater {
         model: 9
@@ -19,9 +21,9 @@ Row {
             readonly property bool done: game.digitCounts[index] >= 9
             readonly property bool highlighted: game.highlightDigit === digit
 
-            width: (pad.width - pad.spacing * 8) / 9
-            height: pad.keyHeight
-            radius: Math.round(height * 0.22)
+            width: pad.keySize
+            height: pad.keySize
+            radius: Math.round(height * 0.18)
             color: mouse.pressed ? theme.alpha(theme.accent, 0.35)
                  : highlighted ? theme.alpha(theme.accent, 0.28)
                  : mouse.containsMouse ? theme.alpha(theme.foreground, 0.12)
@@ -35,9 +37,9 @@ Row {
             Text {
                 anchors.centerIn: parent
                 text: parent.digit.toString()
-                color: game.notesMode ? theme.mix(theme.background, theme.foreground, 0.7) : theme.foreground
-                font.pixelSize: Math.round(pad.keyHeight * 0.46)
-                font.bold: !game.notesMode
+                color: theme.foreground
+                font.pixelSize: Math.round(pad.keySize * 0.42)
+                font.bold: true
             }
 
             MouseArea {

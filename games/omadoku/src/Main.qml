@@ -7,8 +7,8 @@ import Omadoku
 ApplicationWindow {
     id: win
 
-    minimumWidth: Math.round(360 * theme.textScale)
-    minimumHeight: Math.round(560 * theme.textScale)
+    minimumWidth: Math.round(620 * theme.textScale)
+    minimumHeight: Math.round(460 * theme.textScale)
     visible: true
     title: qsTr("Omadoku")
     color: theme.background
@@ -135,8 +135,8 @@ ApplicationWindow {
                 showMaximized();
         } else {
             // First run: open at the design size, grown by the desktop text scale.
-            width = Math.round(420 * theme.textScale);
-            height = Math.round(680 * theme.textScale);
+            width = Math.round(880 * theme.textScale);
+            height = Math.round(640 * theme.textScale);
         }
     }
 
