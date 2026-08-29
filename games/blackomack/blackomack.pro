@@ -12,6 +12,7 @@ HEADERS += \
     src/botplayer.h \
     src/table.h \
     src/gamestate.h \
+    src/seatlayout.h \
     src/blackjackgame.h
 SOURCES += \
     src/main.cpp \
@@ -23,6 +24,7 @@ SOURCES += \
     src/table.cpp \
     src/tableround.cpp \
     src/gamestate.cpp \
+    src/seatlayout.cpp \
     src/blackjackgame.cpp \
     src/blackjackgamemodel.cpp
 RESOURCES += src/resources.qrc

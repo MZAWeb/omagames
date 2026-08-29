@@ -4,6 +4,7 @@
 
 #include "basicstrategy.h"
 #include "gamestate.h"
+#include "seatlayout.h"
 
 using namespace BlackjackRules;
 
@@ -273,6 +274,12 @@ void BlackjackGame::finishRound() {
         m_newBest = true;
     }
     save();
+}
+
+// --- Table layout ---
+
+QRectF BlackjackGame::seatRect(int count, int index, const QSizeF &table, const QSizeF &seat) const {
+    return SeatLayout::rect(count, index, table, seat);
 }
 
 QRect BlackjackGame::windowGeometry() const {

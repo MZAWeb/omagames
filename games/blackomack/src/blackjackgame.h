@@ -3,6 +3,8 @@
 #include <QObject>
 #include <QRandomGenerator>
 #include <QRect>
+#include <QRectF>
+#include <QSizeF>
 #include <QStringList>
 #include <QTimer>
 #include <QVariantList>
@@ -104,6 +106,10 @@ public:
     Q_INVOKABLE void setBotCount(int count);
     Q_INVOKABLE void newGame();
     Q_INVOKABLE void toggleCoach() { setCoachEnabled(!m_coachEnabled); }
+
+    // --- Table layout ---
+    // Seat geometry lives in SeatLayout so it can be checked without QML.
+    Q_INVOKABLE QRectF seatRect(int count, int index, const QSizeF &table, const QSizeF &seat) const;
 
     Q_INVOKABLE QRect windowGeometry() const;
     Q_INVOKABLE void saveWindowGeometry(const QRect &geometry);

@@ -26,25 +26,27 @@ only a settings wipe clears it. When you're broke you can only start a new game.
 ## House Table
 
 The table is arranged around a themed oval: the dealer stays at top-center,
-AI table mates fill fixed upper-arc seats symmetrically in deal order, and your
+AI table mates fill the upper arc symmetrically in deal order, and your
 larger accent-framed tray stays bottom-center. Bets sit beside their hands as
 chips. The fixed action dock shows only the current phase's commands together
 with the round, shoe depth and latest table event.
 
 Heads-up and two-mate tables enlarge the dealer and player cards without
-drawing empty seats. A full table keeps six stable arc positions while there
-is room; at 160% text scale, or when those seats no longer fit at their minimum
-size, the table reflows into a large dealer/player stage and a scrollable
-deal-order roster. Identity, personality, bankroll, bet, cards, total, active
-state, result and net payout remain visible in both layouts. Split and long
-hands grow or wrap instead of covering seat details.
+drawing empty seats. The arc is re-spaced for the number of mates rather than
+reusing fixed slots, so seats never touch; at 160% text scale, or when those
+seats no longer fit at their minimum size, the table reflows into a large
+dealer/player stage and a scrollable deal-order roster. Identity, personality,
+bankroll, bet, cards, total, active state, result and net payout remain visible
+in both layouts. Split and long hands grow or wrap instead of covering seat
+details.
 
-**Six seats.** The full arc uses three fixed 190×132 logical-pixel bot seats on
-each side, filled from the dealer outward in deal order; an odd extra mate sits
-dealer-left. The existing seat minimums and 430×181 human tray do not shrink.
-Six-mate spatial mode needs roughly a 1280×760 window; below that it reflows to
-the stage and scrollable roster, where all six mates remain available in deal
-order.
+**Seating.** Bot seats are 190×132 logical pixels and fill the arc from the
+dealer outward in deal order, left first, so an odd extra mate sits dealer-left.
+Up to four mates sit in two columns per side, spaced so a seat that grows with
+its cards can never cover its neighbour; five and six add a third row and need
+roughly a 1280×760 window, below which they reflow to the stage and scrollable
+roster, where all six mates remain available in deal order. The seat minimums
+and the 430×181 human tray do not shrink.
 
 ## Decision Coach
 
