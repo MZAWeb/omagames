@@ -10,6 +10,8 @@ struct Hand {
     bool doubled = false;
     bool fromSplit = false;
     bool stood = false;
+    bool resolved = false;      // payout applied
+    int returned = 0;           // stake + winnings paid back at resolution
 
     int total() const;          // best total: one ace counts 11 unless that busts
     bool isSoft() const;        // an ace is currently counted as 11
