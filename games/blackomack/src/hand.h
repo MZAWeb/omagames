@@ -17,7 +17,7 @@ struct Hand {
     bool isSoft() const;        // an ace is currently counted as 11
     bool isBust() const { return total() > 21; }
     bool isBlackjack() const;   // natural: two cards, 21, not after a split
-    bool canSplit() const;      // two cards of equal value, not already split
+    bool canSplit() const;      // two cards of equal value; split aces stay put
     bool canDouble() const { return cards.size() == 2 && !stood; }
     // Split aces get exactly one card and stand; also true after a double or bust.
     bool isFinished() const;

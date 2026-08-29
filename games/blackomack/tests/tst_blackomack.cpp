@@ -34,8 +34,12 @@ QVector<TableEvent> dealOut(Table &t) {
 }
 // Runs automatic steps until the human must act or the round is settled.
 void autoplay(Table &t) {
-    while (!t.waitingForHuman() && !t.roundOver() && t.phase() != Table::Phase::Betting)
-        t.advance();
+    while (!t.waitingForHuman() && !t.roundOver() && t.phase() != Table::Phase::Betting) {
+        if (t.waitingForInsurance())
+            t.declineInsurance();   // the book never insures
+        else
+            t.advance();
+    }
 }
 BotPersonality perfect(const QString &name, quint32 seed = 1) { return {name, 1.0, 0.5, seed}; }
 }
@@ -48,9 +52,12 @@ class BlackOmackTest : public QObject {
     static void playRound(BlackjackGame &g) {
         g.dealRound();
         while (!g.roundOver()) {
-            QVERIFY(g.waitingForHuman());
-            if (g.canStand())
+            if (g.canInsure())
+                g.declineInsurance();
+            else if (g.canStand())
                 g.stand();
+            else
+                QVERIFY(g.waitingForHuman());
         }
     }
 
@@ -102,7 +109,10 @@ private slots:
         QVERIFY(!hand({8, 8, 8}).canSplit());
         Hand again = hand({8, 8});
         again.fromSplit = true;
-        QVERIFY(!again.canSplit());           // no re-split
+        QVERIFY(again.canSplit());            // pairs re-split, up to the table's cap
+        Hand aces = hand({1, 1});
+        aces.fromSplit = true;
+        QVERIFY(!aces.canSplit());            // except split aces, which stand pat
         QVERIFY(hand({5, 6}).canDouble());
         QVERIFY(!hand({5, 6, 2}).canDouble());
     }
@@ -367,7 +377,9 @@ private slots:
         Table t(1);
         t.stackDeck(cards({10, 1, 9, 13}));
         t.placeBets(50);
-        const auto events = dealOut(t);
+        dealOut(t);
+        QVERIFY(t.waitingForInsurance());          // an ace up asks before it peeks
+        const auto events = t.declineInsurance();
         QCOMPARE(t.phase(), Table::Phase::Payout);
         QVERIFY(!t.holeHidden());
         QCOMPARE(events.last().type, TableEvent::DealerBlackjack);
@@ -421,7 +433,7 @@ private slots:
         t.act(Table::Action::Split);
         QCOMPARE(t.currentHand(), 0);
         QVERIFY(t.canAct(t.humanSeat(), Table::Action::Double));   // double after split
-        QVERIFY(!t.canAct(t.humanSeat(), Table::Action::Split));   // no re-split
+        QVERIFY(!t.canAct(t.humanSeat(), Table::Action::Split));   // 8,3 is no pair
         t.act(Table::Action::Double);
         QCOMPARE(t.currentHand(), 1);
         QVERIFY(t.waitingForHuman());
@@ -435,6 +447,7 @@ private slots:
         t.stackDeck(cards({10, 1, 8, 6}));
         t.placeBets(10);
         dealOut(t);
+        t.declineInsurance();
         t.act(Table::Action::Stand);
         autoplay(t);
         QCOMPARE(t.dealer().cards.size(), 2);
@@ -495,7 +508,8 @@ private slots:
                                                 t.canAct(t.humanSeat(), Table::Action::Split)));
             }
             for (int i = 0; i < t.seats().size(); ++i) {
-                int staked = 0, returned = 0;
+                int staked = t.seats()[i].insuranceBet;
+                int returned = t.seats()[i].insuranceReturned;
                 for (const Hand &h : t.seats()[i].hands) {
                     QVERIFY(h.resolved);
                     staked += h.bet;
@@ -672,6 +686,8 @@ private slots:
             QVERIFY(g.coachAction().isEmpty());
             QVERIFY(g.coachSituation().isEmpty());
             g.dealRound();
+            if (g.canInsure())
+                g.declineInsurance();
             QVERIFY(g.waitingForHuman());
             QCOMPARE(g.shoeRemaining(), 312);   // scripted cards do not consume the real shoe
             QCOMPARE(g.shoePercent(), 100);
@@ -730,7 +746,7 @@ private slots:
         g.betMax();
         QCOMPARE(g.bet(), 50);
         while (!g.roundOver())
-            g.stand();
+            g.canInsure() ? g.declineInsurance() : g.stand();
         g.setBet(80);                // still locked while the result is on the table
         QCOMPARE(g.bet(), 50);
         g.nextRound();
@@ -889,7 +905,7 @@ private slots:
             g.betMax();
             g.dealRound();
             while (!g.roundOver())
-                g.hit();                     // hitting until bust loses fast
+                g.canInsure() ? g.declineInsurance() : g.hit();   // busting loses fast
             g.nextRound();
         }
         QVERIFY(g.isBroke());
@@ -1038,6 +1054,268 @@ private slots:
         const int staked = g.bet();
         g.setBetPreset(2);
         QCOMPARE(g.bet(), staked);
+    }
+
+    // --- Re-splits ---
+
+    void resplitsToFourHandsAndStopsThere() {
+        Table t(1);
+        t.stackDeck(cards({8, 9, 8, 7, 8, 8, 8, 10, 10, 10, 5, 10}));
+        t.placeBets(50);
+        dealOut(t);
+        for (int splits = 0; splits < 3; ++splits) {
+            QVERIFY(t.canAct(t.humanSeat(), Table::Action::Split));
+            t.act(Table::Action::Split);
+            QCOMPARE(t.currentHand(), 0);          // the fresh pair is played first
+        }
+        const Seat &me = t.human();
+        QCOMPARE(me.hands.size(), BlackjackRules::kMaxHandsPerSeat);
+        QCOMPARE(me.bankroll, 800);                // four stakes of 50 are down
+        t.act(Table::Action::Stand);
+        t.act(Table::Action::Stand);
+        t.act(Table::Action::Stand);
+        QCOMPARE(t.currentHand(), 3);
+        QVERIFY(me.hands[3].canSplit());           // a pair, but the seat is full
+        QVERIFY(!t.canAct(t.humanSeat(), Table::Action::Split));
+        t.act(Table::Action::Hit);
+        autoplay(t);
+        QVERIFY(t.dealer().isBust());
+        for (const Hand &h : me.hands)
+            QCOMPARE(h.returned, 100);
+        QCOMPARE(me.bankroll, 1200);
+    }
+    void splitAcesAreNeverResplit() {
+        Table t(1);
+        t.stackDeck(cards({1, 9, 1, 7, 1, 1, 10}));
+        t.placeBets(50);
+        dealOut(t);
+        t.act(Table::Action::Split);
+        const Seat &me = t.human();
+        QCOMPARE(me.hands.size(), 2);
+        QVERIFY(!me.hands[0].canSplit());          // A,A after a split still stands pat
+        QVERIFY(!me.hands[1].canSplit());
+        QCOMPARE(t.phase(), Table::Phase::DealerTurn);
+        autoplay(t);
+        QCOMPARE(me.bankroll, 1100);               // both 12s ride out a dealer bust
+    }
+    void basicStrategyResplitsPairs() {
+        Hand again = hand({8, 8});
+        again.fromSplit = true;
+        QCOMPARE(BasicStrategy::decide(again, c(10), false, true), BlackjackRules::Action::Split);
+        QCOMPARE(BasicStrategy::decide(again, c(10), false, false), BlackjackRules::Action::Hit);
+    }
+    void botsResplitAtTheTable() {
+        Table t(1);
+        t.addBot(perfect(QStringLiteral("Zed")));
+        t.stackDeck(cards({10, 8, 9, 9, 8, 7, 8, 5, 10, 10, 10, 10}));
+        t.placeBets(50);
+        dealOut(t);
+        QVERIFY(t.waitingForHuman());
+        t.act(Table::Action::Stand);
+        autoplay(t);
+        QVERIFY(t.roundOver());
+        QCOMPARE(t.seats()[1].hands.size(), 3);    // 8,8 split, then split again
+    }
+
+    // --- Insurance ---
+
+    void insuranceStakeAndReturn() {
+        Hand natural = hand({1, 10});
+        Hand plain = hand({10, 7});
+        QCOMPARE(BlackjackRules::insuranceStake(100), 50);
+        QCOMPARE(BlackjackRules::insuranceReturn(50, natural), 150);   // stake plus 2 to 1
+        QCOMPARE(BlackjackRules::insuranceReturn(50, plain), 0);
+    }
+    void insuranceIsOfferedOnlyAgainstAnAce() {
+        Table ten(1);
+        ten.stackDeck(cards({10, 10, 9, 7}));
+        ten.placeBets(50);
+        dealOut(ten);
+        QVERIFY(!ten.waitingForInsurance());
+        QCOMPARE(ten.phase(), Table::Phase::PlayerTurns);
+        QVERIFY(ten.takeInsurance().isEmpty());
+
+        Table ace(1);
+        ace.stackDeck(cards({10, 1, 9, 7}));
+        ace.placeBets(50);
+        dealOut(ace);
+        QCOMPARE(ace.phase(), Table::Phase::Insurance);
+        QVERIFY(ace.waitingForInsurance());
+        QVERIFY(ace.canInsure(ace.humanSeat()));
+        QCOMPARE(ace.insuranceCost(ace.humanSeat()), 25);
+        QVERIFY(ace.act(Table::Action::Hit).isEmpty());   // no cards until it is answered
+    }
+    void insurancePaysTwoToOneOnADealerNatural() {
+        Table t(1);
+        t.stackDeck(cards({10, 1, 9, 13}));
+        t.placeBets(100);
+        dealOut(t);
+        QCOMPARE(t.human().bankroll, 900);
+        const auto events = t.takeInsurance();
+        QCOMPARE(t.human().insuranceBet, 50);
+        QCOMPARE(t.human().insuranceReturned, 150);
+        QCOMPARE(t.human().bankroll, 1000);
+        QCOMPARE(events.first().text, QStringLiteral("You take insurance"));
+        QCOMPARE(events.last().type, TableEvent::InsuranceResolved);
+        QCOMPARE(events.last().text, QStringLiteral("Insurance pays Ø 100"));
+        autoplay(t);
+        QVERIFY(t.roundOver());
+        QCOMPARE(t.human().hands[0].returned, 0);        // the hand itself is gone
+        QCOMPARE(t.human().bankroll, 1000);              // insurance made it a wash
+    }
+    void insuranceIsLostWithoutADealerNatural() {
+        Table t(1);
+        t.stackDeck(cards({10, 1, 9, 7}));
+        t.placeBets(100);
+        dealOut(t);
+        const auto events = t.takeInsurance();
+        QCOMPARE(t.human().insuranceBet, 50);
+        QCOMPARE(t.human().insuranceReturned, 0);
+        QCOMPARE(t.human().bankroll, 850);
+        QCOMPARE(events.first().type, TableEvent::Insurance);
+        QCOMPARE(events[1].type, TableEvent::InsuranceResolved);
+        QCOMPARE(events[1].text, QStringLiteral("Insurance loses Ø 50"));
+        QCOMPARE(t.phase(), Table::Phase::PlayerTurns);
+        t.act(Table::Action::Stand);
+        autoplay(t);
+        QCOMPARE(t.dealer().total(), 18);
+        QCOMPARE(t.human().bankroll, 1050);              // 19 beats 18, minus the side bet
+    }
+    void insuranceIsSkippedWhenNobodyCanCoverIt() {
+        Table t(1);
+        t.setHumanBankroll(10);
+        t.addBot(perfect(QStringLiteral("Zed")), 5);      // too broke to have a bet
+        t.stackDeck(cards({10, 1, 9, 7}));
+        t.placeBets(10);
+        dealOut(t);
+        QVERIFY(t.seats()[1].hands.isEmpty());
+        QVERIFY(!t.waitingForInsurance());
+        QCOMPARE(t.phase(), Table::Phase::PlayerTurns);
+        QVERIFY(t.takeInsurance().isEmpty());
+    }
+    void botInsuranceFollowsSkillDeterministically() {
+        BotPlayer rookie({QStringLiteral("Nina"), 0.05, 0.9, 7}), twin({QStringLiteral("Nina"), 0.05, 0.9, 7});
+        BotPlayer pro(perfect(QStringLiteral("Ace")));
+        int taken = 0;
+        for (int i = 0; i < 50; ++i) {
+            const bool bite = rookie.takesInsurance();
+            QCOMPARE(bite, twin.takesInsurance());
+            taken += bite ? 1 : 0;
+            QVERIFY(!pro.takesInsurance());               // the book never insures
+        }
+        QVERIFY(taken > 0 && taken < 50);
+    }
+    void botAnswersTheInsuranceOfferAtTheTable() {
+        const BotPersonality nina{QStringLiteral("Nina"), 0.0, 1.0, 7};
+        BotPlayer oracle(nina);
+        const bool expected = oracle.takesInsurance();
+        Table t(1);
+        t.addBot(nina);
+        t.stackDeck(cards({10, 5, 1, 9, 6, 7}));
+        t.placeBets(100);
+        dealOut(t);
+        QVERIFY(t.waitingForInsurance());                 // the human is asked first
+        t.declineInsurance();
+        QCOMPARE(t.human().insuranceBet, 0);
+        QCOMPARE(t.phase(), Table::Phase::Insurance);
+        const auto events = t.advance();
+        const int stake = BlackjackRules::insuranceStake(t.seats()[1].hands[0].bet);
+        QCOMPARE(t.seats()[1].insuranceBet, expected ? stake : 0);
+        QCOMPARE(events.first().text, expected ? QStringLiteral("Nina takes insurance") : QString());
+        QCOMPARE(t.phase(), Table::Phase::PlayerTurns);
+    }
+    void bridgeOffersInsuranceAgainstAnAce() {
+        QSettings().clear();
+        BlackjackGame g;
+        g.setStepInterval(0);
+        g.setBotCount(0);
+        g.setCoachEnabled(true);
+        g.setBet(100);
+        g.stackDeck(cards({10, 1, 9, 13}));
+        g.dealRound();
+        QCOMPARE(g.phase(), QStringLiteral("insurance"));
+        QVERIFY(g.canInsure());
+        QVERIFY(!g.waitingForHuman());
+        QCOMPARE(g.insuranceCost(), 50);
+        QCOMPARE(g.coachAction(), QStringLiteral("No insurance"));
+        QCOMPARE(g.coachSituation(), QStringLiteral("Dealer shows an ace"));
+        g.insurance();
+        QVERIFY(!g.canInsure());
+        QVERIFY(g.roundOver());
+        QVERIFY(g.log().contains(QStringLiteral("You take insurance")));
+        QVERIFY(g.log().contains(QStringLiteral("Insurance pays Ø 100")));
+        QCOMPARE(g.bankroll(), 1000);      // the side bet exactly covered the lost hand
+        QCOMPARE(g.netResult(), 0);
+    }
+    void bridgeDeclinedInsuranceCostsNothing() {
+        QSettings().clear();
+        BlackjackGame g;
+        g.setStepInterval(0);
+        g.setBotCount(0);
+        g.setBet(100);
+        g.stackDeck(cards({10, 1, 9, 13}));
+        g.dealRound();
+        QVERIFY(g.canInsure());
+        g.declineInsurance();
+        QVERIFY(g.roundOver());
+        QCOMPARE(g.bankroll(), 900);
+        QCOMPARE(g.netResult(), -100);
+        QVERIFY(g.log().contains(QStringLiteral("Insurance?")));   // the offer still shows
+        for (const QString &line : g.log()) {
+            QVERIFY(!line.contains(QStringLiteral("take insurance")));
+            QVERIFY(!line.startsWith(QStringLiteral("Insurance ")));
+        }
+    }
+
+    // ── House edge ──────────────────────────────────────────────────────
+    // A whole shoe game played by the book has a known, small edge; these
+    // slots are the guard rail against a rule change that quietly moves it.
+private:
+    static constexpr int kEdgeRounds = 80000;
+
+    // Plays `rounds` seeded rounds with a perfect-basic-strategy human and
+    // returns the net result per unit staked on the initial bet. The human's
+    // stack is topped back up every round so a losing streak never clamps a bet.
+    static double houseEdge(quint32 seed, int bots, int rounds) {
+        constexpr int kBet = 10;
+        constexpr int kStack = 1'000'000;
+        Table t(seed);
+        QRandomGenerator rng(seed);
+        for (int i = 0; i < bots; ++i)
+            t.addBot(BotPersonality::roll(t.takenNames(), rng), 1000, rng.generate());
+        qint64 net = 0;
+        for (int r = 0; r < rounds; ++r) {
+            t.setHumanBankroll(kStack);
+            t.placeBets(kBet);
+            while (!t.roundOver()) {
+                if (t.waitingForHuman()) {
+                    const Hand &h = t.human().hands[t.currentHand()];
+                    t.act(BasicStrategy::decide(h, t.dealerUpCard(),
+                                                t.canAct(t.humanSeat(), Table::Action::Double),
+                                                t.canAct(t.humanSeat(), Table::Action::Split)));
+                } else if (t.waitingForInsurance()) {
+                    t.declineInsurance();       // the book never insures
+                } else if (t.advance().isEmpty()) {
+                    break;
+                }
+            }
+            net += t.human().bankroll - kStack;
+            t.nextRound(rng);
+        }
+        return double(net) / (double(rounds) * kBet);
+    }
+
+private slots:
+    void houseEdgeStaysInTheKnownBand() {
+        QElapsedTimer clock;
+        clock.start();
+        const double solo = houseEdge(20240815, 0, kEdgeRounds);
+        qInfo("house edge, heads-up: %.3f%%", 100 * solo);
+        QVERIFY2(solo >= -0.015 && solo <= 0.005, qPrintable(QString::number(solo)));
+        const double crowded = houseEdge(19700101, 3, kEdgeRounds);
+        qInfo("house edge, three table mates: %.3f%%", 100 * crowded);
+        QVERIFY2(crowded >= -0.015 && crowded <= 0.005, qPrintable(QString::number(crowded)));
+        qInfo("%lld rounds in %lld ms", 2 * qint64(kEdgeRounds), clock.elapsed());
     }
 };
 

@@ -70,6 +70,8 @@ QVector<TableEvent> Table::placeBets(int humanBet) {
     for (int i = 0; i < m_seats.size(); ++i) {
         Seat &seat = m_seats[i];
         seat.hands.clear();
+        seat.insuranceBet = 0;
+        seat.insuranceReturned = 0;
         const int bet = seat.isHuman ? humanBet : seat.bot.chooseBet(seat.bankroll);
         if (bet <= 0)
             continue;   // a broke bot sits this one out until replaced
@@ -126,16 +128,34 @@ QVector<TableEvent> Table::dealStep() {
     return events;
 }
 
-// The deal is complete: the dealer peeks on a ten or an ace, otherwise the
-// first hand that still needs a decision gets the cursor.
+// The deal is complete. An ace up buys the table one round of insurance
+// offers before the dealer looks at the hole card; anything else goes
+// straight to the peek.
 QVector<TableEvent> Table::openTurns() {
+    if (dealerUpCard().isAce()) {
+        m_insureSeat = 0;
+        if (findInsuranceSeat()) {
+            m_phase = Phase::Insurance;
+            if (waitingForInsurance())
+                return {{TableEvent::HumanTurn, QStringLiteral("Insurance?"), m_insureSeat}};
+            return {};
+        }
+    }
+    return peekAndOpen();
+}
+
+// The dealer looks at the hole card: a natural ends the round there, and
+// either way the insurance bets are settled before anyone plays on.
+QVector<TableEvent> Table::peekAndOpen() {
     QVector<TableEvent> events;
     if (dealerPeeks(dealerUpCard()) && m_dealer.isBlackjack()) {
         m_holeHidden = false;
         m_phase = Phase::Payout;
         events.append({TableEvent::DealerBlackjack, QStringLiteral("Dealer has blackjack")});
+        events += settleInsurance();
         return events;
     }
+    events += settleInsurance();
     m_phase = Phase::PlayerTurns;
     m_seat = 0;
     m_hand = -1;
@@ -143,6 +163,38 @@ QVector<TableEvent> Table::openTurns() {
     if (waitingForHuman())
         events.append({TableEvent::HumanTurn, QStringLiteral("Your turn"), m_seat, m_hand});
     return events;
+}
+
+int Table::insuranceCost(int seat) const {
+    const Seat &s = m_seats[seat];
+    return s.hands.isEmpty() ? 0 : insuranceStake(s.hands.first().bet);
+}
+
+// Moves the cursor to the next seat that is actually being offered the side
+// bet: it needs a hand in play and the money to cover half its stake.
+bool Table::findInsuranceSeat() {
+    while (m_insureSeat < m_seats.size()) {
+        const Seat &seat = m_seats[m_insureSeat];
+        const int cost = insuranceCost(m_insureSeat);
+        if (cost > 0 && seat.bankroll >= cost)
+            return true;
+        ++m_insureSeat;
+    }
+    return false;
+}
+
+QVector<TableEvent> Table::insuranceStep() {
+    if (waitingForInsurance())
+        return {};
+    return applyInsurance(m_seats[m_insureSeat].bot.takesInsurance());
+}
+
+QVector<TableEvent> Table::takeInsurance() {
+    return waitingForInsurance() ? applyInsurance(true) : QVector<TableEvent>();
+}
+
+QVector<TableEvent> Table::declineInsurance() {
+    return waitingForInsurance() ? applyInsurance(false) : QVector<TableEvent>();
 }
 
 // Advances to the next hand that still needs a decision, or to the dealer.
@@ -171,7 +223,8 @@ bool Table::canAct(int seatIndex, Action action) const {
     case Action::Hit:
     case Action::Stand: return true;
     case Action::Double: return hand.canDouble() && seat.bankroll >= hand.bet;
-    case Action::Split: return hand.canSplit() && seat.bankroll >= hand.bet;
+    case Action::Split:
+        return hand.canSplit() && seat.hands.size() < kMaxHandsPerSeat && seat.bankroll >= hand.bet;
     }
     return false;
 }
@@ -193,6 +246,7 @@ QVector<TableEvent> Table::advance() {
         return apply(m_seat, action);
     }
     case Phase::Dealing: return dealStep();
+    case Phase::Insurance: return insuranceStep();
     case Phase::DealerTurn: return dealerStep();
     case Phase::Payout: return resolve();
     case Phase::Betting: return {};

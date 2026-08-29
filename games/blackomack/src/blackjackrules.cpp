@@ -29,6 +29,14 @@ int payout(const Hand &player, const Hand &dealer) {
     return 0;
 }
 
+int insuranceStake(int bet) {
+    return bet / kInsuranceDivisor;
+}
+
+int insuranceReturn(int stake, const Hand &dealer) {
+    return dealer.isBlackjack() ? stake * (1 + kInsurancePayoutNumerator) : 0;
+}
+
 bool validBet(int bet, int bankroll) {
     return bet >= kMinBet && bet <= bankroll && bet % kBetStep == 0;
 }

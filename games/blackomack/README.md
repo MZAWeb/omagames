@@ -11,8 +11,13 @@ table seats four of them.
   showing an ace or a ten-value card.
 - Blackjack pays 3:2, wins pay 1:1, pushes return the bet.
 - Double down on any first two cards (one card only), including after a split.
-- Split once per hand; split aces get one card each and cannot hit.
-- No insurance, no surrender.
+- Split any pair, and split again up to four hands a seat; split aces get one
+  card each, cannot hit and cannot be re-split.
+- When the dealer shows an ace, every seat with a bet is offered insurance
+  before the peek: a side bet of half the original stake that pays 2 to 1 if
+  the dealer has blackjack and is lost otherwise. It is the one bet the coach
+  tells you to refuse.
+- No surrender.
 - Bets from Ø 10 up to your whole bankroll, in steps of 10; `1`, `2` and `3`
   stake the Ø 10 / Ø 50 / Ø 100 presets. Doubling and splitting require enough
   bankroll to cover the extra bet.
@@ -70,6 +75,8 @@ C++ bridge rather than in QML.
 
 Each bot is rolled with a `skill` (how well it plays: rookie, regular, pro)
 and an `aggression` (bet sizing and appetite for risk: timid, steady, bold).
+Insurance is a losing bet, so pros always refuse it while rookies — the bolder
+the likelier — sometimes take it.
 Under its name it says how it bets and then how it plays — "timid pro",
 "bold rookie", "steady regular". A bot that goes broke leaves and a fresh one
 takes its seat. Change how many are at the table (0–6) between rounds with the
@@ -84,6 +91,7 @@ Everything is reachable without a mouse; each button shows its key as a badge.
 |---|---|
 | `Enter` / `Space` | Deal / next round; `Space` also finishes automatic pacing without playing your hand |
 | `H` `S` `D` `P` | Hit / Stand / Double / Split |
+| `I` / `N` | Take insurance / no insurance (only while the offer stands) |
 | `↑` `↓` or `+` `-` | Bet ±10 |
 | `M` | Bet max |
 | `1` `2` `3` | Bet Ø 10 / Ø 50 / Ø 100 (clamped to your bankroll) |

@@ -46,6 +46,8 @@ ApplicationWindow {
     Shortcut { enabled: window.keysActive; sequence: "S"; onActivated: game.stand() }
     Shortcut { enabled: window.keysActive; sequence: "D"; onActivated: game.doubleDown() }
     Shortcut { enabled: window.keysActive; sequence: "P"; onActivated: game.split() }
+    Shortcut { enabled: window.keysActive; sequence: "I"; onActivated: game.insurance() }
+    Shortcut { enabled: window.keysActive; sequence: "N"; onActivated: game.declineInsurance() }
     Shortcut { enabled: window.keysActive; sequence: "C"; onActivated: game.toggleCoach() }
     Shortcut {
         enabled: window.keysActive
