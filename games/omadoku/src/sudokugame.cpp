@@ -399,7 +399,9 @@ void SudokuGame::selectFirstEmptyCell() {
 
 void SudokuGame::loadSettings() {
     const QSettings settings;
-    m_board.setValidateAsYouGo(settings.value(kValidateKey, true).toBool());
+    // Off by default: a first puzzle should not correct you before you have
+    // finished thinking. A choice already stored still wins.
+    m_board.setValidateAsYouGo(settings.value(kValidateKey, false).toBool());
     // Anything unrecognised (including the int this key held before the modes
     // got names) falls back to the default.
     m_padMode = modeFromId(settings.value(kPadModeKey).toString(), PadMode::Highlight);

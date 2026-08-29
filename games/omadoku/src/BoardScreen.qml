@@ -1,9 +1,9 @@
 import QtQuick
 import QtQuick.Layouts
-import OmaGames
 
-// The playing screen: status line, board and, beside it, the keypad with its
-// click mode and the remaining actions. All rules live in `game`; this only
+// The playing screen: a compact header, the square board as the hero, and the
+// rail of controls beside it — or under it, when the window is shaped so that
+// the board comes out bigger that way. All rules live in `game`; this only
 // renders state and forwards intent.
 FocusScope {
     id: root
@@ -97,11 +97,12 @@ FocusScope {
             }
             Text {
                 Layout.leftMargin: 10 * theme.textScale
+                Layout.fillWidth: true
                 text: qsTr("needs %1").arg(game.techniqueLabel)
                 color: theme.mix(theme.background, theme.foreground, 0.6)
                 font.pixelSize: 14 * theme.textScale
+                elide: Text.ElideRight
             }
-            Item { Layout.fillWidth: true }
             Text {
                 text: game.filledCount + "/81"
                 color: theme.mix(theme.background, theme.foreground, 0.6)
@@ -115,93 +116,78 @@ FocusScope {
             }
         }
 
+        // Board and controls. Both shapes give the board every pixel the
+        // controls do not need, so the layout is chosen by which one leaves it
+        // bigger — which is what makes a narrow window, or a large text scale,
+        // fold the rail underneath on its own.
         Item {
             id: content
+
             Layout.fillWidth: true
             Layout.fillHeight: true
 
-            // One cell of the board is the unit the keypad beside it is sized
-            // from, so board and pad always scale together: 9 units of board,
-            // half a unit of gap and roughly four units of side column.
-            readonly property real unit: Math.floor(Math.min(width / 13.6, height / 9))
+            readonly property real gap: 14 * theme.textScale
+            readonly property real railWidth:
+                Math.max(280 * theme.textScale, Math.min(340 * theme.textScale, width * 0.34))
+            // The rail needs this much height for its keypad to stay usable.
+            readonly property real railMinHeight: 360 * theme.textScale
+            readonly property bool tightSheet: width < 720 * theme.textScale
+            readonly property real sheetHeight: (tightSheet ? 196 : 150) * theme.textScale
 
-            SudokuBoardView {
-                id: boardView
-                width: content.unit * 9
-                height: width
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
+            readonly property real railBoard: Math.min(width - railWidth - gap, height)
+            readonly property real sheetBoard: Math.min(width, height - sheetHeight - gap)
+            readonly property bool compact: railBoard < railMinHeight || sheetBoard > railBoard
+
+            Loader {
+                anchors.fill: parent
+                sourceComponent: content.compact ? sheetLayout : railLayout
             }
 
-            ColumnLayout {
-                id: side
-                anchors.left: boardView.right
-                anchors.leftMargin: content.unit * 0.5
-                anchors.right: parent.right
-                anchors.top: boardView.top
-                anchors.bottom: boardView.bottom
-                spacing: 10 * theme.textScale
+            Component {
+                id: railLayout
 
-                // Room left for the keypad once the mode selector has taken
-                // its share. A key plus its gap is 1.08 keys wide, hence the
-                // 3.24: expressing it that way keeps the keypad's own spacing
-                // out of the binding and avoids a loop.
-                readonly property real keyBudget: height - modes.implicitHeight - 2 * spacing
+                Item {
+                    readonly property real boardSize: Math.max(0, content.railBoard)
 
-                DigitPad {
-                    Layout.alignment: Qt.AlignHCenter
-                    keySize: Math.max(18, Math.min(content.unit * 1.2,
-                                                   side.keyBudget / 3.24,
-                                                   side.width / 3.24))
-                    onDigitPressed: function(digit) { game.pressDigit(digit); }
+                    SudokuBoardView {
+                        id: railBoardView
+                        width: parent.boardSize
+                        height: width
+                        x: Math.round((parent.width - width - content.gap - content.railWidth) / 2)
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    BoardRail {
+                        anchors.left: railBoardView.right
+                        anchors.leftMargin: content.gap
+                        anchors.top: railBoardView.top
+                        anchors.bottom: railBoardView.bottom
+                        width: content.railWidth
+                        onLeaveRequested: root.leaveRequested()
+                    }
                 }
+            }
 
-                PadModeSelector {
-                    id: modes
-                    Layout.fillWidth: true
+            Component {
+                id: sheetLayout
+
+                Item {
+                    SudokuBoardView {
+                        width: Math.max(0, content.sheetBoard)
+                        height: width
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        y: Math.round((parent.height - content.sheetHeight - content.gap - height) / 2)
+                    }
+
+                    BoardSheet {
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.bottom: parent.bottom
+                        height: content.sheetHeight
+                        tight: content.tightSheet
+                        onLeaveRequested: root.leaveRequested()
+                    }
                 }
-
-                Item { Layout.fillHeight: true }
-            }
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 8 * theme.textScale
-
-            OmaHintButton {
-                Layout.fillWidth: true
-                text: qsTr("Erase")
-                hint: qsTr("Bksp")
-                onClicked: game.erase()
-            }
-            OmaHintButton {
-                Layout.fillWidth: true
-                text: qsTr("Undo")
-                hint: qsTr("Ctrl+Z")
-                enabled: game.canUndo
-                onClicked: game.undo()
-            }
-            OmaHintButton {
-                Layout.fillWidth: true
-                text: qsTr("Restart")
-                hint: qsTr("R")
-                onClicked: game.restart()
-            }
-            // A toggle drawn as a button: filled while on, outlined while off,
-            // so its state reads at a glance among the plain actions.
-            OmaHintButton {
-                Layout.fillWidth: true
-                text: qsTr("Validate")
-                hint: qsTr("V")
-                primary: game.validateAsYouGo
-                onClicked: game.validateAsYouGo = !game.validateAsYouGo
-            }
-            OmaHintButton {
-                Layout.fillWidth: true
-                text: qsTr("New game")
-                hint: qsTr("Esc")
-                onClicked: root.leaveRequested()
             }
         }
     }

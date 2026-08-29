@@ -7,14 +7,16 @@ current Omarchy theme.
 
 ## Playing
 
-- **Validate as I go** (the `Validate` toggle beside the board's actions,
-  remembered between sessions): wrong entries turn red as soon as you make
-  them. Switch it off to be told only once all 81 cells are filled; flip it
-  mid-game and the marks appear or vanish immediately.
+- **Validate as I go** (the `Validate` toggle in the rail, remembered between
+  sessions): wrong entries turn red, with a small marker in the corner of the
+  cell, as soon as you make them. It starts **off** — a first puzzle should not
+  correct you before you have finished thinking — so without it you are told
+  only once all 81 cells are filled; flip it mid-game and the marks appear or
+  vanish immediately.
 - **Notes** are pencil marks: up to nine small digits per empty cell. Placing a
   digit clears that cell's notes and retracts the digit from the notes of every
   cell in the same row, column and box. Notes are never checked.
-- **Mode** (the segmented control under the keypad) decides what a digit does,
+- **Mode** (the segmented control under the keypad in the rail) decides what a digit does,
   typed or clicked: *Highlight*, *Note* or *Fill*. `N` cycles it and it is
   remembered between sessions; Highlight is the default. Holding a modifier
   overrides it for one press without switching mode, which is what each
@@ -44,6 +46,25 @@ current Omarchy theme.
 
 On the start screen `1`, `2`, `3`, `4` pick a difficulty and `R` resumes.
 Every button shows its key, so nothing above needs memorising.
+
+## Layout
+
+The board is the hero: square, centred, and given every pixel the controls do
+not need. Everything else lives in one rail, always in the same order — the
+3×3 keypad, the mode selector, *Validate as I go*, then Erase, Undo, Restart
+and New game, with a line of keyboard reminders at the foot.
+
+The rail sits beside the board on the right, and folds into a bottom sheet
+under it when that leaves the board bigger — which is what a tall, narrow
+window or a large desktop text scale amounts to. The controls keep their order
+across the switch; only their number of columns changes, so nothing a hand has
+learnt moves. Feedback stays local to the cell that changed: a placement
+settles, retracted pencil marks fade where they stood, and a wrong entry marks
+its own corner instead of the board reacting as a whole.
+
+The window is at least 700×560 logical pixels, both multiplied by the desktop
+text scale (so 1400×1120 at 200%). It opens at 880×640 the first time and
+remembers its geometry afterwards.
 
 ## Difficulty
 
