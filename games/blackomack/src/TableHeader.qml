@@ -30,7 +30,7 @@ RowLayout {
         color: theme.muted
         font.pixelSize: 12 * theme.textScale
     }
-    OmaButton { text: "−"; fontScale: 1.1; enabled: header.betting && game.botCount > 0; onClicked: game.setBotCount(game.botCount - 1) }
+    HintButton { text: "−"; hint: "["; enabled: header.betting && game.botCount > 0; onClicked: game.setBotCount(game.botCount - 1) }
     Text {
         text: game.botCount
         color: theme.foreground
@@ -39,6 +39,6 @@ RowLayout {
         horizontalAlignment: Text.AlignHCenter
         Layout.preferredWidth: 20 * theme.textScale
     }
-    OmaButton { text: "+"; fontScale: 1.1; enabled: header.betting && game.botCount < 5; onClicked: game.setBotCount(game.botCount + 1) }
-    OmaButton { text: "New game"; enabled: header.betting; onClicked: header.newGameRequested(); Layout.leftMargin: 8 * theme.textScale }
+    HintButton { text: "+"; hint: "]"; enabled: header.betting && game.botCount < 5; onClicked: game.setBotCount(game.botCount + 1) }
+    HintButton { text: "New game"; hint: "Ctrl+N"; enabled: header.betting; onClicked: header.newGameRequested(); Layout.leftMargin: 8 * theme.textScale }
 }
