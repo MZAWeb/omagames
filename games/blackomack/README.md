@@ -18,9 +18,13 @@ table seats four of them.
   the dealer has blackjack and is lost otherwise. It is the one bet the coach
   tells you to refuse.
 - No surrender.
-- Bets from Ø 10 up to your whole bankroll, in steps of 10; `1`, `2` and `3`
-  stake the Ø 10 / Ø 50 / Ø 100 presets. Doubling and splitting require enough
-  bankroll to cover the extra bet.
+- Bets from Ø 10 up to your whole bankroll, in steps of 10. `1`, `2` and `3`
+  stake three presets sized to your stack — roughly a tenth, a quarter and a
+  half of it, each snapped to a round 1, 2 or 5 amount (Ø 1,270 offers
+  Ø 100 / Ø 200 / Ø 500; Ø 60 offers Ø 10 / Ø 20 / Ø 50) and never below the
+  Ø 10 table minimum or above your bankroll. A stack too thin to keep three
+  apart shows fewer buttons. Doubling and splitting require enough bankroll to
+  cover the extra bet.
 
 You start with Ø 1,000. The bankroll, your table mates and session stats are
 saved between launches. Your session net appears with round and shoe context
@@ -94,7 +98,7 @@ Everything is reachable without a mouse; each button shows its key as a badge.
 | `I` / `N` | Take insurance / no insurance (only while the offer stands) |
 | `↑` `↓` or `+` `-` | Bet ±10 |
 | `M` | Bet max |
-| `1` `2` `3` | Bet Ø 10 / Ø 50 / Ø 100 (clamped to your bankroll) |
+| `1` `2` `3` | Bet the small / medium / large preset for your bankroll |
 | `B` | Type a bet (`Enter` deals, `Escape` reverts) — bet controls only exist while betting |
 | `[` `]` | Fewer / more table mates (between rounds) |
 | `C` | Toggle the Decision Coach (off by default) |

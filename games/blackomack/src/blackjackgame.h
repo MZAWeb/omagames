@@ -24,7 +24,7 @@ class BlackjackGame : public QObject {
     Q_PROPERTY(int maxBots READ maxBots NOTIFY compactLayoutChanged)
     Q_PROPERTY(bool compactLayout READ compactLayout WRITE setCompactLayout NOTIFY compactLayoutChanged)
     Q_PROPERTY(int maxBet READ maxBet NOTIFY stateChanged)
-    Q_PROPERTY(QVariantList betPresets READ betPresets CONSTANT)
+    Q_PROPERTY(QVariantList betPresets READ betPresets NOTIFY stateChanged)
     Q_PROPERTY(QString phase READ phase NOTIFY stateChanged)
     Q_PROPERTY(int botCount READ botCount NOTIFY stateChanged)
     Q_PROPERTY(bool canDeal READ canDeal NOTIFY stateChanged)
@@ -61,8 +61,9 @@ public:
     int bet() const { return m_bet; }
     int minBet() const { return BlackjackRules::kMinBet; }
     int maxBet() const { return bankroll() - bankroll() % BlackjackRules::kBetStep; }
-    // The stakes behind the 1/2/3 keys, smallest first; a preset above the
-    // bankroll clamps like any other bet.
+    // The stakes behind the 1/2/3 keys, smallest first. They follow the
+    // bankroll, so a thin one offers fewer than three and the keys past the
+    // end of the list do nothing.
     QVariantList betPresets() const;
     QString phase() const;
     int botCount() const { return m_table.botCount(); }

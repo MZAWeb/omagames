@@ -23,8 +23,9 @@ Item {
         width: parent.width
         spacing: bar.gap
 
-        // The stakes behind 1, 2 and 3: the bridge owns the amounts so the keys,
-        // the buttons and the README cannot drift apart.
+        // The stakes behind 1, 2 and 3, sized to the bankroll by the bridge so
+        // the keys, the buttons and the README cannot drift apart. A bankroll
+        // too thin to keep three apart simply offers fewer buttons.
         Row {
             id: presets
             spacing: bar.gap
@@ -34,7 +35,7 @@ Item {
                     required property var modelData
                     required property int index
                     width: implicitWidth
-                    text: "Ø " + modelData
+                    text: "Ø " + Number(modelData).toLocaleString(Qt.locale(), "f", 0)
                     hint: String(index + 1)
                     enabled: game.bet !== modelData && game.maxBet >= modelData
                     onClicked: game.setBetPreset(index)
