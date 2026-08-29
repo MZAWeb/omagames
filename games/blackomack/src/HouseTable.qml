@@ -58,16 +58,18 @@ Item {
                 }
 
                 Repeater {
-                    model: root.botSeats
+                    // Seats are counted rather than listed so a seat (and the
+                    // cards on it) survives every state change of the round.
+                    model: root.botSeats.length
                     delegate: TableSeat {
-                        required property var modelData
                         required property int index
                         // The seating chart lives in C++ (SeatLayout), so the
                         // spacing that keeps seats off each other is tested.
                         readonly property rect slot: game.seatRect(root.botSeats.length, index,
                                                                    Qt.size(table.width, table.height),
                                                                    Qt.size(targetWidth, targetHeight))
-                        seatData: modelData
+                        seatData: root.botSeats[index]
+                        dealOrigin: dealer
                         targetWidth: 190 * theme.textScale
                         targetHeight: 132 * theme.textScale
                         cardScale: game.botCount <= 2 ? 0.9 : 0.8
@@ -98,6 +100,7 @@ Item {
                 TableSeat {
                     id: human
                     seatData: game.seats[game.humanSeat]
+                    dealOrigin: dealer
                     targetWidth: (game.botCount <= 2 ? 500 : 430) * theme.textScale
                     targetHeight: (game.botCount <= 2 ? 226 : 181) * theme.textScale
                     cardScale: game.botCount <= 2 ? 1.3 : 1.12
@@ -152,6 +155,7 @@ Item {
                     }
                     HumanStage {
                         seatData: game.seats[game.humanSeat]
+                        dealOrigin: stageDealer
                         width: parent.width
                         x: (parent.width - width) / 2
                         y: parent.height - height
@@ -188,11 +192,11 @@ Item {
                             width: parent.width
                             spacing: 2 * theme.textScale
                             Repeater {
-                                model: root.botSeats
+                                model: root.botSeats.length
                                 delegate: RosterSeat {
-                                    required property var modelData
+                                    required property int index
                                     width: rosterColumn.width
-                                    seatData: modelData
+                                    seatData: root.botSeats[index]
                                 }
                             }
                         }

@@ -28,8 +28,9 @@ only a settings wipe clears it. When you're broke you can only start a new game.
 
 The table is arranged around a themed oval: the dealer stays at top-center,
 AI table mates fill the upper arc symmetrically in deal order, and your
-larger accent-framed tray stays bottom-center. Bets sit beside their hands as
-chips. The fixed action dock shows only the current phase's commands together
+larger accent-framed tray stays bottom-center. Dealt cards travel from the
+dealer's shoe to the seat they land on, one at a time as the deal paces them.
+Bets sit beside their hands as chips. The fixed action dock shows only the current phase's commands together
 with the round, shoe depth and latest table event.
 
 Heads-up and two-mate tables enlarge the dealer and player cards without
