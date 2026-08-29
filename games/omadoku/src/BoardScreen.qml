@@ -18,7 +18,7 @@ FocusScope {
         return minutes + ":" + (rest < 10 ? "0" : "") + rest;
     }
 
-    readonly property var difficultyNames: [qsTr("Easy"), qsTr("Medium"), qsTr("Hard")]
+    property var difficultyNames: [qsTr("Easy"), qsTr("Medium"), qsTr("Hard")]
 
     Keys.onPressed: function(event) {
         if (event.key >= Qt.Key_1 && event.key <= Qt.Key_9)

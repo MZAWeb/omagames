@@ -55,7 +55,10 @@ ApplicationWindow {
     Component { id: startScreen; StartScreen {} }
     Component {
         id: boardScreen
-        BoardScreen { onLeaveRequested: win.leaveGame() }
+        BoardScreen {
+            difficultyNames: win.difficultyNames
+            onLeaveRequested: win.leaveGame()
+        }
     }
 
     Loader {
