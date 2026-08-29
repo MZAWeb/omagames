@@ -14,6 +14,10 @@ size.
 
 Each game has its own README with rules and keyboard shortcuts.
 
+| Omadoku | Black Omack |
+|---|---|
+| <img src="screenshots/omadoku.png" alt="Omadoku, a Medium puzzle with the 7s highlighted" width="100%"> | <img src="screenshots/blackomack.png" alt="Black Omack, a round won against three table mates" width="100%"> |
+
 This is a monorepo: games live under `games/`, everything shared (theming,
 fonts, app bootstrap, common QML controls) lives under `common/` and is compiled
 into each game. Each game ships as its own Arch package.
