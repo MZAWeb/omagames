@@ -15,8 +15,9 @@ private slots:
     void newGameSelectsTheFirstEmptyCell();
     void selectionMovesWithinTheGrid();
     void digitsGoIntoTheSelectedCellOnly();
-    void notesModeWritesPencilMarks();
-    void ctrlAndShiftPathsIgnoreTheMode();
+    void padModeDispatchesClicks();
+    void padModeCyclesAndPersists();
+    void ctrlAndShiftPathsIgnoreThePadMode();
     void highlightTogglesAndSwitchesDigits();
     void padHighlightsWhenNothingIsSelected();
     void selectedValueFollowsTheSelection();

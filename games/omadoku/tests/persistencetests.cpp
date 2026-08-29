@@ -48,11 +48,11 @@ void PersistenceTests::winningSwitchesStateAndClearsTheSave() {
     QCOMPARE(game.selectedIndex(), last);
 
     // A wrong entry is flagged immediately and does not win.
-    game.enterDigit(expected.puzzle().solution[size_t(last)] % 9 + 1);
+    game.enterValue(expected.puzzle().solution[size_t(last)] % 9 + 1);
     QVERIFY(cellBool(game.cells(), last, CellModel::WrongRole));
     QCOMPARE(game.state(), SudokuGame::Playing);
 
-    game.enterDigit(expected.puzzle().solution[size_t(last)]);
+    game.enterValue(expected.puzzle().solution[size_t(last)]);
     QVERIFY(!cellBool(game.cells(), last, CellModel::WrongRole));
     QCOMPARE(game.state(), SudokuGame::Won);
     QVERIFY(!game.hasSavedGame());
@@ -77,9 +77,7 @@ void PersistenceTests::savedGameSurvivesRestart() {
         SudokuGame game;
         game.newGame(SudokuGame::Medium);
         cell = game.selectedIndex();
-        game.enterDigit(7);
-        game.toggleNotesMode();
-        game.select(cell);
+        game.enterValue(7);
         game.backToStart();  // saves on the way out
         QVERIFY(game.hasSavedGame());
     }

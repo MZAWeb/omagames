@@ -62,7 +62,6 @@ void GameTests::newGameSelectsTheFirstEmptyCell() {
     QCOMPARE(game.difficulty(), int(Difficulty::Hard));
     QVERIFY(game.selectedIndex() >= 0);
     QCOMPARE(cellInt(game.cells(), game.selectedIndex(), CellModel::ValueRole), 0);
-    QVERIFY(!game.notesMode());
 
     QVERIFY(game.filledCount() >= SudokuGenerator::minClues(Difficulty::Hard));
     QCOMPARE(game.digitCounts().size(), 9);
@@ -97,62 +96,93 @@ void GameTests::digitsGoIntoTheSelectedCellOnly() {
     const int givenValue = cellInt(game.cells(), given, CellModel::ValueRole);
 
     game.select(given);
-    game.enterDigit(givenValue % 9 + 1);
+    game.enterValue(givenValue % 9 + 1);
     QCOMPARE(cellInt(game.cells(), given, CellModel::ValueRole), givenValue);
     QVERIFY(!game.canUndo());
 
     game.select(empty);
-    game.enterDigit(5);
+    game.enterValue(5);
     QCOMPARE(cellInt(game.cells(), empty, CellModel::ValueRole), 5);
     QVERIFY(game.canUndo());
 }
 
-void GameTests::notesModeWritesPencilMarks() {
+void GameTests::padModeDispatchesClicks() {
     SudokuGame game;
     game.newGame(SudokuGame::Easy);
     const int cell = game.selectedIndex();
+    QCOMPARE(game.padMode(), SudokuGame::Fill);
 
-    game.toggleNotesMode();
-    QVERIFY(game.notesMode());
-    game.enterDigit(3);
-    game.enterDigit(8);
+    game.pressPad(4);
+    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 4);
+
+    game.setPadMode(SudokuGame::Note);
+    game.erase();
+    game.pressPad(3);
+    game.pressPad(8);
     QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), (1 << 2) | (1 << 7));
     QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 0);
-
-    game.enterDigit(3);  // toggles back off
+    game.pressPad(3);  // toggles back off
     QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), 1 << 7);
+    QCOMPARE(game.highlightDigit(), -1);
 
-    game.toggleNotesMode();
-    game.enterDigit(4);
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 4);
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), 0);
+    game.setPadMode(SudokuGame::Highlight);
+    game.pressPad(6);
+    QCOMPARE(game.highlightDigit(), 6);
+    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 0);
+
+    // Without a selection there is nowhere to write, so the pad highlights.
+    game.setPadMode(SudokuGame::Fill);
+    game.select(-1);
+    game.pressPad(2);
+    QCOMPARE(game.highlightDigit(), 2);
 }
 
-void GameTests::ctrlAndShiftPathsIgnoreTheMode() {
+void GameTests::padModeCyclesAndPersists() {
+    {
+        SudokuGame game;
+        QSignalSpy spy(&game, &SudokuGame::padModeChanged);
+        game.newGame(SudokuGame::Easy);
+        QCOMPARE(game.padMode(), SudokuGame::Fill);  // the default
+
+        game.cyclePadMode();
+        QCOMPARE(game.padMode(), SudokuGame::Highlight);
+        game.cyclePadMode();
+        QCOMPARE(game.padMode(), SudokuGame::Note);
+        game.cyclePadMode();
+        QCOMPARE(game.padMode(), SudokuGame::Fill);
+        QCOMPARE(spy.count(), 3);
+
+        game.setPadMode(SudokuGame::Note);
+        game.newGame(SudokuGame::Hard);
+        QCOMPARE(game.padMode(), SudokuGame::Note);  // a preference, not game state
+    }
+    SudokuGame restarted;
+    QCOMPARE(restarted.padMode(), SudokuGame::Note);
+}
+
+void GameTests::ctrlAndShiftPathsIgnoreThePadMode() {
     SudokuGame game;
     game.newGame(SudokuGame::Easy);
     const int cell = game.selectedIndex();
 
-    // Shift+digit pencils a note even in entry mode...
+    // Shift+digit pencils a note even while the pad is in Fill mode...
+    QCOMPARE(game.padMode(), SudokuGame::Fill);
     game.toggleNote(7);
     QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), 1 << 6);
     QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 0);
-    QVERIFY(!game.notesMode());
 
-    // ...and Ctrl+digit writes a value even in notes mode.
-    game.toggleNotesMode();
+    // ...and Ctrl+digit writes a value while it is in Note mode.
+    game.setPadMode(SudokuGame::Note);
     game.enterValue(3);
-    QVERIFY(game.notesMode());
+    QCOMPARE(game.padMode(), SudokuGame::Note);
     QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 3);
     QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), 0);
 
-    // The mode still governs the plain (pad) path.
-    game.erase();
-    game.enterDigit(5);
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), 1 << 4);
-    game.toggleNotesMode();
-    game.enterDigit(5);
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 5);
+    // ...and a plain digit only ever highlights.
+    game.setPadMode(SudokuGame::Highlight);
+    game.toggleHighlight(5);
+    QCOMPARE(game.highlightDigit(), 5);
+    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 3);
 }
 
 void GameTests::highlightTogglesAndSwitchesDigits() {
@@ -206,7 +236,7 @@ void GameTests::undoRestartAndEraseGoThroughTheBoard() {
     const int cell = game.selectedIndex();
     const int filled = game.filledCount();
 
-    game.enterDigit(2);
+    game.enterValue(2);
     QCOMPARE(game.filledCount(), filled + 1);
     game.erase();
     QCOMPARE(game.filledCount(), filled);
@@ -217,7 +247,7 @@ void GameTests::undoRestartAndEraseGoThroughTheBoard() {
     QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 0);
     QVERIFY(!game.canUndo());
 
-    game.enterDigit(2);
+    game.enterValue(2);
     game.restart();
     QCOMPARE(game.filledCount(), filled);
     QVERIFY(!game.canUndo());
@@ -242,7 +272,7 @@ void GameTests::selectedValueFollowsTheSelection() {
     QCOMPARE(game.selectedValue(), 0);
 
     QSignalSpy spy(&game, &SudokuGame::selectedValueChanged);
-    game.enterDigit(6);
+    game.enterValue(6);
     QCOMPARE(game.selectedValue(), 6);
     QVERIFY(spy.count() > 0);
 
@@ -259,7 +289,7 @@ void GameTests::untouchedPuzzleIsNotInProgress() {
     game.newGame(SudokuGame::Easy);
     QVERIFY(!game.inProgress());  // givens alone are not progress
 
-    game.enterDigit(1);
+    game.enterValue(1);
     QVERIFY(game.inProgress());
     game.undo();
     QVERIFY(!game.inProgress());
