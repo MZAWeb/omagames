@@ -13,8 +13,9 @@ table seats four of them.
 - Double down on any first two cards (one card only), including after a split.
 - Split once per hand; split aces get one card each and cannot hit.
 - No insurance, no surrender.
-- Bets from Ø 10 up to your whole bankroll, in steps of 10. Doubling and
-  splitting require enough bankroll to cover the extra bet.
+- Bets from Ø 10 up to your whole bankroll, in steps of 10; `1`, `2` and `3`
+  stake the Ø 10 / Ø 50 / Ø 100 presets. Doubling and splitting require enough
+  bankroll to cover the extra bet.
 
 You start with Ø 1,000. The bankroll, your table mates and session stats are
 saved between launches. Your session net appears with round and shoe context
@@ -84,6 +85,7 @@ Everything is reachable without a mouse; each button shows its key as a badge.
 | `H` `S` `D` `P` | Hit / Stand / Double / Split |
 | `↑` `↓` or `+` `-` | Bet ±10 |
 | `M` | Bet max |
+| `1` `2` `3` | Bet Ø 10 / Ø 50 / Ø 100 (clamped to your bankroll) |
 | `B` | Type a bet (`Enter` deals, `Escape` reverts) — bet controls only exist while betting |
 | `[` `]` | Fewer / more table mates (between rounds) |
 | `C` | Toggle the Decision Coach (off by default) |

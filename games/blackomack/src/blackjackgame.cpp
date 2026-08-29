@@ -2,6 +2,8 @@
 
 #include <QSettings>
 
+#include <iterator>
+
 #include "basicstrategy.h"
 #include "gamestate.h"
 #include "seatlayout.h"
@@ -14,6 +16,8 @@ constexpr int kDefaultStepMs = 500;
 // cards are pitched faster than the bot and dealer steps.
 constexpr int kDealStepMs = 180;
 constexpr int kLogLength = 8;
+// One tap each for a table minimum, a comfortable stake and a big one.
+constexpr int kBetPresets[] = {10, 50, 100};
 constexpr const char *kCoachEnabledKey = "coach/enabled";
 
 QString actionText(Action action) {
@@ -87,6 +91,13 @@ BlackjackGame::Advice BlackjackGame::coachLookup() const {
     return {actionText(action), situation};
 }
 
+QVariantList BlackjackGame::betPresets() const {
+    QVariantList presets;
+    for (int amount : kBetPresets)
+        presets.append(amount);
+    return presets;
+}
+
 QString BlackjackGame::phase() const {
     switch (m_table.phase()) {
     case Table::Phase::Betting: return QStringLiteral("betting");
@@ -136,6 +147,12 @@ void BlackjackGame::setBet(int amount) {
     m_bet = clamped;
     emit betChanged();
     emit stateChanged();   // canDeal depends on the bet
+}
+
+void BlackjackGame::setBetPreset(int index) {
+    if (index < 0 || index >= int(std::size(kBetPresets)))
+        return;
+    setBet(kBetPresets[index]);
 }
 
 void BlackjackGame::adjustBet(int delta) {

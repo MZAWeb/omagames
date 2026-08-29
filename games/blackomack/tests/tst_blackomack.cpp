@@ -1004,6 +1004,41 @@ private slots:
         reloaded.newGame();
         QCOMPARE(reloaded.botCount(), 5);   // a new game reseats the same table
     }
+    // --- Bet presets ---
+    // 1, 2 and 3 stake the presets, which clamp to the bankroll like any bet
+    // and are only live while betting.
+    void bridgeBetPresets() {
+        BlackjackGame g;
+        g.setStepInterval(0);
+        g.setBotCount(0);
+        QCOMPARE(g.betPresets(), QVariantList({10, 50, 100}));
+        g.setBetPreset(2);
+        QCOMPARE(g.bet(), 100);
+        g.setBetPreset(0);
+        QCOMPARE(g.bet(), 10);
+        g.setBetPreset(1);
+        QCOMPARE(g.bet(), 50);
+        g.setBetPreset(3);
+        QCOMPARE(g.bet(), 50);   // there is no fourth preset
+        g.setBetPreset(-1);
+        QCOMPARE(g.bet(), 50);
+
+        // a preset above the bankroll stakes what is there instead
+        g.setBet(940);
+        g.stackDeck(cards({10, 10, 6, 10}));   // 16 against 20
+        playRound(g);
+        g.nextRound();
+        QCOMPARE(g.bankroll(), 60);
+        g.setBetPreset(2);
+        QCOMPARE(g.bet(), 60);
+
+        // and the stake is locked once the cards are out
+        g.setBetPreset(0);
+        g.dealRound();
+        const int staked = g.bet();
+        g.setBetPreset(2);
+        QCOMPARE(g.bet(), staked);
+    }
 };
 
 QTEST_GUILESS_MAIN(BlackOmackTest)

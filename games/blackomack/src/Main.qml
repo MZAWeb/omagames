@@ -67,6 +67,9 @@ ApplicationWindow {
     Shortcut { enabled: window.betKeysActive; sequences: ["Up", "+"]; onActivated: game.adjustBet(10) }
     Shortcut { enabled: window.betKeysActive; sequences: ["Down", "-"]; onActivated: game.adjustBet(-10) }
     Shortcut { enabled: window.betKeysActive; sequence: "M"; onActivated: game.betMax() }
+    Shortcut { enabled: window.betKeysActive; sequence: "1"; onActivated: game.setBetPreset(0) }
+    Shortcut { enabled: window.betKeysActive; sequence: "2"; onActivated: game.setBetPreset(1) }
+    Shortcut { enabled: window.betKeysActive; sequence: "3"; onActivated: game.setBetPreset(2) }
     Shortcut { enabled: window.betKeysActive; sequence: "B"; onActivated: dock.focusBet() }
     Shortcut { enabled: window.betKeysActive && game.botCount > 0; sequence: "["; onActivated: game.setBotCount(game.botCount - 1) }
     Shortcut { enabled: window.betKeysActive && game.botCount < game.maxBots; sequence: "]"; onActivated: game.setBotCount(game.botCount + 1) }
