@@ -1,8 +1,11 @@
 /build/
 /build-tests/
-# makepkg output, wherever it runs (games/<game>/pkgbuild/ included)
-pkg/
-pkgbuild/src/
+/build-strict/
+/pkg/
+/pkgbuild/pkg/
+/pkgbuild/src/
+games/*/pkgbuild/pkg/
+games/*/pkgbuild/src/
 *.pkg.tar.*
 *.src.tar.*
 *.o

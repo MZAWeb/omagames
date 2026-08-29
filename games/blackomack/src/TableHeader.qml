@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Layouts
-import OmaGames
 
 // Title, session stats and the table controls (bot count, new game).
 RowLayout {
