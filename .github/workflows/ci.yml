@@ -13,8 +13,11 @@ concurrency:
 
 env:
   # base-devel brings gcc, make and fakeroot (makepkg needs the last one);
-  # git is required by actions/checkout.
-  ARCH_PACKAGES: base-devel git qt6-base qt6-declarative
+  # git is required by actions/checkout. hicolor-icon-theme and
+  # xdg-desktop-portal are runtime `depends` of every game's PKGBUILD, and
+  # makepkg refuses to build until they are installed, so the package jobs
+  # need them here even though nothing links against them.
+  ARCH_PACKAGES: base-devel git qt6-base qt6-declarative hicolor-icon-theme xdg-desktop-portal
 
 jobs:
   discover:
