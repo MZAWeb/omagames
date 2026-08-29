@@ -2,6 +2,8 @@
 
 #include <QRandomGenerator>
 
+#include "sudokugrader.h"
+
 #include <algorithm>
 #include <array>
 
@@ -61,6 +63,33 @@ int SudokuGenerator::maxClues(Difficulty difficulty) {
     return 28;
 }
 
+namespace {
+
+// One carving pass: removes clues in `order` while the puzzle stays unique
+// (and, for Easy, stays solvable by singles). Hard keeps carving past the
+// target while singles still crack it, but never below the difficulty floor.
+Sudoku::Grid carve(const Grid &solution, const std::vector<int> &order, int target, int floorClues,
+                   bool requireSingles, bool forbidSingles) {
+    Grid givens = solution;
+    int clues = Sudoku::kCells;
+    for (int index : order) {
+        if (clues <= floorClues)
+            break;
+        if (clues <= target && !(forbidSingles && SudokuGrader::solvableWithSingles(givens)))
+            break;
+        const int removed = givens[index];
+        givens[index] = 0;
+        const bool unique = Sudoku::countSolutions(givens, 2) == 1;
+        if (unique && (!requireSingles || SudokuGrader::solvableWithSingles(givens)))
+            --clues;
+        else
+            givens[index] = removed;
+    }
+    return givens;
+}
+
+}  // namespace
+
 Puzzle SudokuGenerator::generate(Difficulty difficulty, quint32 seed) {
     if (seed == 0)
         seed = QRandomGenerator::global()->generate();
@@ -71,25 +100,29 @@ Puzzle SudokuGenerator::generate(Difficulty difficulty, quint32 seed) {
     puzzle.seed = seed;
     fillGrid(puzzle.solution, 0, rng);
 
-    // Carve clues away in random order, keeping only removals that leave the
-    // puzzle unique. Stop as soon as we are inside the difficulty's window.
-    const int target = minClues(difficulty) + int(rng.bounded(maxClues(difficulty) - minClues(difficulty) + 1));
+    const int target = minClues(difficulty)
+        + int(rng.bounded(maxClues(difficulty) - minClues(difficulty) + 1));
     std::vector<int> order(Sudoku::kCells);
     for (int i = 0; i < Sudoku::kCells; ++i)
         order[size_t(i)] = i;
-    shuffle(order, rng);
 
-    puzzle.givens = puzzle.solution;
-    int clues = Sudoku::kCells;
-    for (int index : order) {
-        if (clues <= target)
+    // Easy must stay solvable by singles alone; Hard must need more than that.
+    // A removal order that cannot deliver a hard-enough puzzle is retried with
+    // a fresh shuffle a bounded number of times - we keep the first attempt as
+    // a fallback rather than ever looping forever.
+    const bool requireSingles = difficulty == Difficulty::Easy;
+    const bool forbidSingles = difficulty == Difficulty::Hard;
+    constexpr int kMaxAttempts = 12;
+    for (int attempt = 0; attempt < kMaxAttempts; ++attempt) {
+        shuffle(order, rng);
+        const Grid givens = carve(puzzle.solution, order, target, minClues(difficulty),
+                                  requireSingles, forbidSingles);
+        if (attempt == 0)
+            puzzle.givens = givens;
+        if (!forbidSingles || !SudokuGrader::solvableWithSingles(givens)) {
+            puzzle.givens = givens;
             break;
-        const int removed = puzzle.givens[index];
-        puzzle.givens[index] = 0;
-        if (Sudoku::countSolutions(puzzle.givens, 2) == 1)
-            --clues;
-        else
-            puzzle.givens[index] = removed;
+        }
     }
     return puzzle;
 }
