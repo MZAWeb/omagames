@@ -20,7 +20,9 @@ HEADERS += \
     boardtests.h \
     scoringtests.h \
     autoshifttests.h \
-    bridgetests.h
+    bridgefixture.h \
+    inputtests.h \
+    persistencetests.h
 
 SOURCES += \
     ../src/piece.cpp \
@@ -35,5 +37,6 @@ SOURCES += \
     boardtests.cpp \
     scoringtests.cpp \
     autoshifttests.cpp \
-    bridgetests.cpp \
+    inputtests.cpp \
+    persistencetests.cpp \
     tst_omatris.cpp
