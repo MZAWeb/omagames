@@ -6,6 +6,8 @@
 #include <QQuickPaintedItem>
 #include <QTimer>
 
+#include "fieldpainter.h"
+
 class Board;
 class OmasweeperGame;
 
@@ -62,7 +64,8 @@ private:
     // whatever room the item was given.
     QPoint origin() const;
     QPoint cellAt(const QPointF &pos) const;
-    const QColor &numberColor(int adjacent) const;
+    // The colors QML set, gathered into the shape the painter wants.
+    FieldPalette palette() const;
 
     void onField();
     void onRipple();
@@ -72,14 +75,8 @@ private:
     // 0 while the cell is still a lid, 1 once it has finished flipping open.
     double flip(int index, qint64 now) const;
 
-    void paintCell(QPainter *painter, const Board &board, int index, qint64 now);
-    void paintLid(QPainter *painter, const QRect &box, double opacity);
-    void paintNumber(QPainter *painter, const QRect &box, int adjacent, double opacity);
-    void paintFlag(QPainter *painter, const QRect &box, const QColor &color);
-    void paintMine(QPainter *painter, const QRect &box);
-    void paintCross(QPainter *painter, const QRect &box);
-    void paintGrid(QPainter *painter, const Board &board);
-    void paintCursor(QPainter *painter, qint64 now);
+    void paintCell(const FieldPainter &cells, const Board &board, int index, qint64 now);
+    void paintCursor(const FieldPainter &cells, qint64 now);
 
     OmasweeperGame *m_source = nullptr;
     int m_cellSize = 16;
