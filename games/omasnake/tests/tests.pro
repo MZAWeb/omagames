@@ -8,6 +8,7 @@ INCLUDEPATH += ../src
 
 HEADERS += \
     ../src/rules.h \
+    ../src/choices.h \
     ../src/snake.h \
     ../src/game.h \
     ../src/omasnakegame.h \
@@ -16,6 +17,7 @@ HEADERS += \
 
 SOURCES += \
     ../src/rules.cpp \
+    ../src/choices.cpp \
     ../src/snake.cpp \
     ../src/game.cpp \
     ../src/omasnakegame.cpp \
