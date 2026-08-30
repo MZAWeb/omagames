@@ -14,6 +14,21 @@ bool Field::isBorder(QPoint p) const {
     return p.x() < kBorder || p.y() < kBorder || p.x() >= m_width - kBorder || p.y() >= m_height - kBorder;
 }
 
+bool Field::isEdge(QPoint p) const {
+    if (!contains(p) || at(p) != Cell::Claimed)
+        return false;
+    for (int dy = -1; dy <= 1; ++dy) {
+        for (int dx = -1; dx <= 1; ++dx) {
+            if (dx == 0 && dy == 0)
+                continue;
+            const QPoint n {p.x() + dx, p.y() + dy};
+            if (contains(n) && at(n) != Cell::Claimed)
+                return true;
+        }
+    }
+    return false;
+}
+
 void Field::reset() {
     m_cells.assign(size_t(cellCount()), Cell::Open);
     for (int y = 0; y < m_height; ++y) {

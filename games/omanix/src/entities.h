@@ -18,13 +18,18 @@ struct Ball {
     void step(const Field &field);
 };
 
-// A chaser is the ball's mirror image: it drifts diagonally through claimed
-// ground and bounces off the sea.
+// A chaser crawls along the edge of the claimed ground — Xonix's border
+// enemy. It keeps the sea on its right, which walks the opening frame
+// clockwise, follows every edge a claim adds and turns around at a dead end.
+// `dir` is an axis-aligned unit vector.
 struct Chaser {
     QPoint pos;
     QPoint dir;
 
     void step(const Field &field);
+
+private:
+    void walkBackToTheEdge(const Field &field);
 };
 
 // The marker. `held` is the key the player is holding right now; `queued`

@@ -45,18 +45,51 @@ void Game::spawnBalls() {
 
 void Game::spawnChasers() {
     m_chasers.clear();
-    // Along the top edge, as far from the marker's start as the frame goes.
+    // Spread along the top edge, the far side of the frame from where the
+    // marker starts, all of them crawling clockwise.
     for (int i = 0; i < m_params.chasers; ++i) {
-        const QPoint pos {int(m_rng.bounded(Field::kBorder, m_field.width() - Field::kBorder)), int(m_rng.bounded(Field::kBorder))};
-        const QPoint dir {m_rng.bounded(2) ? 1 : -1, m_rng.bounded(2) ? 1 : -1};
-        m_chasers.push_back({pos, dir});
+        const QPoint pos {int(m_rng.bounded(Field::kBorder, m_field.width() - Field::kBorder)), 0};
+        m_chasers.push_back({pos, {1, 0}});
     }
 }
 
+// How far each claimed cell is from the nearest chaser, counted in the steps
+// a chaser would actually take: chasers never leave the ground, so a cell
+// across the sea is not near at all. Unreached cells come back as kUnreached.
+std::vector<int> Game::chaserDistances() const {
+    std::vector<int> distance(size_t(m_field.cellCount()), kUnreached);
+    std::vector<int> queue;
+    for (const Chaser &c : m_chasers) {
+        if (!m_field.contains(c.pos) || m_field.at(c.pos) != Cell::Claimed)
+            continue;
+        const int start = m_field.index(c.pos);
+        if (distance[size_t(start)] != kUnreached)
+            continue;
+        distance[size_t(start)] = 0;
+        queue.push_back(start);
+    }
+    for (size_t head = 0; head < queue.size(); ++head) {
+        const QPoint p = m_field.point(queue[head]);
+        const int next = distance[size_t(queue[head])] + 1;
+        for (QPoint step : {QPoint(1, 0), QPoint(0, 1), QPoint(-1, 0), QPoint(0, -1)}) {
+            const QPoint n = p + step;
+            if (!m_field.contains(n) || m_field.at(n) != Cell::Claimed)
+                continue;
+            const int index = m_field.index(n);
+            if (distance[size_t(index)] != kUnreached)
+                continue;
+            distance[size_t(index)] = next;
+            queue.push_back(index);
+        }
+    }
+    return distance;
+}
+
 void Game::respawnPlayer() {
-    // Bottom edge, as close to the middle as the chasers allow: the column
-    // that keeps the nearest chaser furthest away, centre first on ties.
+    // Bottom edge, on the cell the nearest chaser has the longest crawl to,
+    // centre first on ties.
     const int y = m_field.height() - 1;
+    const std::vector<int> distance = chaserDistances();
     const int centre = m_field.width() / 2;
     QPoint best {centre, y};
     int bestDistance = -1;
@@ -64,9 +97,7 @@ void Game::respawnPlayer() {
         for (int x : {centre - offset, centre + offset}) {
             if (x < 0 || x >= m_field.width())
                 continue;
-            int nearest = m_field.width() + m_field.height();
-            for (const Chaser &c : m_chasers)
-                nearest = std::min(nearest, std::abs(c.pos.x() - x) + std::abs(c.pos.y() - y));
+            const int nearest = distance[size_t(m_field.index({x, y}))];
             if (nearest > bestDistance) {
                 bestDistance = nearest;
                 best = {x, y};

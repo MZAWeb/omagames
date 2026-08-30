@@ -7,6 +7,7 @@
 namespace {
 
 constexpr quint32 kSeed = 20260830u;
+constexpr int kInteriorHeight = Field::kDefaultHeight - 2 * Field::kBorder;
 
 // Runs ticks until the player has moved `cells` times (or gives up).
 void walk(Game &game, Direction direction, int cells, std::vector<Event> *events = nullptr) {
@@ -54,7 +55,7 @@ void fence(Game &game, QPoint ball) {
 // A game with nothing that could interfere: no chasers, and one ball kept on
 // the far side of a claimed wall down column `wallX`. Any cut left of the
 // wall closes with no ball on that side, so it claims every interior column
-// up to the wall: `(wallX - kBorder) * 36` cells. The marker starts
+// up to the wall: `(wallX - kBorder) * kInteriorHeight` cells. The marker starts
 // bottom-centre.
 Game quietGame(int wallX = 40) {
     Game game(Difficulty::Normal, kSeed);
@@ -81,25 +82,30 @@ void EngineTests::fieldStartsAsFrameAroundOpenSea() {
     Field field;
     QCOMPARE(field.width(), 64);
     QCOMPARE(field.height(), 40);
-    QCOMPARE(field.interiorCells(), 60 * 36);
+    QCOMPARE(field.interiorCells(), 62 * 38);
     QCOMPARE(field.claimedInterior(), 0);
     QCOMPARE(field.at({0, 0}), Cell::Claimed);
     QCOMPARE(field.at({1, 39}), Cell::Claimed);
-    QCOMPARE(field.at({2, 2}), Cell::Open);
-    QCOMPARE(field.at({61, 37}), Cell::Open);
+    // One cell deep: the second ring in is already open sea.
+    QCOMPARE(field.at({1, 1}), Cell::Open);
+    QCOMPARE(field.at({62, 38}), Cell::Open);
     QVERIFY(field.isBorder({63, 20}));
-    QVERIFY(!field.isBorder({2, 20}));
+    QVERIFY(!field.isBorder({1, 20}));
     QVERIFY(!field.contains({64, 0}));
+    // The whole frame is edge, corners included, and nothing inside it is.
+    QVERIFY(field.isEdge({0, 0}));
+    QVERIFY(field.isEdge({30, 39}));
+    QVERIFY(!field.isEdge({1, 1}));
 }
 
 void EngineTests::claimTakesTrailAndBallFreeRegions() {
     Field field(12, 10);
     // Vertical trail down column 5 splits the interior in two.
-    for (int y = 2; y < 8; ++y)
+    for (int y = 1; y < 9; ++y)
         field.set({5, y}, Cell::Trail);
     const std::vector<int> claimed = field.claim({QPoint(8, 5)});
-    // Trail (6) plus the left region: columns 2..4 × rows 2..7 = 18.
-    QCOMPARE(int(claimed.size()), 6 + 18);
+    // Trail (8) plus the left region: columns 1..4 × rows 1..8 = 32.
+    QCOMPARE(int(claimed.size()), 8 + 32);
     QCOMPARE(field.at({3, 4}), Cell::Claimed);
     QCOMPARE(field.at({5, 4}), Cell::Claimed);
     QCOMPARE(field.at({8, 4}), Cell::Open);
@@ -108,16 +114,16 @@ void EngineTests::claimTakesTrailAndBallFreeRegions() {
 
 void EngineTests::claimKeepsEveryRegionWithABall() {
     Field field(12, 10);
-    for (int y = 2; y < 8; ++y)
+    for (int y = 1; y < 9; ++y)
         field.set({5, y}, Cell::Trail);
     const std::vector<int> claimed = field.claim({QPoint(3, 3), QPoint(8, 5)});
-    QCOMPARE(int(claimed.size()), 6);
+    QCOMPARE(int(claimed.size()), 8);
     QCOMPARE(field.at({3, 4}), Cell::Open);
     QCOMPARE(field.at({8, 4}), Cell::Open);
 
     // Three regions, one ball: the two empty ones go.
     Field three(12, 10);
-    for (int y = 2; y < 8; ++y) {
+    for (int y = 1; y < 9; ++y) {
         three.set({4, y}, Cell::Trail);
         three.set({7, y}, Cell::Trail);
     }
@@ -125,7 +131,7 @@ void EngineTests::claimKeepsEveryRegionWithABall() {
     QCOMPARE(three.at({2, 5}), Cell::Claimed);
     QCOMPARE(three.at({5, 5}), Cell::Open);
     QCOMPARE(three.at({9, 5}), Cell::Claimed);
-    QCOMPARE(three.claimedInterior(), 6 + 6 + 2 * 6 + 2 * 6);
+    QCOMPARE(three.claimedInterior(), 8 + 8 + 3 * 8 + 3 * 8);
 }
 
 void EngineTests::claimMergesWithExistingGround() {
@@ -156,30 +162,34 @@ void EngineTests::ballReflectsOffWalls() {
     Ball ball {{3, 10}, {-1, 1}};
     ball.step(field);
     QCOMPARE(ball.pos, QPoint(2, 11));
-    ball.step(field);  // x would hit the frame at 1: flip dx, keep dy
+    ball.step(field);
+    QCOMPARE(ball.pos, QPoint(1, 12));
+    ball.step(field);  // x would hit the frame at 0: flip dx, keep dy
     QCOMPARE(ball.dir, QPoint(1, 1));
-    QCOMPARE(ball.pos, QPoint(3, 12));
+    QCOMPARE(ball.pos, QPoint(2, 13));
 
     Ball floor {{20, 36}, {1, 1}};
     floor.step(field);
     QCOMPARE(floor.pos, QPoint(21, 37));
     floor.step(field);
+    QCOMPARE(floor.pos, QPoint(22, 38));
+    floor.step(field);
     QCOMPARE(floor.dir, QPoint(1, -1));
-    QCOMPARE(floor.pos, QPoint(22, 36));
+    QCOMPARE(floor.pos, QPoint(23, 37));
 
     // The trail is not a wall.
-    field.set({23, 35}, Cell::Trail);
+    field.set({24, 36}, Cell::Trail);
     floor.step(field);
-    QCOMPARE(floor.pos, QPoint(23, 35));
+    QCOMPARE(floor.pos, QPoint(24, 36));
 }
 
 void EngineTests::ballReflectsOffCorner() {
     Field field;
     // Exact corner of the interior: both axes flip.
-    Ball ball {{2, 2}, {-1, -1}};
+    Ball ball {{1, 1}, {-1, -1}};
     ball.step(field);
     QCOMPARE(ball.dir, QPoint(1, 1));
-    QCOMPARE(ball.pos, QPoint(3, 3));
+    QCOMPARE(ball.pos, QPoint(2, 2));
 
     // A lone claimed cell on the diagonal, sides free: bounce straight back.
     Field lone;
@@ -200,16 +210,93 @@ void EngineTests::ballNeverSqueezesBetweenDiagonalBlockers() {
     QCOMPARE(ball.pos, QPoint(9, 9));
 }
 
-void EngineTests::chaserPatrolsTheFrame() {
+void EngineTests::chaserCrawlsTheFrameClockwise() {
     Field field;
-    Chaser chaser {{10, 0}, {1, 1}};
-    for (int i = 0; i < 200; ++i) {
+    Chaser chaser {{10, 0}, {1, 0}};
+    // Along the top edge to the corner, then round it and down the right one.
+    for (int i = 0; i < 53; ++i)
         chaser.step(field);
-        QVERIFY(field.contains(chaser.pos));
+    QCOMPARE(chaser.pos, QPoint(63, 0));
+    chaser.step(field);
+    QCOMPARE(chaser.pos, QPoint(63, 1));
+    QCOMPARE(chaser.dir, QPoint(0, 1));
+    // The frame is one unbroken ring, and a full lap brings it home.
+    const int ring = 2 * (field.width() + field.height()) - 4;
+    for (int i = 0; i < ring - 54; ++i)
+        chaser.step(field);
+    QCOMPARE(chaser.pos, QPoint(10, 0));
+    QCOMPARE(chaser.dir, QPoint(1, 0));
+    // It never leaves the ground.
+    for (int i = 0; i < 3 * ring; ++i) {
+        chaser.step(field);
         QCOMPARE(field.at(chaser.pos), Cell::Claimed);
     }
-    // It actually travels rather than jittering in place.
-    QVERIFY(chaser.pos.x() != 10 || chaser.pos.y() > 1);
+}
+
+void EngineTests::chaserFollowsNewlyClaimedGround() {
+    Field field;
+    // A one-cell spur claimed downward from the top frame at column 30.
+    for (int y = 1; y <= 5; ++y)
+        field.set({30, y}, Cell::Claimed);
+    Chaser chaser {{28, 0}, {1, 0}};
+    chaser.step(field);
+    QCOMPARE(chaser.pos, QPoint(29, 0));
+    chaser.step(field);
+    QCOMPARE(chaser.pos, QPoint(30, 0));
+    // The sea is on its right, so it turns down the new edge...
+    for (int y = 1; y <= 5; ++y) {
+        chaser.step(field);
+        QCOMPARE(chaser.pos, QPoint(30, y));
+    }
+    // ...turns around at the tip, climbs the spur's other side...
+    for (int y = 4; y >= 0; --y) {
+        chaser.step(field);
+        QCOMPARE(chaser.pos, QPoint(30, y));
+    }
+    // ...and carries on along the top edge.
+    chaser.step(field);
+    QCOMPARE(chaser.pos, QPoint(31, 0));
+}
+
+void EngineTests::chaserReversesAtADeadEnd() {
+    Field field(20, 12);
+    // An island bar out in the sea: every cell of it is edge and both ends
+    // are dead ends, so a chaser can only pace it.
+    for (int x = 5; x <= 8; ++x)
+        field.set({x, 6}, Cell::Claimed);
+    Chaser chaser {{6, 6}, {1, 0}};
+    chaser.step(field);
+    QCOMPARE(chaser.pos, QPoint(7, 6));
+    chaser.step(field);
+    QCOMPARE(chaser.pos, QPoint(8, 6));
+    chaser.step(field);
+    QCOMPARE(chaser.pos, QPoint(7, 6));
+    QCOMPARE(chaser.dir, QPoint(-1, 0));
+    for (int i = 0; i < 40; ++i) {
+        chaser.step(field);
+        QCOMPARE(chaser.pos.y(), 6);
+        QVERIFY(chaser.pos.x() >= 5 && chaser.pos.x() <= 8);
+    }
+}
+
+void EngineTests::chaserBuriedByAClaimWalksBackToTheEdge() {
+    Field field(20, 12);
+    // A claim swallowed the sea around the chaser's stretch of frame.
+    for (int y = 1; y <= 4; ++y) {
+        for (int x = 1; x <= 18; ++x)
+            field.set({x, y}, Cell::Claimed);
+    }
+    Chaser chaser {{9, 2}, {1, 0}};
+    QVERIFY(!field.isEdge(chaser.pos));
+    // Straight down to the nearest edge, one cell a step, then it hugs it.
+    chaser.step(field);
+    QCOMPARE(chaser.pos, QPoint(9, 3));
+    chaser.step(field);
+    QCOMPARE(chaser.pos, QPoint(9, 4));
+    QVERIFY(field.isEdge(chaser.pos));
+    chaser.step(field);
+    QCOMPARE(chaser.pos.y(), 4);
+    QVERIFY(field.isEdge(chaser.pos));
 }
 
 void EngineTests::tapMovesOneCellAndHoldKeepsMoving() {
@@ -263,6 +350,7 @@ void EngineTests::marchingIntoOpenSeaCutsATrailUntilGround() {
     QVERIFY(claimed);
     // The column itself plus the whole ball-free region around it.
     const int interiorHeight = game.field().height() - 2 * Field::kBorder;
+    QCOMPARE(interiorHeight, kInteriorHeight);
     QCOMPARE(int(claimed->cells.size()), interiorHeight * (40 - Field::kBorder));
     QCOMPARE(game.field().at({x, 10}), Cell::Claimed);
     QCOMPARE(claimed->at, game.player().pos);
@@ -285,7 +373,7 @@ void EngineTests::ballOnTrailCostsALifeAndWipesIt() {
     std::vector<Event> events;
     walk(game, Direction::Up, 5, &events);
     QCOMPARE(count(events, Event::LifeLost), 0);
-    // Five steps up from the frame leave four trail cells (rows 34..37).
+    // Five steps up from the frame leave five trail cells (rows 34..38).
     // Park a ball diagonally above the trail's top, heading into it.
     game.placeBalls({{{start.x() - 1, start.y() - 6}, {1, 1}}});
     for (int i = 0; i < 2 * game.params().ballPeriod && !find(events, Event::LifeLost); ++i) {
@@ -295,9 +383,9 @@ void EngineTests::ballOnTrailCostsALifeAndWipesIt() {
     const Event *lost = find(events, Event::LifeLost);
     QVERIFY(lost);
     QCOMPARE(lost->reason, LifeLostReason::BallHitTrail);
-    // Four trail cells from the walk, plus the one the marker kept cutting
+    // Five trail cells from the walk, plus the one the marker kept cutting
     // before the ball arrived.
-    QCOMPARE(int(lost->cells.size()), 5);
+    QCOMPARE(int(lost->cells.size()), 6);
     QCOMPARE(game.lives(), Game::kStartLives - 1);
     QCOMPARE(game.field().trailCells().size(), size_t(0));
     QVERIFY(!game.player().onTrail);
@@ -328,8 +416,8 @@ void EngineTests::crossingOwnTrailCostsALife() {
 void EngineTests::chaserContactCostsALifeAnywhere() {
     Game game = quietGame();
     const QPoint start = game.player().pos;
-    // Chaser right next to the marker on the frame, headed into it.
-    game.placeChasers({{{start.x() - 1, start.y() - 1}, {1, 1}}});
+    // Chaser one cell along the frame from the marker, crawling into it.
+    game.placeChasers({{{start.x() - 1, start.y()}, {1, 0}}});
     std::vector<Event> events;
     for (int i = 0; i < game.params().chaserPeriod; ++i) {
         const std::vector<Event> e = game.tick();
@@ -340,22 +428,23 @@ void EngineTests::chaserContactCostsALifeAnywhere() {
     QCOMPARE(lost->reason, LifeLostReason::ChaserHit);
     QCOMPARE(game.lives(), Game::kStartLives - 1);
 
-    // And walking into one on the trail is just as fatal.
-    Game onTrail = quietGame();
-    const QPoint from = onTrail.player().pos;
-    walk(onTrail, Direction::Up, 3);
-    QVERIFY(onTrail.player().onTrail);
-    onTrail.placeChasers({{{from.x(), from.y() - 4}, {1, 1}}});
+    // And closing a cut on top of one is just as fatal. A lone claimed cell
+    // out in the sea has no edge leading anywhere, so a chaser on it waits.
+    Game island = quietGame();
+    const QPoint from = island.player().pos;
+    const QPoint perch {from.x(), from.y() - 4};
+    island.mutableField().set(perch, Cell::Claimed);
+    island.placeChasers({{perch, {1, 0}}});
     events.clear();
-    walk(onTrail, Direction::Up, 1, &events);
+    walk(island, Direction::Up, 4, &events);
     lost = find(events, Event::LifeLost);
     QVERIFY(lost);
     QCOMPARE(lost->reason, LifeLostReason::ChaserHit);
 }
 
 void EngineTests::levelCompletesAtGoal() {
-    // Any cut left of a wall at column 56 leaves only the ball's sliver
-    // beyond it: 55 of 60 columns claimed.
+    // Any cut left of a wall six columns short of the right frame leaves
+    // only the ball's sliver beyond it, far past the goal.
     Game game = quietGame(Field::kDefaultWidth - Field::kBorder - 6);
     walk(game, Direction::Right, 10);
     const std::vector<Event> events = cutColumn(game);
@@ -377,34 +466,34 @@ void EngineTests::levelCompletesAtGoal() {
 }
 
 void EngineTests::bigCutMultipliesTheScore() {
-    // A wall at column 32 leaves 30 of 60 columns to claim: 50% → ×4.
+    // A wall at column 32 leaves 31 of 62 columns to claim: 50% → ×4.
     Game huge = quietGame(32);
     walk(huge, Direction::Left, 1);
     std::vector<Event> events = cutColumn(huge);
     const Event *claim = find(events, Event::Claimed);
     QVERIFY(claim);
-    QCOMPARE(int(claim->cells.size()), 30 * 36);
+    QCOMPARE(int(claim->cells.size()), 31 * kInteriorHeight);
     QCOMPARE(claim->multiplier, Game::kHugeCutMultiplier);
     QCOMPARE(claim->points, int(claim->cells.size()) * Game::kHugeCutMultiplier);
 
-    // A wall at column 12 leaves 10 of 60 columns: 16.7% → ×2.
+    // A wall at column 12 leaves 11 of 62 columns: 17.7% → ×2.
     Game big = quietGame(12);
     walk(big, Direction::Left, big.player().pos.x() - 11);
     events = cutColumn(big);
     claim = find(events, Event::Claimed);
     QVERIFY(claim);
-    QCOMPARE(int(claim->cells.size()), 10 * 36);
+    QCOMPARE(int(claim->cells.size()), 11 * kInteriorHeight);
     QCOMPARE(claim->multiplier, Game::kBigCutMultiplier);
-    QCOMPARE(big.score(), 10 * 36 * Game::kBigCutMultiplier);
+    QCOMPARE(big.score(), 11 * kInteriorHeight * Game::kBigCutMultiplier);
 
-    // A wall at column 6 leaves 4 columns: 6.7%, plain.
+    // A wall at column 6 leaves 5 columns: 8.1%, plain.
     Game plain = quietGame(6);
     walk(plain, Direction::Left, plain.player().pos.x() - 5);
     events = cutColumn(plain);
     claim = find(events, Event::Claimed);
     QVERIFY(claim);
     QCOMPARE(claim->multiplier, 1);
-    QCOMPARE(plain.score(), 4 * 36);
+    QCOMPARE(plain.score(), 5 * kInteriorHeight);
 }
 
 void EngineTests::closeCallPaysABonus() {
@@ -555,6 +644,31 @@ void EngineTests::levelStartsWithAnIntroFreeze() {
     QVERIFY(game.inLevelIntro());
 }
 
+void EngineTests::respawnLandsWhereChasersMustCrawlFurthest() {
+    Game game = quietGame();
+    // One chaser in the bottom-left corner. Chasers walk the ground, so what
+    // counts is the crawl along it: the far end of the bottom edge.
+    game.placeChasers({{{0, game.field().height() - 1}, {1, 0}}});
+    std::vector<Event> events;
+    walk(game, Direction::Up, 4, &events);
+    walk(game, Direction::Left, 2, &events);
+    walk(game, Direction::Down, 2, &events);
+    walk(game, Direction::Right, 2, &events);
+    QVERIFY(find(events, Event::LifeLost));
+    QCOMPARE(game.player().pos, QPoint(game.field().width() - 1, game.field().height() - 1));
+
+    // With no chaser at all every cell is equally safe, so the marker comes
+    // back to the middle of the bottom edge.
+    Game empty = quietGame();
+    events.clear();
+    walk(empty, Direction::Up, 4, &events);
+    walk(empty, Direction::Left, 2, &events);
+    walk(empty, Direction::Down, 2, &events);
+    walk(empty, Direction::Right, 2, &events);
+    QVERIFY(find(events, Event::LifeLost));
+    QCOMPARE(empty.player().pos, QPoint(empty.field().width() / 2, empty.field().height() - 1));
+}
+
 void EngineTests::trailThreatenedWhileABallIsNear() {
     Game game = quietGame();
     QVERIFY(!game.trailThreatened());
@@ -571,7 +685,7 @@ void EngineTests::trailThreatenedWhileABallIsNear() {
     // Closing ends the threat with the trail.
     walk(game, Direction::Left, 1);
     QVERIFY(game.player().onTrail);
-    walk(game, Direction::Down, 2);
+    walk(game, Direction::Down, 3);
     QVERIFY(!game.player().onTrail);
     QVERIFY(!game.trailThreatened());
 }

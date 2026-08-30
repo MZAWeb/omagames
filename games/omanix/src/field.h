@@ -14,8 +14,8 @@ class Field {
 public:
     static constexpr int kDefaultWidth = 64;
     static constexpr int kDefaultHeight = 40;
-    // The frame is two cells deep so a diagonal chaser can bounce along it.
-    static constexpr int kBorder = 2;
+    // One cell deep, the same thickness as the marker and its trail.
+    static constexpr int kBorder = 1;
 
     explicit Field(int width = kDefaultWidth, int height = kDefaultHeight);
 
@@ -26,6 +26,10 @@ public:
     QPoint point(int index) const { return {index % m_width, index / m_width}; }
     bool contains(QPoint p) const;
     bool isBorder(QPoint p) const;
+    // A claimed cell touching something that is not claimed. Eight-connected
+    // on purpose: it is what makes the frame's corners part of the edge, and
+    // so the edge a chaser crawls is one unbroken ring.
+    bool isEdge(QPoint p) const;
 
     Cell at(QPoint p) const { return m_cells[size_t(index(p))]; }
     Cell at(int index) const { return m_cells[size_t(index)]; }
