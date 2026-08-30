@@ -1,9 +1,8 @@
 # Omasweeper
 
-Minesweeper for Omarchy, with one promise the original never made: **every
-board can be finished by logic alone**. No 50/50s, no guessing, ever. Your
-first click always opens a zero region, and from there each mine can be
-proved.
+Minesweeper for Omarchy. Your first click always opens a zero region, and
+every board is generated so that it can be finished by deduction — a 50/50
+is never part of the design.
 
 ## Rules
 
@@ -21,28 +20,16 @@ proved.
 - The mine counter shows mines minus flags, and goes negative if you
   over-flag. The clock runs from your first reveal to the win or the loss.
 
-## The no-guess promise
+## How boards are made
 
 Mines are placed after the first click, keeping the 3×3 around it clear so
 the opening is always a zero. The board is then played by a built-in logical
-solver that only sees what you see: it uses satisfied and saturated numbers,
-subset reasoning between overlapping numbers (the 1-2-1 family), and an
-exact enumeration of every consistent mine layout along the frontier,
-cross-checked against the mines still unaccounted for. If the solver gets
-stuck, the layout is thrown away and another is drawn from the next seed,
-until it finds one it can finish. Beginner and Intermediate boards need one
-or two tries; Expert about six, still well under a hundredth of a second.
-
-The solver has a bounded search budget and the generator a bounded number
-of tries. Neither bound has been hit on any seed tested, but if either ever
-is, the game says so rather than pretending.
-
-That is what the badge in the header is for. **no guessing** means this
-board was proved solvable before you saw it: every mine on it can be
-deduced, and if you are stuck, you have missed something. **may need a
-guess** means the generator ran out of tries and handed over the last layout
-it drew, unproven — the board is perfectly playable, it just comes with no
-promise, and somewhere on it there may be a position only luck gets past.
+solver that only sees what you see (singles, subset reasoning between
+overlapping numbers, and an exact enumeration of the frontier). If the solver
+gets stuck the layout is discarded and another is drawn, so the boards you
+get never depend on luck. The solver and the generator both have bounded
+budgets; in the unlikely event one is exhausted the header shows a muted
+"may need a guess" note instead of pretending.
 
 ## Keyboard
 
@@ -89,8 +76,7 @@ The board is painted by one `FieldView` item at a whole number of pixels per
 cell, centred in the window: hidden cells are raised lids, revealed ones lie
 flat, numbers 1–8 each take their own theme color, and a freshly opened
 cascade flips in from the cell you clicked over about a quarter of a second.
-The header carries the preset, the no-guess badge, the mine counter and the
-clock; the legend under the board names every key.
+The header carries the preset, the mine counter and the clock; the legend under the board names every key.
 
 The window scales with the desktop text size. The minimum is 640×480 logical
 pixels at 100%, which still gives an Expert board 20 pixels per cell; the

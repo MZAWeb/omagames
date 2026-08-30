@@ -12,7 +12,7 @@ size.
 | **Omadoku** | `games/omadoku` | Sudoku with four technique-graded levels, notes, digit highlighting and validate-as-you-go |
 | **Black Omack** | `games/blackomack` | Casino blackjack with a persistent Omabucks bankroll and AI table mates |
 | **Omanix** | `games/omanix` | Xonix: cut the sea, dodge the balls, claim 75% of the field; three difficulties and high scores |
-| **Omasweeper** | `games/omasweeper` | Minesweeper whose every board is solvable by logic alone — no guessing, ever; three presets and best times |
+| **Omasweeper** | `games/omasweeper` | Minesweeper with Beginner, Intermediate and Expert boards and best times |
 
 Each game has its own README with rules and keyboard shortcuts.
 

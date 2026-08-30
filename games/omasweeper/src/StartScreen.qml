@@ -50,7 +50,7 @@ FocusScope {
             Layout.bottomMargin: 10 * theme.textScale
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
-            text: qsTr("Minesweeper for Omarchy — no guessing, ever")
+            text: qsTr("Minesweeper for Omarchy")
             color: theme.mix(theme.background, theme.foreground, 0.6)
             font.pixelSize: 15 * theme.textScale
             wrapMode: Text.WordWrap
