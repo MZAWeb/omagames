@@ -11,7 +11,8 @@ HEADERS += \
     src/solver.h \
     src/generator.h \
     src/besttimes.h \
-    src/omasweepergame.h
+    src/omasweepergame.h \
+    src/fieldview.h
 SOURCES += \
     src/main.cpp \
     src/board.cpp \
@@ -19,5 +20,6 @@ SOURCES += \
     src/solver.cpp \
     src/generator.cpp \
     src/besttimes.cpp \
-    src/omasweepergame.cpp
+    src/omasweepergame.cpp \
+    src/fieldview.cpp
 RESOURCES += src/resources.qrc
