@@ -14,6 +14,13 @@
 - [ ] Custom board sizes (width/height/mines) with the same no-guess guarantee
 - [ ] Optional "?" marks and a per-preset stats panel (games, wins, streak)
 
+## Omasnake
+- [ ] Play-test the three speeds and the bonus timing
+
+## Omatris
+- [ ] Play-test DAS/ARR and lock-delay feel; consider a settings panel for them
+- [ ] Sprint leaderboard shows time only — add lines/min
+
 ## Black Omack
 - [ ] **Speed setting.** The bridge already has `stepInterval` (500 ms between bot/dealer actions, 180 ms per dealt card); expose it as Slow / Normal / Fast / Instant in the header with a key, persisted. Small.
 - [ ] **Session stats screen.** A panel with hands played, net, best/worst streak, blackjacks, busts, biggest win — the bridge already tracks hands and net; the rest needs counting in `finishRound()` and persisting. Moderate.
@@ -26,7 +33,5 @@
 - [ ] Cut v0.1.0 with `bin/release` and submit `packaging/opr/*` to omarchy-pkgs (see docs/RELEASING.md) — when the games are ready
 
 ## Future games
-- [ ] **Tetris** clone
-- [ ] **Snake** clone (Omasnake?) — reuse Omanix's tick engine, painted `FieldView`, overlays and high-score table
 - [ ] **Solitaire** (Klondike) — reuses `PlayingCard`
 - [ ] **Mahjong** solitaire (tile matching) clone
