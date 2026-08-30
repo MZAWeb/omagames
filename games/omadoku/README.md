@@ -71,19 +71,24 @@ remembers its geometry afterwards.
 Every level is defined by the human solving techniques its puzzles need, and
 the generator guarantees the claim both ways: a puzzle at a level is fully
 solvable with that level's techniques and **not** solvable with the level
-below's, so each level really asks for something new. The start screen lists
-the techniques under each level; the board header shows the hardest one the
+below's, so each level really asks for something new. The bands follow the
+grading most apps and graders agree on: two singles-only levels that differ
+in how hard the scanning is, then a level where pencil marks become
+necessary, then one for the pattern techniques. The start screen lists the
+techniques under each level; the board header shows the hardest one the
 current puzzle needs.
 
-| Level | Techniques it adds | Typical clues |
-| --- | --- | --- |
-| Easy | naked single, hidden single | 38–42 |
-| Medium | naked pair, hidden pair, pointing pair, claiming | 22–34 |
-| Hard | naked triple, X-wing | 21–30 |
-| Extra hard | Y-wing, swordfish | 23–28 |
+| Level | Techniques it adds | Feel | Typical clues |
+| --- | --- | --- | --- |
+| Easy | naked single | some cell always has one digit left; no pencil marks | 38–42 |
+| Medium | hidden single | singles only, but you must scan each unit for where a digit has to go | 25–36 |
+| Hard | naked pair, hidden pair, pointing pair, claiming, naked triple | pencil marks and eliminations | 21–30 |
+| Extra hard | X-wing, Y-wing, swordfish | at least one pattern technique somewhere | 23–28 |
 
 Clue counts are a target the generator aims for, not a promise: the
-technique requirement always wins.
+technique requirement always wins. A Medium is never solvable with naked
+singles alone, a Hard never with singles alone, an Extra hard never without
+a fish or a Y-wing.
 
 ### How grading works
 
@@ -99,12 +104,11 @@ The generator carves clues out of a random complete grid, removing one only
 while the puzzle stays unique and the ladder can still finish it within the
 level's ceiling. It carves past the clue target until the level below can no
 longer solve the puzzle, and when a removal would jump straight over a
-narrow band (Hard's, mostly) it puts a different clue back to land inside
-it. Each level's promise is checked in the test suite over fixed seeds, and
-every technique has a test on a crafted position where nothing easier makes
-progress. Generation takes well under a second on a laptop: Easy and Medium
-are instant, Extra hard about 20 ms, Hard about 100–150 ms because its band
-is the narrowest.
+narrow band it puts a different clue back to land inside it. Each level's
+promise is checked in the test suite over fixed seeds, and every technique
+has a test on a crafted position where nothing easier makes progress.
+Generation is instant for Easy and Medium and takes a few milliseconds for
+Hard and Extra hard (worst case around 50 ms) on a laptop.
 
 ## Build and install
 
