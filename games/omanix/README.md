@@ -19,10 +19,14 @@ field to clear the level.
   rules included (the axis that hit is the one that flips). The trail is not
   a wall to them: a ball touching your trail costs a life and wipes the
   trail. So does running into your own trail.
-- **Chasers** crawl along the edge of the claimed ground, keeping the sea on
-  their right — clockwise around the opening frame. They follow every edge a
-  claim adds, turn around at a dead end, and kill on contact wherever you
-  are. More join every few levels.
+- **Chasers** crawl along the edge of the claimed ground, following every
+  edge a claim adds and turning back only at a dead end. Where the boundary
+  branches they take one of the ways on at random, so the same claim never
+  sends them the same way twice; and a chaser that catches itself going round
+  in circles — around a pocket of sea you have fenced off, say — gives that
+  boundary up, walks across the ground to another region's edge and carries
+  on from there. They kill on contact wherever you are, and more join every
+  few levels.
 - Every level opens with a short banner ("Level 3 · 5 balls · 2 chasers")
   while everything holds still for 1.2 s; a key pressed during it takes
   effect the moment play starts.
