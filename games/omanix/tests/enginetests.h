@@ -32,6 +32,7 @@ private slots:
     void gameOverAfterLastLife();
     void restartLevelKeepsScoreAndLives();
     void difficultyParametersRamp();
+    void theThreeDifficultiesFormALadder();
     void sameSeedSameEvents();
     void levelStartsWithAnIntroFreeze();
     void respawnLandsWhereChasersMustCrawlFurthest();

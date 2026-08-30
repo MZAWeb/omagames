@@ -23,9 +23,9 @@ struct DifficultyInfo {
 
 QVector<DifficultyInfo> difficultyInfos() {
     return {
-        {Difficulty::Easy, OmanixGame::tr("Easy"), OmanixGame::tr("Two slow balls, a gentle ramp.")},
-        {Difficulty::Normal, OmanixGame::tr("Normal"), OmanixGame::tr("Three balls, the classic pace.")},
-        {Difficulty::Hard, OmanixGame::tr("Hard"), OmanixGame::tr("Four fast balls, chasers pile up quickly.")},
+        {Difficulty::Easy, OmanixGame::tr("Easy"), OmanixGame::tr("Two slow balls, one chaser, a gentle ramp.")},
+        {Difficulty::Normal, OmanixGame::tr("Normal"), OmanixGame::tr("Three balls, two chasers, a short step up.")},
+        {Difficulty::Hard, OmanixGame::tr("Hard"), OmanixGame::tr("Four fast balls, three chasers, no mercy.")},
     };
 }
 

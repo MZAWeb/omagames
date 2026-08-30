@@ -135,7 +135,7 @@ void BridgeTests::levelIntroAndThreatAreExposed() {
     game.newGame(QStringLiteral("hard"));
     QVERIFY(game.levelIntro());
     QCOMPARE(game.ballCount(), 4);
-    QCOMPARE(game.chaserCount(), 1);
+    QCOMPARE(game.chaserCount(), 3);
     QCOMPARE(intros.count(), 1);
     for (int i = 0; i < Game::kLevelIntroTicks; ++i)
         game.step();

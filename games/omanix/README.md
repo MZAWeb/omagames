@@ -52,18 +52,25 @@ Every constant is named in `src/game.h`.
 
 ## Difficulties
 
-| | Balls at start | Ball speed | Chasers | Ramp |
-|---|---|---|---|---|
-| **Easy** | 2 | slow | one more every 5 levels | speeds up every 3 levels |
-| **Normal** | 3 | classic | one more every 3 levels | speeds up every 2 levels |
-| **Hard** | 4 | fast | one more every 2 levels | speeds up every 2 levels |
+Speeds are ticks per move at 60 ticks a second, so a smaller number is a
+faster mover; the marker itself moves every 4 ticks.
+
+| | Balls at start | Ball speed | Chasers at start | Chaser speed | Ramp |
+|---|---|---|---|---|---|
+| **Easy** | 2 | 9 | 1, one more every 5 levels | 12 | a tick faster every 4 levels, down to 6 |
+| **Normal** | 3 | 8 | 2, one more every 4 levels | 11 | a tick faster every 3 levels, down to 5 |
+| **Hard** | 4 | 4 | 3, one more every 2 levels | 7 | a tick faster every 2 levels, down to 3 |
+
+Normal is a short step off Easy — one more ball and one more chaser, a single
+tick quicker — not a halfway house to Hard, where the balls move at better
+than twice Easy's pace from the first level.
 
 Each difficulty has its own key and none of them is a default, so no button
 on the start screen is drawn as the primary one; the difficulty played last
 is merely marked. The top ten scores per difficulty (with level and date) are
-kept in `~/.config/Omacom/omanix.conf`; the header
-shows the best for the difficulty in play and tints the score once you pass
-it, and the game-over overlay names your rank when you made the table.
+kept in `~/.config/Omacom/omanix.conf`; the header shows the best for the
+difficulty in play and tints the score once you pass it, and the game-over
+overlay names your rank when you made the table.
 
 ## Keyboard
 

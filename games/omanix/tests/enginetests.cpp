@@ -573,15 +573,14 @@ void EngineTests::difficultyParametersRamp() {
     QCOMPARE(Level::params(Difficulty::Normal, 1).balls, 3);
     QCOMPARE(Level::params(Difficulty::Hard, 1).balls, 4);
     QCOMPARE(Level::params(Difficulty::Easy, 1).chasers, 1);
-    QCOMPARE(Level::params(Difficulty::Normal, 1).chasers, 1);
-    QCOMPARE(Level::params(Difficulty::Hard, 1).chasers, 1);
-    QVERIFY(Level::params(Difficulty::Hard, 1).ballPeriod < Level::params(Difficulty::Normal, 1).ballPeriod);
-    QVERIFY(Level::params(Difficulty::Normal, 1).ballPeriod < Level::params(Difficulty::Easy, 1).ballPeriod);
+    QCOMPARE(Level::params(Difficulty::Normal, 1).chasers, 2);
+    QCOMPARE(Level::params(Difficulty::Hard, 1).chasers, 3);
     // Each level adds a ball; speed and chasers ramp per difficulty.
     QCOMPARE(Level::params(Difficulty::Normal, 4).balls, 6);
     QVERIFY(Level::params(Difficulty::Normal, 5).ballPeriod < Level::params(Difficulty::Normal, 1).ballPeriod);
     QCOMPARE(Level::params(Difficulty::Normal, 4).chasers, 2);
-    QCOMPARE(Level::params(Difficulty::Hard, 3).chasers, 2);
+    QCOMPARE(Level::params(Difficulty::Normal, 5).chasers, 3);
+    QCOMPARE(Level::params(Difficulty::Hard, 3).chasers, 4);
     QCOMPARE(Level::params(Difficulty::Easy, 5).chasers, 1);
     QCOMPARE(Level::params(Difficulty::Easy, 6).chasers, 2);
     // And everything is capped.
@@ -592,11 +591,36 @@ void EngineTests::difficultyParametersRamp() {
     Game game(Difficulty::Hard, kSeed);
     skipIntro(game);
     QCOMPARE(int(game.balls().size()), 4);
-    QCOMPARE(int(game.chasers().size()), 1);
+    QCOMPARE(int(game.chasers().size()), 3);
     for (const Ball &b : game.balls())
         QCOMPARE(game.field().at(b.pos), Cell::Open);
     for (const Chaser &c : game.chasers())
-        QCOMPARE(game.field().at(c.pos), Cell::Claimed);
+        QVERIFY(game.field().isEdge(c.pos));
+}
+
+// Ball speed, ball count and chaser count all have to climb from Easy to
+// Hard, and Normal has to be the small step off Easy rather than Hard with
+// the edges filed off.
+void EngineTests::theThreeDifficultiesFormALadder() {
+    for (int level : {1, 5}) {
+        const LevelParams easy = Level::params(Difficulty::Easy, level);
+        const LevelParams normal = Level::params(Difficulty::Normal, level);
+        const LevelParams hard = Level::params(Difficulty::Hard, level);
+        // Speed is ticks per move, so faster is a shorter period.
+        QVERIFY(easy.ballPeriod > normal.ballPeriod);
+        QVERIFY(normal.ballPeriod > hard.ballPeriod);
+        QVERIFY(easy.balls < normal.balls);
+        QVERIFY(normal.balls < hard.balls);
+        QVERIFY(easy.chasers < normal.chasers);
+        QVERIFY(normal.chasers < hard.chasers);
+    }
+    const LevelParams easy = Level::params(Difficulty::Easy, Level::kFirstLevel);
+    const LevelParams normal = Level::params(Difficulty::Normal, Level::kFirstLevel);
+    const LevelParams hard = Level::params(Difficulty::Hard, Level::kFirstLevel);
+    QVERIFY(easy.ballPeriod - normal.ballPeriod < normal.ballPeriod - hard.ballPeriod);
+    QVERIFY(normal.chasers - easy.chasers <= hard.chasers - normal.chasers);
+    QVERIFY(easy.chaserPeriod > normal.chaserPeriod);
+    QVERIFY(normal.chaserPeriod > hard.chaserPeriod);
 }
 
 void EngineTests::sameSeedSameEvents() {
