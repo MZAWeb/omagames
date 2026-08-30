@@ -31,11 +31,23 @@ inside `games/<game>/` unless you are deliberately changing shared code.
 - `OmarchyTheme` (`theme` in QML): every color from Omarchy's `colors.toml`,
   `darkMode`, `textScale`, plus `theme.mix(a, b, t)` and `theme.alpha(c, a)`.
 - `OmaGames::setupApplication` / `setupEngine`: see `common/src/appsetup.h`.
+- `OmaGames::ScoreTable` (`common/src/scoretable.h`): the top-N table every
+  game keeps. Results grouped by a category id, ranked highest- or
+  lowest-first per category, capped, JSON under `scores/v1`. Never write
+  another one.
+- `OmaGames::WindowGeometry` (`common/src/windowgeometry.h`): the window's
+  place under `window/geometry`, and the map `Main.qml` restores from.
+- `OmaGames::Pacer` (`common/src/pacer.h`): the bridge's `QTimer` and its
+  interval property, `Repeating` or `SingleShot`. Interval 0 means no timer,
+  which is what lets tests drive the game themselves.
 - QML module `OmaGames` (`common/qml/OmaGames/`): `OmaButton`, `OmaPanel`,
-  `OmaKeyHint` (keycap badge), `OmaHintButton` (button + badge), `PlayingCard`.
+  `OmaKeyHint` (keycap badge), `OmaHintButton` (button + badge), `PlayingCard`,
+  `OmaOverlayPanel` (dimmed cover + centred panel), `OmaConfirmDialog`,
+  `OmaPauseOverlay`, `OmaKeyLegend`, `OmaScoresPanel`, `OmaBonusPopup`.
   Add new *generic* controls there
   (register in `qmldir` **and** `common/common.qrc`, append-only); game-specific
-  controls stay in the game.
+  controls stay in the game. A game's own `KeyLegend.qml` / scores panel should
+  be the shared control plus that game's wording, nothing more.
 - Changing an existing `common/` API affects every game: build and test all of
   them (`bin/build && bin/test`) and keep the change backwards compatible when possible.
 
