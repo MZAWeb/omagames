@@ -18,30 +18,6 @@ FocusScope {
         return minutes + ":" + (rest < 10 ? "0" : "") + rest;
     }
 
-    // Which digit a key press means. Layouts disagree loudly here: US sends
-    // the symbol row with Shift (Key_Exclam and friends), AZERTY sends the
-    // digits themselves with Shift, and anything else falls back to the
-    // physical top-row scan codes (X11 keycodes 10-18).
-    readonly property var shiftedRowKeys: [Qt.Key_Exclam, Qt.Key_At, Qt.Key_NumberSign,
-        Qt.Key_Dollar, Qt.Key_Percent, Qt.Key_AsciiCircum, Qt.Key_Ampersand,
-        Qt.Key_Asterisk, Qt.Key_ParenLeft]
-
-    function digitFor(event) {
-        if (event.key >= Qt.Key_1 && event.key <= Qt.Key_9)
-            return event.key - Qt.Key_0;
-        if (event.modifiers & Qt.ShiftModifier) {
-            var symbol = "!@#$%^&*(".indexOf(event.text);
-            if (symbol >= 0)
-                return symbol + 1;
-            var known = root.shiftedRowKeys.indexOf(event.key);
-            if (known >= 0)
-                return known + 1;
-        }
-        if (event.nativeScanCode >= 10 && event.nativeScanCode <= 18)
-            return event.nativeScanCode - 9;
-        return 0;
-    }
-
     // A modifier names the action outright; without one the selected mode
     // decides. The bridge does the deciding, this only reports what was typed.
     function overrideFor(event) {
@@ -55,7 +31,7 @@ FocusScope {
     }
 
     Keys.onPressed: function(event) {
-        var digit = root.digitFor(event);
+        var digit = game.digitForKey(event.key, event.modifiers, event.text, event.nativeScanCode);
         if (digit > 0) {
             game.pressDigit(digit, root.overrideFor(event));
         } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H) {

@@ -7,6 +7,7 @@
 
 #include "sudoku.h"
 #include "sudokugrader.h"
+#include "sudokukeys.h"
 
 namespace {
 
@@ -231,6 +232,10 @@ void SudokuGame::setValidateAsYouGo(bool validateAsYouGo) {
     m_cells.refreshAll();
     emit validateAsYouGoChanged();
     emit boardChanged();
+}
+
+int SudokuGame::digitForKey(int key, int modifiers, const QString &text, int nativeScanCode) const {
+    return SudokuKeys::digitFor(key, Qt::KeyboardModifiers(modifiers), text, quint32(nativeScanCode));
 }
 
 void SudokuGame::newGame(const QString &difficulty) {
