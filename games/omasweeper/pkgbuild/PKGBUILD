@@ -3,7 +3,7 @@
 pkgname=omasweeper
 pkgver=0.1.0
 pkgrel=1
-pkgdesc='Minesweeper for Omarchy, every board solvable without guessing'
+pkgdesc='Minesweeper for Omarchy'
 arch=('x86_64' 'aarch64')
 url='https://github.com/MZAWeb/omagames'
 license=('MIT' 'OFL-1.1')

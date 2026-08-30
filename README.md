@@ -12,8 +12,8 @@ size.
 | **Omadoku** | `games/omadoku` | Sudoku with four technique-graded levels, notes, digit highlighting and validate-as-you-go |
 | **Black Omack** | `games/blackomack` | Casino blackjack with a persistent Omabucks bankroll and AI table mates |
 | **Omanix** | `games/omanix` | Xonix: cut the sea, dodge the balls, claim 75% of the field; three difficulties and high scores |
+| **Omasweeper** | `games/omasweeper` | Minesweeper with Beginner, Intermediate and Expert boards and best times |
 | **Omasnake** | `games/omasnake` | Snake: eat the dots, grow longer and faster, and never touch the wall or your own tail; Classic or Wrap edges, three speeds and high scores |
-| **Omasweeper** | `games/omasweeper` | Minesweeper whose every board is solvable by logic alone — no guessing, ever; three presets and best times |
 
 Each game has its own README with rules and keyboard shortcuts.
 
@@ -23,7 +23,7 @@ Each game has its own README with rules and keyboard shortcuts.
 
 | Omanix | Omasweeper |
 |---|---|
-| <img src="screenshots/omanix.png" alt="Omanix, cutting a trail across the sea with balls closing in" width="100%"> | <img src="screenshots/omasweeper.png" alt="Omasweeper, an Intermediate board opening up with the no-guessing badge" width="100%"> |
+| <img src="screenshots/omanix.png" alt="Omanix, cutting a trail across the sea with balls closing in" width="100%"> | <img src="screenshots/omasweeper.png" alt="Omasweeper, an Intermediate board opening up" width="100%"> |
 
 This is a monorepo: games live under `games/`, everything shared (theming,
 fonts, app bootstrap, common QML controls) lives under `common/` and is compiled
