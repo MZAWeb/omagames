@@ -19,6 +19,11 @@ inside `games/<game>/` unless you are deliberately changing shared code.
 - The UI must be swappable without touching the engine. Keep QML free of
   hardcoded colors, fonts and pixel sizes: use the `theme` context property
   (`OmarchyTheme`) and `theme.textScale`. Shared controls come from `import OmaGames`.
+  The one sanctioned exception so far is omadoku's digit highlight
+  (`SudokuGame::highlightColor` / `highlightInk`): a highlighter pen has to be
+  highlighter yellow whatever the desktop looks like. Such a color is named as
+  a constant in C++ and read from QML as a property — never written into a
+  `.qml` file, which the CI hex-color grep covers.
 - Rule of thumb: delete every `.qml` file and `bin/test` should still pass and
   still cover all the rules.
 

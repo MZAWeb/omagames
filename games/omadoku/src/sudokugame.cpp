@@ -92,6 +92,11 @@ QStringList techniquesIntroducedBy(Difficulty difficulty) {
 // still survives a crash or a kill in practice.
 constexpr int kSaveDelayMs = 500;
 
+// Highlighter yellow, and an ink dark enough to stay readable on it. The one
+// place in the game that is deliberately deaf to the Omarchy theme.
+constexpr QColor kHighlightColor(0xff, 0xf0, 0x2b);
+constexpr QColor kHighlightInk(0x1a, 0x1a, 0x14);
+
 }  // namespace
 
 QString SudokuGame::state() const {
@@ -299,6 +304,14 @@ void SudokuGame::toggleNote(int digit) {
     if (m_screen != Screen::Playing || m_selectedIndex < 0)
         return;
     applyChange(m_board.toggleNote(m_selectedIndex, digit));
+}
+
+QColor SudokuGame::highlightColor() {
+    return kHighlightColor;
+}
+
+QColor SudokuGame::highlightInk() {
+    return kHighlightInk;
 }
 
 void SudokuGame::toggleHighlight(int digit) {

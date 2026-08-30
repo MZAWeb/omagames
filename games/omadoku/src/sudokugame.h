@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QColor>
 #include <QObject>
 #include <QStringList>
 #include <QTimer>
@@ -29,6 +30,8 @@ class SudokuGame : public QObject {
     Q_PROPERTY(int selectedIndex READ selectedIndex WRITE select NOTIFY selectedIndexChanged)
     Q_PROPERTY(int selectedValue READ selectedValue NOTIFY selectedValueChanged)
     Q_PROPERTY(int highlightDigit READ highlightDigit NOTIFY highlightDigitChanged)
+    Q_PROPERTY(QColor highlightColor READ highlightColor CONSTANT)
+    Q_PROPERTY(QColor highlightInk READ highlightInk CONSTANT)
     Q_PROPERTY(bool canUndo READ canUndo NOTIFY boardChanged)
     Q_PROPERTY(int filledCount READ filledCount NOTIFY boardChanged)
     Q_PROPERTY(bool inProgress READ inProgress NOTIFY boardChanged)
@@ -67,6 +70,13 @@ public:
     QVariantList digitCounts() const;
     // Digit the player asked to see everywhere on the board (-1 = none).
     int highlightDigit() const { return m_highlightDigit; }
+    // The single sanctioned exception to the theming rule (see CLAUDE.md): a
+    // digit highlight is a highlighter pen, and a pen that changed color with
+    // the desktop would stop reading as one. Fixed marker yellow, with the
+    // dark ink that keeps a digit on top of it legible. Both live here rather
+    // than in QML so no literal color is written into a .qml file.
+    static QColor highlightColor();
+    static QColor highlightInk();
     int elapsedSeconds() const { return m_elapsedSeconds; }
     bool hasSavedGame() const { return m_hasSavedGame; }
 

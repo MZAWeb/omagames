@@ -24,8 +24,11 @@ current Omarchy theme.
   *Highlight* / *Note* / *Fill* selector decides: what clicking a key on the
   keypad does. It changes nothing about the keyboard. `N` cycles it and it is
   remembered between sessions; Fill is the default.
-- **Highlighting** lights up every cell holding that digit, givens included.
-  The same digit again (or `Escape`) clears it, another digit switches it.
+- **Highlighting** lights up every cell holding that digit, givens included,
+  and the key on the keypad with it. The same digit again (or `Escape`) clears
+  it, another digit switches it. It is the one thing in the game that does not
+  follow the Omarchy theme: a highlighter pen is highlighter yellow, with dark
+  ink on top, whatever the desktop looks like.
 - An unfinished puzzle is saved automatically and offered as *Resume* the next
   time you start the game.
 

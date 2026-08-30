@@ -16,6 +16,10 @@ Item {
     property bool peer: false
     property bool sameDigit: false
     property bool highlighted: false
+    // Passed in rather than reached for: the cell still knows nothing about
+    // the game object. See SudokuGame::highlightColor for why it is fixed.
+    property color highlightColor
+    property color highlightInk
     property real cellSize: width
 
     // Feedback timings, all named so the board's rhythm is read in one place.
@@ -41,7 +45,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         color: cell.selected ? theme.alpha(theme.accent, 0.30)
-             : cell.highlighted ? theme.alpha(theme.accent, 0.26)
+             : cell.highlighted ? cell.highlightColor
              : cell.sameDigit ? theme.alpha(theme.accent, 0.14)
              : cell.peer ? theme.alpha(theme.foreground, 0.10)
              : "transparent"
@@ -73,8 +77,11 @@ Item {
         anchors.centerIn: parent
         visible: cell.value > 0
         text: cell.value > 0 ? cell.value.toString() : ""
-        // Weight and color both separate a given from an entry.
-        color: cell.wrong ? theme.red : cell.given ? theme.foreground : theme.accent
+        // Weight and color both separate a given from an entry, and a wrong
+        // entry keeps its red even on the highlighter.
+        color: cell.wrong ? theme.red
+             : cell.highlighted ? cell.highlightInk
+             : cell.given ? theme.foreground : theme.accent
         font.pixelSize: Math.max(1, Math.round(cell.cellSize * 0.6))
         font.bold: cell.given
     }

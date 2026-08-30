@@ -4,6 +4,8 @@
 #include <QTemporaryDir>
 #include <QtTest>
 
+#include <cmath>
+
 #include "cellmodel.h"
 #include "savedgame.h"
 #include "sudoku.h"
@@ -18,6 +20,20 @@ int cellInt(QAbstractListModel *model, int cell, CellModel::Role role) {
 
 bool cellBool(QAbstractListModel *model, int cell, CellModel::Role role) {
     return model->data(model->index(cell, 0), role).toBool();
+}
+
+// WCAG relative luminance and contrast ratio, so "readable" is measured the
+// way a contrast checker would rather than guessed at.
+double luminance(const QColor &color) {
+    auto channel = [](double v) { return v <= 0.03928 ? v / 12.92 : std::pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * channel(color.redF()) + 0.7152 * channel(color.greenF())
+        + 0.0722 * channel(color.blueF());
+}
+
+double contrastRatio(const QColor &a, const QColor &b) {
+    const double first = luminance(a);
+    const double second = luminance(b);
+    return (std::max(first, second) + 0.05) / (std::min(first, second) + 0.05);
 }
 
 int firstGiven(QAbstractListModel *model) {
@@ -256,6 +272,24 @@ void GameTests::highlightTogglesAndSwitchesDigits() {
     game.toggleHighlight(2);
     game.backToStart();
     QCOMPARE(game.highlightDigit(), -1);
+}
+
+void GameTests::highlightWearsAFixedHighlighterYellow() {
+    // The deliberate exception to the theming rule: this pair never moves with
+    // the desktop theme, so the test states what it is meant to look like.
+    const QColor yellow = SudokuGame::highlightColor();
+    QVERIFY(yellow.isValid());
+    QCOMPARE(yellow.alpha(), 255);
+    QVERIFY(yellow.hslHueF() * 360.0 > 45.0);   // yellow, not orange or green
+    QVERIFY(yellow.hslHueF() * 360.0 < 70.0);
+    QVERIFY(yellow.hslSaturationF() > 0.8);     // a marker, not a pastel
+    QVERIFY(yellow.lightnessF() > 0.5);
+
+    // Dark ink on it, with room to spare over the 7:1 a contrast checker asks
+    // of small text.
+    const QColor ink = SudokuGame::highlightInk();
+    QVERIFY(ink.lightnessF() < 0.15);
+    QVERIFY(contrastRatio(yellow, ink) > 7.0);
 }
 
 void GameTests::undoRestartAndEraseGoThroughTheBoard() {

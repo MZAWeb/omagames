@@ -20,6 +20,7 @@ private slots:
     void keyboardMappingIgnoresTheClickMode();
     void clickModeCyclesAndPersists();
     void highlightTogglesAndSwitchesDigits();
+    void highlightWearsAFixedHighlighterYellow();
     void selectedValueFollowsTheSelection();
     void undoRestartAndEraseGoThroughTheBoard();
     void untouchedPuzzleIsNotInProgress();
