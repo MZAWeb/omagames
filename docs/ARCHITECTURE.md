@@ -22,9 +22,12 @@ common/
   src/systemtheme.*     portal / Qt dark-mode and text-scale watcher
   src/omarchytheme.*    colors.toml reader → `theme` QML context property
   src/appsetup.*        OmaGames::setupApplication / setupEngine
-  qml/OmaGames/         qmldir + generic controls (OmaButton, OmaPanel, OmaKeyHint, OmaHintButton, PlayingCard)
+  src/scoretable.*      OmaGames::ScoreTable: the top-N table every game keeps
+  src/windowgeometry.*  OmaGames::WindowGeometry: where the window was
+  src/pacer.*           OmaGames::Pacer: the QTimer a bridge drives its engine with
+  qml/OmaGames/         qmldir + generic controls (see below)
   fonts/                iA Writer Mono S (OFL)
-  tests/tests.pro, tst_common.cpp   `bin/test common`, like a game's suite
+  tests/                one file per area, `bin/test common`, like a game's suite
 games/<game>/
   <game>.pro            include(../../common/common.pri) + game sources
   src/                  engine (QtCore only) + <Game>Game QObject bridge + QML
@@ -46,6 +49,36 @@ and installs its binary, desktop file and icon; CI packages every game the
 same way. Releases go to the Omarchy Package Repository from the generated
 `packaging/opr/` directories — see `docs/RELEASING.md`.
 
+## What lives in `common/`
+
+Five games kept their own score table, seven bridges their own window
+geometry, five their own pacing timer, and six QML components were copied by
+name across games. Each of those is now in one place.
+
+| Piece | What it is |
+|---|---|
+| `OmaGames::ScoreTable` | Top-N results grouped by a category id (a difficulty, a mode, a preset), ranked highest- or lowest-first *per category*, capped, persisted as JSON under `scores/v1`. `insert()` returns the rank or -1; `best()` and `toVariantList()` are what a bridge exposes to QML. An entry is `{value, date, extra}`: the ranked number, the day, and the other integers the game shows beside it. The stored shape is the one the games always wrote, so an existing table needs no migration — Omatris ranks Sprint on the clock and Marathon on the score out of one table because a category names its own `valueField`. |
+| `OmaGames::WindowGeometry` | The rect and the maximized flag under `window/geometry` / `window/maximized`, plus the `{valid, x, y, width, height, maximized}` map `Main.qml` restores from. |
+| `OmaGames::Pacer` | The bridge's `QTimer` and its interval property. `Repeating` for a falling piece or a moving snake, `SingleShot` for a dealer drawing cards. Interval 0 means no timer: a repeating pacer stays stopped and a single-shot one runs its step synchronously, which is what keeps headless tests deterministic. The step stays in the bridge. |
+
+The QML module (`import OmaGames`) holds `OmaButton`, `OmaPanel`,
+`OmaKeyHint`, `OmaHintButton`, `PlayingCard`, and the shells the games share:
+
+| Control | What it is |
+|---|---|
+| `OmaOverlayPanel` | A dimmed cover with a centred panel: the shell of every overlay. `dim`, `maxWidth`, and `dismissable` for a click outside that backs out. |
+| `OmaConfirmDialog` | The yes/no prompt on that shell; Enter or Y confirms, Escape or N backs out. The keycaps shown on the buttons are properties. |
+| `OmaPauseOverlay` | Heading and standing; the game adds its own buttons as children and keeps its own keys. |
+| `OmaKeyLegend` | The wrapping row of keycaps, its `{key, label}` pairs a model. |
+| `OmaScoresPanel` | The kept tables side by side. It reads the flat list a bridge builds from `ScoreTable`, groups it by `categoryField`, and shows the ranked number as a score or a `m:ss` clock. Anything a game wants between the heading and the tables it adds as children. |
+| `OmaBonusPopup` | The label that rises and fades from the spot that earned it. |
+
+Black Omack keeps its own `ConfirmDialog`: it is a modal `Popup` with a title,
+a body and an optional Cancel, so it dims the screen behind it the Material
+way rather than with the overlay shell. `StartScreen`, `PlayHeader` and the
+game-over overlays stay per game too — they differ in more than wording — but
+they are built from the shared pieces.
+
 ## Shape of a game (mandatory)
 
 ```
@@ -58,12 +91,14 @@ Engine classes (QtCore only)        rules, generation, AI; pure and unit-tested;
 
 - The engine is step-wise and synchronous: anything that needs pacing (an AI
   opponent "thinking", a dealer drawing cards) exposes an `advance()`-style call
-  and the bridge drives it with a `QTimer` whose interval is a property, so
-  tests run it at 0 ms.
+  and the bridge drives it with an `OmaGames::Pacer` whose interval is a
+  property, so tests run it at 0 ms.
 - Randomness is seeded explicitly (`QRandomGenerator(seed)`), never global, so
   tests are deterministic.
 - Everything a player would want to keep (bankroll, in-progress puzzle,
   settings) is persisted by the bridge as JSON under a versioned QSettings key.
+  Kept results go in an `OmaGames::ScoreTable` and the window's place through
+  `OmaGames::WindowGeometry`, so every game remembers them the same way.
 
 ## Theming contract
 

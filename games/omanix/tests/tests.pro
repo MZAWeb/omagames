@@ -11,7 +11,6 @@ HEADERS += \
     ../src/entities.h \
     ../src/level.h \
     ../src/game.h \
-    ../src/highscores.h \
     ../src/omanixgame.h \
     enginetests.h \
     bridgetests.h
@@ -21,7 +20,6 @@ SOURCES += \
     ../src/entities.cpp \
     ../src/level.cpp \
     ../src/game.cpp \
-    ../src/highscores.cpp \
     ../src/omanixgame.cpp \
     enginetests.cpp \
     bridgetests.cpp \

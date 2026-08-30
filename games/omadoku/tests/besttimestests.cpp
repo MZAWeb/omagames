@@ -4,7 +4,6 @@
 #include <QTemporaryDir>
 #include <QtTest>
 
-#include "besttimes.h"
 #include "savedgame.h"
 #include "sudoku.h"
 #include "sudokugame.h"
@@ -12,17 +11,6 @@
 namespace {
 
 constexpr quint32 kSeed = 20260829u;
-
-TimeEntry entry(int seconds) {
-    return {seconds, QDate(2026, 8, 30)};
-}
-
-QList<int> secondsIn(const BestTimes &times, Difficulty difficulty) {
-    QList<int> list;
-    for (const TimeEntry &e : times.entries(difficulty))
-        list << e.seconds;
-    return list;
-}
 
 // Solves the saved puzzle from `installSavedGame(1, kSeed)`, which leaves one
 // cell open, and returns the game so the win can be inspected.
@@ -47,65 +35,33 @@ void BestTimesTests::init() {
     settings.sync();
 }
 
-void BestTimesTests::fastestFirstAndOnlyFiveKept() {
-    BestTimes times;
-    QVERIFY(times.entries(Difficulty::Hard).empty());
-    QCOMPARE(times.best(Difficulty::Hard), 0);  // never solved
+// The table Omadoku wrote before it moved to OmaGames::ScoreTable still reads
+// back: the JSON below is the literal output of the old BestTimes::toJson(),
+// which is what is sitting in ~/.config/Omacom/omadoku.conf on a machine that
+// has been playing.
+void BestTimesTests::savedBestTimesReachQml() {
+    QSettings settings;
+    settings.setValue(
+        QStringLiteral("scores/v1"),
+        QStringLiteral(R"({"easy":[{"date":"2026-08-29","seconds":193},)"
+                       R"({"date":"2026-08-30","seconds":248}],"extrahard":[],)"
+                       R"("hard":[{"date":"2026-07-04","seconds":1502}],"medium":[]})"));
+    settings.sync();
 
-    QCOMPARE(times.insert(Difficulty::Hard, entry(300)), 0);
-    QCOMPARE(times.insert(Difficulty::Hard, entry(100)), 0);  // faster, so first
-    QCOMPARE(times.insert(Difficulty::Hard, entry(500)), 2);
-    QCOMPARE(times.insert(Difficulty::Hard, entry(200)), 1);
-    QCOMPARE(secondsIn(times, Difficulty::Hard), QList<int>({100, 200, 300, 500}));
-    QCOMPARE(times.best(Difficulty::Hard), 100);
+    SudokuGame game;
+    const QVariantList rows = game.bestTimes();
+    QCOMPARE(rows.size(), 3);
+    const QVariantMap first = rows.first().toMap();
+    QCOMPARE(first.value(QStringLiteral("difficulty")).toString(), QStringLiteral("easy"));
+    QCOMPARE(first.value(QStringLiteral("label")).toString(), QStringLiteral("Easy"));
+    QCOMPARE(first.value(QStringLiteral("seconds")).toInt(), 193);
+    QCOMPARE(first.value(QStringLiteral("date")).toString(), QStringLiteral("2026-08-29"));
+    QCOMPARE(rows.at(1).toMap().value(QStringLiteral("seconds")).toInt(), 248);
+    QCOMPARE(rows.at(2).toMap().value(QStringLiteral("difficulty")).toString(), QStringLiteral("hard"));
 
-    QCOMPARE(times.insert(Difficulty::Hard, entry(400)), 3);
-    QCOMPARE(secondsIn(times, Difficulty::Hard), QList<int>({100, 200, 300, 400, 500}));
-
-    // The table is full: only a time that makes the top five gets in, and the
-    // slowest falls off the end.
-    QCOMPARE(times.insert(Difficulty::Hard, entry(600)), -1);
-    QCOMPARE(times.insert(Difficulty::Hard, entry(150)), 1);
-    QCOMPARE(secondsIn(times, Difficulty::Hard), QList<int>({100, 150, 200, 300, 400}));
-    QCOMPARE(int(times.entries(Difficulty::Hard).size()), BestTimes::kMaxEntries);
-}
-
-void BestTimesTests::tiesRankBelowTheTimeAlreadyThere() {
-    BestTimes times;
-    times.insert(Difficulty::Easy, entry(120));
-    QCOMPARE(times.insert(Difficulty::Easy, entry(120)), 1);  // a best has to be beaten
-    QCOMPARE(secondsIn(times, Difficulty::Easy), QList<int>({120, 120}));
-}
-
-void BestTimesTests::tablesAreKeptPerLevel() {
-    BestTimes times;
-    times.insert(Difficulty::Easy, entry(60));
-    times.insert(Difficulty::ExtraHard, entry(900));
-
-    QCOMPARE(times.best(Difficulty::Easy), 60);
-    QCOMPARE(times.best(Difficulty::ExtraHard), 900);
-    QVERIFY(times.entries(Difficulty::Medium).empty());
-    QCOMPARE(times.best(Difficulty::Medium), 0);
-}
-
-void BestTimesTests::tablesSurviveARestart() {
-    {
-        BestTimes times;
-        times.insert(Difficulty::Medium, entry(240));
-        times.insert(Difficulty::Medium, entry(180));
-        times.save();
-    }
-    BestTimes reloaded;
-    reloaded.load();
-    QCOMPARE(secondsIn(reloaded, Difficulty::Medium), QList<int>({180, 240}));
-    QCOMPARE(reloaded.entries(Difficulty::Medium).front().date, QDate(2026, 8, 30));
-
-    // A file we did not write is sorted and trimmed rather than trusted.
-    BestTimes wild;
-    wild.fromJson(QJsonDocument::fromJson(
-        "{\"easy\":[{\"seconds\":90},{\"seconds\":30},{\"seconds\":0},{\"seconds\":60},"
-        "{\"seconds\":10},{\"seconds\":20},{\"seconds\":40}]}").object());
-    QCOMPARE(secondsIn(wild, Difficulty::Easy), QList<int>({10, 20, 30, 40, 60}));
+    QCOMPARE(game.bests().value(QStringLiteral("easy")).toInt(), 193);
+    QCOMPARE(game.bests().value(QStringLiteral("hard")).toInt(), 1502);
+    QCOMPARE(game.bests().value(QStringLiteral("medium")).toInt(), 0);
 }
 
 void BestTimesTests::aWinIsRecordedWithItsRank() {
@@ -167,4 +123,20 @@ void BestTimesTests::restartingOrLeavingRecordsNothing() {
     won.newGame(QStringLiteral("easy"));
     QCOMPARE(won.newBestRank(), -1);
     QCOMPARE(won.bestTimes().size(), 1);  // the win itself is still on the table
+}
+
+// Omadoku's table refuses a solve of no time at all: it can only come from a
+// hand-edited or truncated file, and it would sit at the top for ever.
+void BestTimesTests::aHandEditedZeroIsNotATime() {
+    QSettings settings;
+    settings.setValue(QStringLiteral("scores/v1"),
+                      QStringLiteral(R"({"easy":[{"seconds":0,"date":"2026-08-30"},)"
+                                     R"({"seconds":95,"date":"2026-08-30"}]})"));
+    settings.sync();
+
+    SudokuGame game;
+    const QVariantList entries = game.bestTimes();
+    QCOMPARE(entries.size(), 1);
+    QCOMPARE(entries.first().toMap().value(QStringLiteral("seconds")).toInt(), 95);
+    QCOMPARE(game.bests().value(QStringLiteral("easy")).toInt(), 95);
 }

@@ -108,20 +108,38 @@ std::vector<int> SudokuBoard::toggleNotes(const std::vector<int> &indices, int d
     // Notes only make sense in an empty cell, so anything else in the list is
     // quietly passed over: pencilling across a selection should not care that
     // some of it is already solved.
-    std::vector<int> changed;
+    std::vector<int> cells;
     for (int index : indices) {
         if (!inRange(index) || isGiven(index) || m_values[size_t(index)] != 0)
             continue;
-        if (std::find(changed.begin(), changed.end(), index) == changed.end())
-            changed.push_back(index);
+        if (std::find(cells.begin(), cells.end(), index) == cells.end())
+            cells.push_back(index);
     }
-    if (changed.empty())
+    if (cells.empty())
         return {};
 
-    pushUndo(changed);  // one step, however many cells it covers
+    // The selection answers as one. Flipping each cell on its own terms leaves
+    // a mixed selection mixed however often you press, so the digit goes in
+    // everywhere unless every cell already carries it — then it comes out.
     const quint16 bit = quint16(1u << (digit - 1));
-    for (int index : changed)
-        m_notes[size_t(index)] ^= bit;
+    const bool add = std::any_of(cells.begin(), cells.end(), [&](int index) {
+        return (m_notes[size_t(index)] & bit) == 0;
+    });
+
+    std::vector<int> changed;
+    changed.reserve(cells.size());
+    for (int index : cells) {
+        if (bool(m_notes[size_t(index)] & bit) != add)
+            changed.push_back(index);
+    }
+
+    pushUndo(changed);  // one step, however many cells it covers
+    for (int index : changed) {
+        if (add)
+            m_notes[size_t(index)] |= bit;
+        else
+            m_notes[size_t(index)] &= quint16(~bit);
+    }
     return changed;
 }
 

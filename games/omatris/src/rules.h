@@ -29,7 +29,10 @@ constexpr int kSoftDropFactor = 20;
 
 constexpr int kLockDelayMs = 500;
 constexpr int kLockDelayTicks = kLockDelayMs * kTicksPerSecond / 1000;
-constexpr int kMaxLockResets = 15;
+// The guideline hands a piece fifteen of these; two is enough to place it and
+// few enough that hammering move and rotate cannot keep it alive. Revisit if
+// the shorter allowance ever gets in the way of an honest placement.
+constexpr int kMaxLockResets = 2;
 constexpr int kClearDelayMs = 150;
 constexpr int kClearDelayTicks = kClearDelayMs * kTicksPerSecond / 1000;
 

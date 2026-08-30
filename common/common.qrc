@@ -12,5 +12,11 @@
         <file alias="OmaGames/PlayingCard.qml">qml/OmaGames/PlayingCard.qml</file>
         <file alias="OmaGames/OmaKeyHint.qml">qml/OmaGames/OmaKeyHint.qml</file>
         <file alias="OmaGames/OmaHintButton.qml">qml/OmaGames/OmaHintButton.qml</file>
+        <file alias="OmaGames/OmaOverlayPanel.qml">qml/OmaGames/OmaOverlayPanel.qml</file>
+        <file alias="OmaGames/OmaConfirmDialog.qml">qml/OmaGames/OmaConfirmDialog.qml</file>
+        <file alias="OmaGames/OmaPauseOverlay.qml">qml/OmaGames/OmaPauseOverlay.qml</file>
+        <file alias="OmaGames/OmaKeyLegend.qml">qml/OmaGames/OmaKeyLegend.qml</file>
+        <file alias="OmaGames/OmaScoresPanel.qml">qml/OmaGames/OmaScoresPanel.qml</file>
+        <file alias="OmaGames/OmaBonusPopup.qml">qml/OmaGames/OmaBonusPopup.qml</file>
     </qresource>
 </RCC>

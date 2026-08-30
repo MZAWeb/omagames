@@ -1,14 +1,14 @@
 #pragma once
 
 #include <QObject>
-#include <QTimer>
 #include <QVariantList>
 #include <QVariantMap>
 #include <QVector>
 #include <memory>
 
 #include "game.h"
-#include "highscores.h"
+#include "pacer.h"
+#include "scoretable.h"
 
 // The only bridge between the engine and QML: state as properties, actions as
 // invokables, persistence and pacing. Modes cross to QML as lowercase id
@@ -60,7 +60,7 @@ public:
     // Whether the well outlines where the falling piece would land.
     bool ghostEnabled() const { return m_ghostEnabled; }
     // "marathon" | "sprint" | "zen": the one being played, or the last chosen.
-    QString mode() const { return HighScores::idFor(m_mode); }
+    QString mode() const;
     QString modeLabel() const;
     bool rankByTime() const { return Rules::params(m_mode).rankByTime; }
     // {id, label, description, goal} for the start screen, in play order.
@@ -84,7 +84,7 @@ public:
     QVariantList highScores() const;
     QVariantMap bests() const;
     int newHighScoreRank() const { return m_newHighScoreRank; }
-    int stepInterval() const { return m_stepInterval; }
+    int stepInterval() const { return m_pacer.interval(); }
     void setStepInterval(int interval);
 
     // Read-only view for the renderer; null on the start screen.
@@ -168,10 +168,9 @@ private:
     void loadSettings();
 
     std::unique_ptr<Game> m_game;
-    HighScores m_scores;
-    QTimer m_timer {this};
+    OmaGames::ScoreTable m_scores;
+    OmaGames::Pacer m_pacer;
     Mode m_mode = Mode::Marathon;
-    int m_stepInterval = kDefaultStepIntervalMs;
     int m_newHighScoreRank = -1;
     bool m_ghostEnabled = true;
     // -1 left, +1 right, 0 nothing held; and how long it has been held.

@@ -15,6 +15,8 @@ private slots:
     void entryClearsOnlyItsOwnNotes();
     void notesToggleOnlyInEmptyCells();
     void notesAcrossManyCellsAreOneStep();
+    void notesOverASelectionConverge();
+    void notesInOneCellStillToggle();
     void eraseClearsValueAndNotes();
     void undoRestoresValuesAndNotes();
     void undoKeepsAtLeastAHundredLevels();

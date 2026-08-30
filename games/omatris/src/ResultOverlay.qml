@@ -4,7 +4,7 @@ import OmaGames
 
 // The end of a run, either way it ended: a Sprint that crossed forty lines,
 // or a stack that reached the ceiling.
-OverlayPanel {
+OmaOverlayPanel {
     id: root
 
     readonly property bool won: game.phase === "finished"

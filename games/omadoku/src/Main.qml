@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Window
+import OmaGames
 
 ApplicationWindow {
     id: win
@@ -83,7 +84,10 @@ ApplicationWindow {
         id: confirmLoader
         anchors.fill: parent
         active: false
-        sourceComponent: ConfirmDialog {
+        sourceComponent: OmaConfirmDialog {
+            dim: 0.85
+            maxWidth: 300 * theme.textScale
+            dismissable: true
             message: qsTr("Leave this puzzle? Your progress is saved and you can resume it later.")
             acceptText: qsTr("Leave")
             onAccepted: {
@@ -103,7 +107,10 @@ ApplicationWindow {
     Loader {
         anchors.fill: parent
         active: game.restartPending
-        sourceComponent: ConfirmDialog {
+        sourceComponent: OmaConfirmDialog {
+            dim: 0.85
+            maxWidth: 300 * theme.textScale
+            dismissable: true
             message: qsTr("Restart this puzzle? Every entry and note is cleared.")
             acceptText: qsTr("Restart")
             onAccepted: {

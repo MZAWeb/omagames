@@ -303,57 +303,45 @@ void BridgeTests::pieceShapesFeedTheBoxes() {
     QVERIFY(none.value(QStringLiteral("cells")).toList().isEmpty());
 }
 
-void BridgeTests::highScoresRankByScoreOrByTime() {
-    HighScores scores;
-    const QDate day(2026, 8, 30);
-    QCOMPARE(scores.insert(Mode::Marathon, {100, 4, 1, 9000, day}), 0);
-    QCOMPARE(scores.insert(Mode::Marathon, {300, 12, 2, 9000, day}), 0);
-    QCOMPARE(scores.insert(Mode::Marathon, {200, 8, 1, 9000, day}), 1);
-    // A tie ranks below the older run.
-    QCOMPARE(scores.insert(Mode::Marathon, {200, 9, 1, 9000, day}), 2);
-    QCOMPARE(scores.entries(Mode::Marathon).at(2).lines, 9);
-    QCOMPARE(scores.best(Mode::Marathon), 300);
-    QVERIFY(scores.entries(Mode::Zen).empty());
-    QCOMPARE(scores.best(Mode::Zen), 0);
-
-    // Sprint is the other way round: the shortest clock wins.
-    QCOMPARE(scores.insert(Mode::Sprint, {900, 40, 5, 62000, day}), 0);
-    QCOMPARE(scores.insert(Mode::Sprint, {800, 40, 5, 48000, day}), 0);
-    QCOMPARE(scores.insert(Mode::Sprint, {700, 40, 5, 55000, day}), 1);
-    QCOMPARE(scores.best(Mode::Sprint), 48000);
-
-    for (int i = 0; i < 20; ++i)
-        scores.insert(Mode::Zen, {i * 10, 1, 1, 1000, day});
-    QCOMPARE(int(scores.entries(Mode::Zen).size()), HighScores::kMaxEntries);
-    QCOMPARE(scores.entries(Mode::Zen).front().score, 190);
-    QCOMPARE(scores.entries(Mode::Zen).back().score, 100);
-    QCOMPARE(scores.insert(Mode::Zen, {50, 1, 1, 1000, day}), -1);
-    QCOMPARE(scores.insert(Mode::Zen, {150, 1, 1, 1000, day}), 5);
-    QCOMPARE(scores.entries(Mode::Zen).back().score, 110);
-}
-
-void BridgeTests::highScoresRoundTripThroughSettings() {
-    {
-        HighScores scores;
-        scores.insert(Mode::Marathon, {42000, 63, 7, 300000, QDate(2026, 8, 30)});
-        scores.insert(Mode::Marathon, {9000, 21, 3, 90000, QDate(2026, 8, 29)});
-        scores.insert(Mode::Sprint, {5400, 40, 5, 51230, QDate(2026, 8, 28)});
-        scores.save();
-    }
-    HighScores loaded;
-    loaded.load();
-    QCOMPARE(int(loaded.entries(Mode::Marathon).size()), 2);
-    QCOMPARE(loaded.entries(Mode::Marathon).front().score, 42000);
-    QCOMPARE(loaded.entries(Mode::Marathon).front().level, 7);
-    QCOMPARE(loaded.entries(Mode::Marathon).front().date, QDate(2026, 8, 30));
-    QCOMPARE(loaded.best(Mode::Sprint), 51230);
-    QVERIFY(loaded.entries(Mode::Zen).empty());
+// Ordering, the cap and the ranks are ScoreTable's own tests now. What is
+// Omatris's is that Sprint ranks on the clock while Marathon and Zen rank on
+// the score, that every run keeps all four numbers whichever mode it was, and
+// that the JSON it wrote before the move still reads back: the string below
+// is the literal output of the old HighScores::toJson().
+void BridgeTests::savedHighScoresReachQml() {
+    QSettings settings;
+    settings.setValue(
+        QStringLiteral("scores/v1"),
+        QStringLiteral(R"({"marathon":[{"date":"2026-08-30","level":7,"lines":62,"millis":305000,"score":15400},)"
+                       R"({"date":"2026-08-20","level":2,"lines":12,"millis":61000,"score":2200}],)"
+                       R"("sprint":[{"date":"2026-08-26","level":4,"lines":40,"millis":78040,"score":2900},)"
+                       R"({"date":"2026-08-25","level":5,"lines":40,"millis":92310,"score":3100}],)"
+                       R"("zen":[{"date":"2026-05-02","level":1,"lines":8,"millis":44000,"score":640}]})"));
+    settings.sync();
 
     OmatrisGame game;
-    QCOMPARE(game.highScores().size(), 3);
-    QCOMPARE(game.highScores().first().toMap().value(QStringLiteral("label")).toString(), QStringLiteral("Marathon"));
-    QCOMPARE(game.bests().value(QStringLiteral("marathon")).toInt(), 42000);
-    QCOMPARE(game.bests().value(QStringLiteral("sprint")).toInt(), 51230);
+    const QVariantList rows = game.highScores();
+    QCOMPARE(rows.size(), 5);
+    const QVariantMap first = rows.first().toMap();
+    QCOMPARE(first.value(QStringLiteral("mode")).toString(), QStringLiteral("marathon"));
+    QCOMPARE(first.value(QStringLiteral("label")).toString(), QStringLiteral("Marathon"));
+    QCOMPARE(first.value(QStringLiteral("score")).toInt(), 15400);
+    QCOMPARE(first.value(QStringLiteral("lines")).toInt(), 62);
+    QCOMPARE(first.value(QStringLiteral("level")).toInt(), 7);
+    QCOMPARE(first.value(QStringLiteral("millis")).toInt(), 305000);
+    QCOMPARE(first.value(QStringLiteral("date")).toString(), QStringLiteral("2026-08-30"));
+
+    // Sprint is ranked on the clock, so the run with the lower score but the
+    // faster time comes first, and it still carries its score.
+    const QVariantMap sprint = rows.at(2).toMap();
+    QCOMPARE(sprint.value(QStringLiteral("mode")).toString(), QStringLiteral("sprint"));
+    QCOMPARE(sprint.value(QStringLiteral("millis")).toInt(), 78040);
+    QCOMPARE(sprint.value(QStringLiteral("score")).toInt(), 2900);
+    QCOMPARE(rows.at(3).toMap().value(QStringLiteral("millis")).toInt(), 92310);
+
+    QCOMPARE(game.bests().value(QStringLiteral("marathon")).toInt(), 15400);
+    QCOMPARE(game.bests().value(QStringLiteral("sprint")).toInt(), 78040);
+    QCOMPARE(game.bests().value(QStringLiteral("zen")).toInt(), 640);
 }
 
 void BridgeTests::lastModeIsRemembered() {

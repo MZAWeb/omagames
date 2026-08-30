@@ -12,7 +12,6 @@ HEADERS += \
     ../src/bag.h \
     ../src/rules.h \
     ../src/game.h \
-    ../src/highscores.h \
     ../src/omatrisgame.h \
     enginetests.h \
     bridgetests.h
@@ -23,7 +22,6 @@ SOURCES += \
     ../src/bag.cpp \
     ../src/rules.cpp \
     ../src/game.cpp \
-    ../src/highscores.cpp \
     ../src/omatrisgame.cpp \
     enginetests.cpp \
     bridgetests.cpp \

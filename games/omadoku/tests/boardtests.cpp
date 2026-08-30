@@ -133,15 +133,54 @@ void BoardTests::notesAcrossManyCellsAreOneStep() {
     QCOMPARE(m_board.notes(second), quint16(0));
     QCOMPARE(m_board.value(third), 4);  // the entry is a step of its own
 
-    // Each cell toggles on its own terms, so a mixed selection ends mixed.
-    m_board.toggleNote(first, 6);
-    m_board.toggleNotes({first, second}, 6);
-    QCOMPARE(m_board.notes(first), quint16(0));
-    QCOMPARE(m_board.notes(second), quint16(1u << 5));
-
     QVERIFY(m_board.toggleNotes({first, second}, 0).empty());
     QVERIFY(m_board.toggleNotes({}, 6).empty());
     QVERIFY(m_board.toggleNotes({given}, 6).empty());
+}
+
+void BoardTests::notesOverASelectionConverge() {
+    const int first = emptyCell();
+    const int second = emptyCell(1);
+    const int third = emptyCell(2);
+    const int filled = emptyCell(3);
+    m_board.setValue(filled, 4);
+    m_board.toggleNote(second, 6);  // a mixed selection: one of the three noted
+
+    // One cell short of the note is enough to write it into all of them, and
+    // only the two that lacked it count as changed.
+    QCOMPARE(m_board.toggleNotes({first, second, third, filled}, 6),
+             std::vector<int>({first, third}));
+    QCOMPARE(m_board.notes(first), quint16(1u << 5));
+    QCOMPARE(m_board.notes(second), quint16(1u << 5));
+    QCOMPARE(m_board.notes(third), quint16(1u << 5));
+    QCOMPARE(m_board.notes(filled), quint16(0));  // filled, so never touched
+    QCOMPARE(m_board.value(filled), 4);
+
+    // Now that every one carries it, the same press takes it out everywhere.
+    QCOMPARE(m_board.toggleNotes({first, second, third, filled}, 6),
+             std::vector<int>({first, second, third}));
+    QCOMPARE(m_board.notes(first), quint16(0));
+    QCOMPARE(m_board.notes(second), quint16(0));
+    QCOMPARE(m_board.notes(third), quint16(0));
+
+    // Each of the two presses was one undo step, converged selection included.
+    m_board.undo();
+    QCOMPARE(m_board.notes(first), quint16(1u << 5));
+    QCOMPARE(m_board.notes(second), quint16(1u << 5));
+    QCOMPARE(m_board.notes(third), quint16(1u << 5));
+    m_board.undo();
+    QCOMPARE(m_board.notes(first), quint16(0));
+    QCOMPARE(m_board.notes(second), quint16(1u << 5));  // back to mixed
+    QCOMPARE(m_board.notes(third), quint16(0));
+    QCOMPARE(m_board.value(filled), 4);
+}
+
+void BoardTests::notesInOneCellStillToggle() {
+    const int cell = emptyCell();
+    m_board.toggleNotes({cell}, 6);
+    QCOMPARE(m_board.notes(cell), quint16(1u << 5));
+    m_board.toggleNotes({cell}, 6);
+    QCOMPARE(m_board.notes(cell), quint16(0));
 }
 
 void BoardTests::eraseClearsValueAndNotes() {

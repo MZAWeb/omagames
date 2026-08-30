@@ -1,64 +1,19 @@
-import QtQuick
 import OmaGames
 
-// The keys that matter during play, each as a keycap beside its action. It
-// takes the width it is given and wraps, staying centred: the flow is as
-// wide as its content fits, never wider than the item.
-Item {
-    id: root
-
-    property bool compact: false
-
-    implicitHeight: flow.implicitHeight
-
-    // What the entries would need on one line; the Repeater itself has no
-    // width and is skipped.
-    readonly property real naturalWidth: {
-        var total = 0;
-        for (var i = 0; i < flow.children.length; ++i) {
-            var child = flow.children[i];
-            if (child.implicitWidth > 0)
-                total += child.implicitWidth + flow.spacing;
-        }
-        return Math.max(0, total - flow.spacing);
-    }
-
-    Flow {
-        id: flow
-        anchors.horizontalCenter: parent.horizontalCenter
-        width: Math.min(root.width, root.naturalWidth)
-        spacing: 12 * theme.textScale
-
-        Repeater {
-            model: [
-                { key: qsTr("←→"), action: qsTr("move") },
-                { key: qsTr("↓"), action: qsTr("soft drop") },
-                { key: qsTr("Space"), action: qsTr("hard drop") },
-                { key: qsTr("↑"), action: qsTr("or X to rotate") },
-                { key: qsTr("Z"), action: qsTr("rotate back") },
-                { key: qsTr("C"), action: qsTr("hold") },
-                { key: qsTr("G"), action: game.ghostEnabled ? qsTr("ghost on") : qsTr("ghost off") },
-                { key: qsTr("P"), action: qsTr("pause") },
-                { key: qsTr("R"), action: qsTr("restart") },
-                { key: qsTr("Esc"), action: qsTr("leave") },
-                { key: qsTr("Ctrl+Q"), action: qsTr("quit") }
-            ]
-
-            Row {
-                required property var modelData
-                spacing: 5 * theme.textScale
-
-                OmaKeyHint {
-                    anchors.verticalCenter: parent.verticalCenter
-                    key: parent.modelData.key
-                }
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: parent.modelData.action
-                    color: theme.mix(theme.background, theme.foreground, root.compact ? 0.5 : 0.6)
-                    font.pixelSize: (root.compact ? 11 : 12) * theme.textScale
-                }
-            }
-        }
-    }
+// The keys Omatris plays with, in the order they matter.
+OmaKeyLegend {
+    spacing: 12 * theme.textScale
+    model: [
+        { key: qsTr("←→"), label: qsTr("move") },
+        { key: qsTr("↓"), label: qsTr("soft drop") },
+        { key: qsTr("Space"), label: qsTr("hard drop") },
+        { key: qsTr("↑"), label: qsTr("or X to rotate") },
+        { key: qsTr("Z"), label: qsTr("rotate back") },
+        { key: qsTr("C"), label: qsTr("hold") },
+        { key: qsTr("G"), label: game.ghostEnabled ? qsTr("ghost on") : qsTr("ghost off") },
+        { key: qsTr("P"), label: qsTr("pause") },
+        { key: qsTr("R"), label: qsTr("restart") },
+        { key: qsTr("Esc"), label: qsTr("leave") },
+        { key: qsTr("Ctrl+Q"), label: qsTr("quit") }
+    ]
 }

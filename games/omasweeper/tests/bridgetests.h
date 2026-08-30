@@ -25,8 +25,7 @@ private slots:
     void generatorGivingUpClearsTheNoGuessFlag();
     void restartKeepsThePresetAndDrawsANewBoard();
     void backToStartClearsTheBoard();
-    void bestTimesOrderAndCap();
-    void bestTimesRoundTripThroughSettings();
+    void savedBestTimesReachQml();
     void lastPresetIsRemembered();
     void windowGeometryRoundTrips();
 

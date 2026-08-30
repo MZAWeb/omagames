@@ -12,8 +12,6 @@ const auto kValidateKey = QStringLiteral("play/checkAsYouGo");
 // A new key: the old one stored what *every* digit did, which is not what the
 // selector means any more.
 const auto kClickModeKey = QStringLiteral("play/clickMode");
-const auto kGeometryKey = QStringLiteral("window/geometry");
-const auto kMaximizedKey = QStringLiteral("window/maximized");
 // The clock rides along inside the saved board rather than beside it, so a
 // resumed puzzle and its elapsed time can never come apart.
 const auto kElapsedKey = QStringLiteral("elapsed");
@@ -51,15 +49,4 @@ void SudokuStore::saveGame(const QJsonObject &board, int elapsedSeconds) const {
 
 void SudokuStore::clearSavedGame() const {
     QSettings().remove(kStateKey);
-}
-
-SudokuStore::WindowGeometry SudokuStore::windowGeometry() const {
-    const QSettings settings;
-    return {settings.value(kGeometryKey).toRect(), settings.value(kMaximizedKey, false).toBool()};
-}
-
-void SudokuStore::saveWindowGeometry(const QRect &rect, bool maximized) const {
-    QSettings settings;
-    settings.setValue(kGeometryKey, rect);
-    settings.setValue(kMaximizedKey, maximized);
 }

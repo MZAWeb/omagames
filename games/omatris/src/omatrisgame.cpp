@@ -5,12 +5,16 @@
 #include <QSettings>
 #include <algorithm>
 
+#include "windowgeometry.h"
+
 namespace {
 
 const auto kModeKey = QStringLiteral("play/mode");
 const auto kGhostKey = QStringLiteral("play/ghost");
-const auto kGeometryKey = QStringLiteral("window/geometry");
-const auto kMaximizedKey = QStringLiteral("window/maximized");
+
+const auto kMarathonId = QStringLiteral("marathon");
+const auto kSprintId = QStringLiteral("sprint");
+const auto kZenId = QStringLiteral("zen");
 
 const auto kStartId = QStringLiteral("start");
 const auto kPlayingId = QStringLiteral("playing");
@@ -22,6 +26,47 @@ struct ModeInfo {
     QString label;
     QString description;
 };
+
+// Modes cross to QML, and name a score table, as these ids.
+QString modeId(Mode mode) {
+    switch (mode) {
+    case Mode::Sprint:
+        return kSprintId;
+    case Mode::Zen:
+        return kZenId;
+    case Mode::Marathon:
+        break;
+    }
+    return kMarathonId;
+}
+
+bool modeFromId(const QString &id, Mode *mode) {
+    for (int i = 0; i < kModeCount; ++i) {
+        if (modeId(Mode(i)) == id) {
+            *mode = Mode(i);
+            return true;
+        }
+    }
+    return false;
+}
+
+// The top ten per mode. A run keeps its score, lines, level and clock
+// whatever the mode; which of them ranks is the mode's business, and Sprint
+// is the one raced against the clock.
+OmaGames::ScoreTable scoreTable() {
+    std::vector<OmaGames::ScoreTable::Category> categories;
+    for (int i = 0; i < kModeCount; ++i) {
+        const Mode mode = Mode(i);
+        const bool byTime = Rules::params(mode).rankByTime;
+        categories.push_back({modeId(mode),
+                              byTime ? OmaGames::ScoreTable::LowerIsBetter
+                                     : OmaGames::ScoreTable::HigherIsBetter,
+                              byTime ? QStringLiteral("millis") : QString()});
+    }
+    return OmaGames::ScoreTable({QStringLiteral("score"), QStringLiteral("lines"),
+                                 QStringLiteral("level"), QStringLiteral("millis")},
+                                10, std::move(categories));
+}
 
 QVector<ModeInfo> modeInfos() {
     return {
@@ -43,15 +88,21 @@ QString clearName(const ClearInfo &clear) {
 
 }  // namespace
 
-OmatrisGame::OmatrisGame(QObject *parent) : QObject(parent) {
-    m_timer.setTimerType(Qt::PreciseTimer);
-    connect(&m_timer, &QTimer::timeout, this, &OmatrisGame::step);
+OmatrisGame::OmatrisGame(QObject *parent)
+    : QObject(parent), m_scores(scoreTable()),
+      m_pacer(OmaGames::Pacer::Repeating, [this]() { step(); }, this) {
+    m_pacer.setTimerType(Qt::PreciseTimer);
+    m_pacer.setInterval(kDefaultStepIntervalMs);
     loadSettings();
+}
+
+QString OmatrisGame::mode() const {
+    return modeId(m_mode);
 }
 
 void OmatrisGame::loadSettings() {
     QSettings settings;
-    HighScores::modeFromId(settings.value(kModeKey).toString(), &m_mode);
+    modeFromId(settings.value(kModeKey).toString(), &m_mode);
     m_ghostEnabled = settings.value(kGhostKey, true).toBool();
     m_scores.load();
 }
@@ -86,7 +137,7 @@ QVariantList OmatrisGame::modes() {
     QVariantList list;
     for (const ModeInfo &info : modeInfos()) {
         list.append(QVariantMap {
-            {QStringLiteral("id"), HighScores::idFor(info.mode)},
+            {QStringLiteral("id"), modeId(info.mode)},
             {QStringLiteral("label"), info.label},
             {QStringLiteral("description"), info.description},
             {QStringLiteral("goal"), Rules::params(info.mode).lineGoal},
@@ -111,16 +162,12 @@ QVariantList OmatrisGame::nextQueue() const {
 QVariantList OmatrisGame::highScores() const {
     QVariantList list;
     for (const ModeInfo &info : modeInfos()) {
-        for (const ScoreEntry &e : m_scores.entries(info.mode)) {
-            list.append(QVariantMap {
-                {QStringLiteral("mode"), HighScores::idFor(info.mode)},
-                {QStringLiteral("label"), info.label},
-                {QStringLiteral("score"), e.score},
-                {QStringLiteral("lines"), e.lines},
-                {QStringLiteral("level"), e.level},
-                {QStringLiteral("millis"), e.millis},
-                {QStringLiteral("date"), e.date.toString(Qt::ISODate)},
-            });
+        const QString id = modeId(info.mode);
+        for (const QVariant &entry : m_scores.toVariantList(id)) {
+            QVariantMap row = entry.toMap();
+            row.insert(QStringLiteral("mode"), id);
+            row.insert(QStringLiteral("label"), info.label);
+            list.append(row);
         }
     }
     return list;
@@ -129,7 +176,7 @@ QVariantList OmatrisGame::highScores() const {
 QVariantMap OmatrisGame::bests() const {
     QVariantMap map;
     for (int i = 0; i < kModeCount; ++i)
-        map.insert(HighScores::idFor(Mode(i)), m_scores.best(Mode(i)));
+        map.insert(modeId(Mode(i)), m_scores.best(modeId(Mode(i))));
     return map;
 }
 
@@ -154,24 +201,19 @@ QVariantMap OmatrisGame::pieceShape(int piece) const {
 }
 
 void OmatrisGame::setStepInterval(int interval) {
-    if (m_stepInterval == interval)
+    if (!m_pacer.setInterval(interval))
         return;
-    m_stepInterval = interval;
     syncTimer();
     emit stepIntervalChanged();
 }
 
 void OmatrisGame::syncTimer() {
-    if (playing() && m_stepInterval > 0) {
-        m_timer.start(m_stepInterval);
-    } else {
-        m_timer.stop();
-    }
+    m_pacer.setRunning(playing());
 }
 
 void OmatrisGame::startGame(Mode mode, quint32 seed) {
     m_mode = mode;
-    QSettings().setValue(kModeKey, HighScores::idFor(mode));
+    QSettings().setValue(kModeKey, modeId(mode));
     m_game = std::make_unique<Game>(mode, seed);
     m_newHighScoreRank = -1;
     m_shift = 0;
@@ -192,7 +234,7 @@ void OmatrisGame::startGame(Mode mode, quint32 seed) {
 
 void OmatrisGame::newGame(const QString &mode) {
     Mode chosen = m_mode;
-    HighScores::modeFromId(mode, &chosen);
+    modeFromId(mode, &chosen);
     startGame(chosen, QRandomGenerator::global()->generate());
 }
 
@@ -205,7 +247,7 @@ void OmatrisGame::backToStart() {
     if (!m_game)
         return;
     m_game.reset();
-    m_timer.stop();
+    m_pacer.stop();
     emit phaseChanged();
     emit pausedChanged();
     emit frameChanged();
@@ -381,9 +423,15 @@ void OmatrisGame::publish(const Snapshot &before) {
 void OmatrisGame::finishGame() {
     // A Sprint that tops out never crossed the line, so it has no time to keep.
     const bool ranked = m_game->phase() == Phase::Finished || !rankByTime();
-    m_newHighScoreRank = ranked ? m_scores.insert(m_mode, {m_game->score(), m_game->lines(), m_game->level(),
-                                                           m_game->elapsedMs(), QDate::currentDate()})
-                                : -1;
+    m_newHighScoreRank =
+        ranked ? m_scores.insert(modeId(m_mode),
+                                 {rankByTime() ? m_game->elapsedMs() : m_game->score(),
+                                  QDate::currentDate(),
+                                  {{QStringLiteral("score"), m_game->score()},
+                                   {QStringLiteral("lines"), m_game->lines()},
+                                   {QStringLiteral("level"), m_game->level()},
+                                   {QStringLiteral("millis"), m_game->elapsedMs()}}})
+               : -1;
     if (m_newHighScoreRank >= 0) {
         m_scores.save();
         emit highScoresChanged();
@@ -394,20 +442,9 @@ void OmatrisGame::finishGame() {
 }
 
 QVariantMap OmatrisGame::windowGeometry() const {
-    QSettings settings;
-    const QRect rect = settings.value(kGeometryKey).toRect();
-    return {
-        {QStringLiteral("valid"), rect.isValid()},
-        {QStringLiteral("x"), rect.x()},
-        {QStringLiteral("y"), rect.y()},
-        {QStringLiteral("width"), rect.width()},
-        {QStringLiteral("height"), rect.height()},
-        {QStringLiteral("maximized"), settings.value(kMaximizedKey, false).toBool()},
-    };
+    return OmaGames::WindowGeometry::toVariantMap();
 }
 
 void OmatrisGame::saveWindowGeometry(int x, int y, int width, int height, bool maximized) {
-    QSettings settings;
-    settings.setValue(kGeometryKey, QRect(x, y, width, height));
-    settings.setValue(kMaximizedKey, maximized);
+    OmaGames::WindowGeometry::save(QRect(x, y, width, height), maximized);
 }

@@ -2,16 +2,16 @@
 
 #include <QObject>
 #include <QPoint>
-#include <QTimer>
 #include <QVariantList>
 #include <QVariantMap>
 #include <QVector>
 #include <optional>
 
-#include "besttimes.h"
 #include "board.h"
 #include "generator.h"
+#include "pacer.h"
 #include "presets.h"
+#include "scoretable.h"
 
 // The cascade the last reveal opened, in breadth-first order, with each
 // cell's Chebyshev distance from the cell that was acted on so the view can
@@ -56,7 +56,7 @@ public:
 
     QString phase() const;
     QString status() const;
-    QString preset() const { return BestTimes::idFor(m_preset); }
+    QString preset() const;
     QString presetLabel() const;
     // {id, label, width, height, mines} for the start screen, in play order.
     static QVariantList presets();
@@ -79,7 +79,7 @@ public:
     // Where the win just landed in its table (0 = fastest ever), or -1.
     int newBestRank() const { return m_newBestRank; }
     // Milliseconds per clock tick; 0 stops the timer so tests drive step().
-    int stepInterval() const { return m_stepInterval; }
+    int stepInterval() const { return m_pacer.interval(); }
     void setStepInterval(int interval);
 
     // Read-only view for the renderer; null on the start screen.
@@ -136,12 +136,11 @@ private:
     void loadSettings();
 
     std::optional<Board> m_board;
-    BestTimes m_times;
-    QTimer m_timer {this};
+    OmaGames::ScoreTable m_times;
+    OmaGames::Pacer m_pacer;
     Preset m_preset = Preset::Beginner;
     quint32 m_seed = 0;
     int m_maxAttempts = Generator::kMaxAttempts;
-    int m_stepInterval = kDefaultStepIntervalMs;
     int m_elapsedSeconds = 0;
     int m_newBestRank = -1;
     int m_exploded = -1;

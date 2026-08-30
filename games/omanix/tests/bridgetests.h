@@ -17,8 +17,7 @@ private slots:
     void levelIntroAndThreatAreExposed();
     void scriptedLevelCompletesAndContinues();
     void scriptedGameOverRecordsAHighScore();
-    void highScoresOrderAndCap();
-    void highScoresRoundTripThroughSettings();
+    void savedHighScoresReachQml();
     void lastDifficultyIsRemembered();
     void windowGeometryRoundTrips();
     void aLongGameKeepsEveryContainerBounded();

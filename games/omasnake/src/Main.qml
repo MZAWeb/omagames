@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Window
+import OmaGames
 
 ApplicationWindow {
     id: win
@@ -81,7 +82,7 @@ ApplicationWindow {
         id: confirmLoader
         anchors.fill: parent
         active: false
-        sourceComponent: ConfirmDialog {
+        sourceComponent: OmaConfirmDialog {
             message: qsTr("Leave this game? The score is lost unless it makes the high scores.")
             acceptText: qsTr("Leave")
             onAccepted: {

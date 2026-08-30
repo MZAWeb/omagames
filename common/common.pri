@@ -9,11 +9,17 @@ INCLUDEPATH += $$PWD/src
 HEADERS += \
     $$PWD/src/systemtheme.h \
     $$PWD/src/omarchytheme.h \
-    $$PWD/src/appsetup.h
+    $$PWD/src/appsetup.h \
+    $$PWD/src/scoretable.h \
+    $$PWD/src/windowgeometry.h \
+    $$PWD/src/pacer.h
 
 SOURCES += \
     $$PWD/src/systemtheme.cpp \
     $$PWD/src/omarchytheme.cpp \
-    $$PWD/src/appsetup.cpp
+    $$PWD/src/appsetup.cpp \
+    $$PWD/src/scoretable.cpp \
+    $$PWD/src/windowgeometry.cpp \
+    $$PWD/src/pacer.cpp
 
 RESOURCES += $$PWD/common.qrc

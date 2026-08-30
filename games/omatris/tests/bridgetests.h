@@ -19,8 +19,7 @@ private slots:
     void scriptedMarathonTopsOutAndRecordsAScore();
     void scriptedSprintRecordsItsTime();
     void pieceShapesFeedTheBoxes();
-    void highScoresRankByScoreOrByTime();
-    void highScoresRoundTripThroughSettings();
+    void savedHighScoresReachQml();
     void lastModeIsRemembered();
     void ghostToggleIsRemembered();
     void windowGeometryRoundTrips();

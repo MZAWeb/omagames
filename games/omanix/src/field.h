@@ -30,6 +30,12 @@ public:
     // on purpose: it is what makes the frame's corners part of the edge, and
     // so the edge a chaser crawls is one unbroken ring.
     bool isEdge(QPoint p) const;
+    // Labels every cell that is not claimed ground with the stretch of sea it
+    // belongs to, four-connected like claim(); claimed cells come back as
+    // kNoRegion. An unclosed trail belongs to the sea it cuts through: it
+    // only splits one region in two once it is claimed.
+    static constexpr int kNoRegion = -1;
+    std::vector<int> openRegions() const;
 
     Cell at(QPoint p) const { return m_cells[size_t(index(p))]; }
     Cell at(int index) const { return m_cells[size_t(index)]; }
