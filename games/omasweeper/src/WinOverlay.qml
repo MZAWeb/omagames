@@ -4,7 +4,7 @@ import OmaGames
 
 // The board is solved: the clock, where the time landed, and the way out.
 // The cover is light so the finished board stays readable behind it.
-OverlayPanel {
+OmaOverlayPanel {
     id: root
 
     readonly property bool ranked: game.newBestRank >= 0

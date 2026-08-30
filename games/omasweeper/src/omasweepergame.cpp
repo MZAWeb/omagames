@@ -1,15 +1,14 @@
 #include "omasweepergame.h"
 
 #include <QRandomGenerator>
-#include <QRect>
 #include <QSettings>
 #include <algorithm>
+
+#include "windowgeometry.h"
 
 namespace {
 
 const auto kPresetKey = QStringLiteral("play/preset");
-const auto kGeometryKey = QStringLiteral("window/geometry");
-const auto kMaximizedKey = QStringLiteral("window/maximized");
 
 const auto kStartId = QStringLiteral("start");
 const auto kReadyId = QStringLiteral("ready");
@@ -21,16 +20,48 @@ quint32 freshSeed() {
     return QRandomGenerator::global()->generate();
 }
 
+// A preset's key is the id everything outside the engine uses: the setting,
+// the QML model and the best-times table.
+QString presetId(Preset preset) {
+    return QString::fromLatin1(Presets::spec(preset).key);
+}
+
+bool presetFromId(const QString &id, Preset *preset) {
+    for (const PresetSpec &spec : Presets::kAll) {
+        if (QLatin1String(spec.key) == id) {
+            *preset = spec.id;
+            return true;
+        }
+    }
+    return false;
+}
+
+// The five fastest wins per preset. Faster is better; no names, just the
+// clock and the day.
+OmaGames::ScoreTable timesTable() {
+    QStringList ids;
+    for (const PresetSpec &spec : Presets::kAll)
+        ids << QString::fromLatin1(spec.key);
+    return OmaGames::ScoreTable({QStringLiteral("seconds")}, 5,
+                                OmaGames::ScoreTable::sameOrder(ids, OmaGames::ScoreTable::LowerIsBetter));
+}
+
 }  // namespace
 
-OmasweeperGame::OmasweeperGame(QObject *parent) : QObject(parent) {
-    connect(&m_timer, &QTimer::timeout, this, &OmasweeperGame::step);
+OmasweeperGame::OmasweeperGame(QObject *parent)
+    : QObject(parent), m_times(timesTable()),
+      m_pacer(OmaGames::Pacer::Repeating, [this]() { step(); }, this) {
+    m_pacer.setInterval(kDefaultStepIntervalMs);
     loadSettings();
+}
+
+QString OmasweeperGame::preset() const {
+    return presetId(m_preset);
 }
 
 void OmasweeperGame::loadSettings() {
     QSettings settings;
-    BestTimes::presetFromId(settings.value(kPresetKey).toString(), &m_preset);
+    presetFromId(settings.value(kPresetKey).toString(), &m_preset);
     m_times.load();
 }
 
@@ -86,13 +117,11 @@ QVariantList OmasweeperGame::presets() {
 QVariantList OmasweeperGame::bestTimes() const {
     QVariantList list;
     for (const PresetSpec &s : Presets::kAll) {
-        for (const TimeEntry &e : m_times.entries(s.id)) {
-            list.append(QVariantMap {
-                {QStringLiteral("preset"), QString::fromLatin1(s.key)},
-                {QStringLiteral("label"), QString::fromLatin1(s.label)},
-                {QStringLiteral("seconds"), e.seconds},
-                {QStringLiteral("date"), e.date.toString(Qt::ISODate)},
-            });
+        for (const QVariant &entry : m_times.toVariantList(QString::fromLatin1(s.key))) {
+            QVariantMap row = entry.toMap();
+            row.insert(QStringLiteral("preset"), QString::fromLatin1(s.key));
+            row.insert(QStringLiteral("label"), QString::fromLatin1(s.label));
+            list.append(row);
         }
     }
     return list;
@@ -101,28 +130,24 @@ QVariantList OmasweeperGame::bestTimes() const {
 QVariantMap OmasweeperGame::bests() const {
     QVariantMap map;
     for (const PresetSpec &s : Presets::kAll)
-        map.insert(QString::fromLatin1(s.key), m_times.best(s.id));
+        map.insert(QString::fromLatin1(s.key), m_times.best(QString::fromLatin1(s.key)));
     return map;
 }
 
 void OmasweeperGame::setStepInterval(int interval) {
-    if (m_stepInterval == interval)
+    if (!m_pacer.setInterval(interval))
         return;
-    m_stepInterval = interval;
     syncTimer();
     emit stepIntervalChanged();
 }
 
 void OmasweeperGame::syncTimer() {
-    if (m_board && m_board->status() == Status::Playing && m_stepInterval > 0)
-        m_timer.start(m_stepInterval);
-    else
-        m_timer.stop();
+    m_pacer.setRunning(m_board && m_board->status() == Status::Playing);
 }
 
 void OmasweeperGame::startGame(Preset preset, quint32 seed) {
     m_preset = preset;
-    QSettings().setValue(kPresetKey, BestTimes::idFor(preset));
+    QSettings().setValue(kPresetKey, presetId(preset));
     m_seed = seed;
     const PresetSpec &s = Presets::spec(preset);
     m_board.emplace(s.width, s.height, s.mines, seed);
@@ -145,7 +170,7 @@ void OmasweeperGame::startGame(Preset preset, quint32 seed) {
 
 void OmasweeperGame::newGame(const QString &preset) {
     Preset chosen = m_preset;
-    BestTimes::presetFromId(preset, &chosen);
+    presetFromId(preset, &chosen);
     startGame(chosen, freshSeed());
 }
 
@@ -159,7 +184,7 @@ void OmasweeperGame::backToStart() {
     m_board.reset();
     m_status = Status::Ready;
     m_ripple = {};
-    m_timer.stop();
+    m_pacer.stop();
     emit phaseChanged();
     emit countersChanged();
     emit fieldChanged();
@@ -290,7 +315,7 @@ void OmasweeperGame::buildRipple(const std::vector<int> &cells, QPoint origin) {
 void OmasweeperGame::finishGame(Status status) {
     if (status != Status::Won)
         return;
-    m_newBestRank = m_times.insert(m_preset, {m_elapsedSeconds, QDate::currentDate()});
+    m_newBestRank = m_times.insert(presetId(m_preset), {m_elapsedSeconds, QDate::currentDate(), {}});
     if (m_newBestRank >= 0) {
         m_times.save();
         emit bestTimesChanged();
@@ -305,20 +330,9 @@ void OmasweeperGame::step() {
 }
 
 QVariantMap OmasweeperGame::windowGeometry() const {
-    QSettings settings;
-    const QRect rect = settings.value(kGeometryKey).toRect();
-    return {
-        {QStringLiteral("valid"), rect.isValid()},
-        {QStringLiteral("x"), rect.x()},
-        {QStringLiteral("y"), rect.y()},
-        {QStringLiteral("width"), rect.width()},
-        {QStringLiteral("height"), rect.height()},
-        {QStringLiteral("maximized"), settings.value(kMaximizedKey, false).toBool()},
-    };
+    return OmaGames::WindowGeometry::toVariantMap();
 }
 
 void OmasweeperGame::saveWindowGeometry(int x, int y, int width, int height, bool maximized) {
-    QSettings settings;
-    settings.setValue(kGeometryKey, QRect(x, y, width, height));
-    settings.setValue(kMaximizedKey, maximized);
+    OmaGames::WindowGeometry::save(QRect(x, y, width, height), maximized);
 }

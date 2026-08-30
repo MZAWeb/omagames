@@ -6,6 +6,7 @@
 #include <QtTest>
 
 #include "omasweepergame.h"
+#include "scoretable.h"
 #include "solver.h"
 
 namespace {
@@ -412,42 +413,37 @@ void BridgeTests::backToStartClearsTheBoard() {
     QCOMPARE(game.elapsedSeconds(), 0);
 }
 
-void BridgeTests::bestTimesOrderAndCap() {
-    BestTimes times;
-    QCOMPARE(times.best(Preset::Expert), 0);
-    const QDate day = QDate::currentDate();
-    QCOMPARE(times.insert(Preset::Expert, {300, day}), 0);
-    QCOMPARE(times.insert(Preset::Expert, {120, day}), 0);
-    QCOMPARE(times.insert(Preset::Expert, {400, day}), 2);
-    // A tie ranks below the time that was already there.
-    QCOMPARE(times.insert(Preset::Expert, {120, day}), 1);
-    QCOMPARE(times.insert(Preset::Expert, {200, day}), 2);
-    // The table is full at 120, 120, 200, 300, 400: slower is turned away,
-    // faster pushes the slowest off the end.
-    QCOMPARE(times.insert(Preset::Expert, {600, day}), -1);
-    QCOMPARE(times.insert(Preset::Expert, {250, day}), 3);
-    QCOMPARE(int(times.entries(Preset::Expert).size()), BestTimes::kMaxEntries);
-    QCOMPARE(times.best(Preset::Expert), 120);
-    QCOMPARE(times.entries(Preset::Expert).at(4).seconds, 300);
-    // Tables are per preset.
-    QVERIFY(times.entries(Preset::Beginner).empty());
-}
-
-void BridgeTests::bestTimesRoundTripThroughSettings() {
+// Ordering, the cap and the ranks are ScoreTable's own tests now; what is
+// Omasweeper's is that the tables are keyed by preset and the shape they
+// reach QML in.
+void BridgeTests::savedBestTimesReachQml() {
     const QDate day(2026, 8, 30);
-    BestTimes times;
-    times.insert(Preset::Beginner, {31, day});
-    times.insert(Preset::Beginner, {12, day});
-    times.insert(Preset::Expert, {999, day});
-    times.save();
+    {
+        OmaGames::ScoreTable times({QStringLiteral("seconds")}, 5,
+                                   OmaGames::ScoreTable::sameOrder({QStringLiteral("beginner"),
+                                                                    QStringLiteral("intermediate"),
+                                                                    QStringLiteral("expert")},
+                                                                   OmaGames::ScoreTable::LowerIsBetter));
+        times.insert(QStringLiteral("beginner"), {31, day, {}});
+        times.insert(QStringLiteral("beginner"), {12, day, {}});
+        times.insert(QStringLiteral("expert"), {999, day, {}});
+        times.save();
+    }
 
-    BestTimes reloaded;
-    reloaded.load();
-    QCOMPARE(int(reloaded.entries(Preset::Beginner).size()), 2);
-    QCOMPARE(reloaded.entries(Preset::Beginner).front().seconds, 12);
-    QCOMPARE(reloaded.entries(Preset::Beginner).front().date, day);
-    QCOMPARE(reloaded.best(Preset::Expert), 999);
-    QVERIFY(reloaded.entries(Preset::Intermediate).empty());
+    OmasweeperGame game;
+    const QVariantList rows = game.bestTimes();
+    QCOMPARE(rows.size(), 3);
+    const QVariantMap first = rows.first().toMap();
+    QCOMPARE(first.value(QStringLiteral("preset")).toString(), QStringLiteral("beginner"));
+    QCOMPARE(first.value(QStringLiteral("label")).toString(), QStringLiteral("Beginner"));
+    QCOMPARE(first.value(QStringLiteral("seconds")).toInt(), 12);
+    QCOMPARE(first.value(QStringLiteral("date")).toString(), QStringLiteral("2026-08-30"));
+    QCOMPARE(rows.at(1).toMap().value(QStringLiteral("seconds")).toInt(), 31);
+    QCOMPARE(rows.at(2).toMap().value(QStringLiteral("preset")).toString(), QStringLiteral("expert"));
+
+    QCOMPARE(game.bests().value(QStringLiteral("beginner")).toInt(), 12);
+    QCOMPARE(game.bests().value(QStringLiteral("expert")).toInt(), 999);
+    QCOMPARE(game.bests().value(QStringLiteral("intermediate")).toInt(), 0);
 }
 
 void BridgeTests::lastPresetIsRemembered() {

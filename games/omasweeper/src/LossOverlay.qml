@@ -4,7 +4,7 @@ import OmaGames
 
 // A mine went off. Every mine is turned over on the board behind, wrong
 // flags crossed out, so the cover stays light enough to read them.
-OverlayPanel {
+OmaOverlayPanel {
     id: root
 
     dim: 0.6

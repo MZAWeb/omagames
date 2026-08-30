@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Window
+import OmaGames
 
 // The window and the screen it shows. Expert is 30x16 cells, so the smallest
 // window still gives every cell 20 px; below that the layout would start
@@ -74,7 +75,9 @@ ApplicationWindow {
         id: confirmLoader
         anchors.fill: parent
         active: false
-        sourceComponent: ConfirmDialog {
+        sourceComponent: OmaConfirmDialog {
+            acceptHint: qsTr("Y")
+            rejectHint: qsTr("N")
             message: qsTr("Leave this board? It is thrown away, clock and all.")
             acceptText: qsTr("Leave")
             onAccepted: {
