@@ -33,7 +33,9 @@ current Omarchy theme.
   cursor is outlined more strongly than the rest of the selection.
 - **Highlighting** lights up every cell holding that digit, givens included,
   and the key on the keypad with it. The same digit again (or `Escape`) clears
-  it, another digit switches it. It is the one thing in the game that does not
+  it, another digit switches it. The cursor and the selection do not put it
+  out: a lit cell they land on keeps the yellow, a shade toned down, and wears
+  the selection outline on top. It is the one thing in the game that does not
   follow the Omarchy theme: a highlighter pen is highlighter yellow, with dark
   ink on top, whatever the desktop looks like.
 - **Best times**: solving a puzzle files the clock, with the day, in that

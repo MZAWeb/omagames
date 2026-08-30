@@ -45,9 +45,15 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        color: cell.cursor ? theme.alpha(theme.accent, 0.30)
+        // The highlighter outranks the selection tint, and the cursor and the
+        // selection tone it down with its own ink instead of painting over it:
+        // a lit cell has to stay lit while the keyboard sits on it, and the
+        // outline below is what says where the keyboard is.
+        color: cell.highlighted
+                 ? theme.mix(cell.highlightColor, cell.highlightInk,
+                             cell.cursor ? 0.28 : cell.selected ? 0.16 : 0)
+             : cell.cursor ? theme.alpha(theme.accent, 0.30)
              : cell.selected ? theme.alpha(theme.accent, 0.18)
-             : cell.highlighted ? cell.highlightColor
              : cell.sameDigit ? theme.alpha(theme.accent, 0.14)
              : cell.peer ? theme.alpha(theme.foreground, 0.10)
              : "transparent"
