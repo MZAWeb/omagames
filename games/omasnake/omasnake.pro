@@ -7,10 +7,14 @@ TEMPLATE = app
 HEADERS += \
     src/rules.h \
     src/snake.h \
-    src/game.h
+    src/game.h \
+    src/highscores.h \
+    src/omasnakegame.h
 SOURCES += \
     src/main.cpp \
     src/rules.cpp \
     src/snake.cpp \
-    src/game.cpp
+    src/game.cpp \
+    src/highscores.cpp \
+    src/omasnakegame.cpp
 RESOURCES += src/resources.qrc

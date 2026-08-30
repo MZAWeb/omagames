@@ -10,11 +10,17 @@ HEADERS += \
     ../src/rules.h \
     ../src/snake.h \
     ../src/game.h \
-    enginetests.h
+    ../src/highscores.h \
+    ../src/omasnakegame.h \
+    enginetests.h \
+    bridgetests.h
 
 SOURCES += \
     ../src/rules.cpp \
     ../src/snake.cpp \
     ../src/game.cpp \
+    ../src/highscores.cpp \
+    ../src/omasnakegame.cpp \
     enginetests.cpp \
+    bridgetests.cpp \
     tst_omasnake.cpp
