@@ -22,7 +22,7 @@ Each game has its own README with rules and keyboard shortcuts.
 
 | Omanix | Omasweeper |
 |---|---|
-| <img src="screenshots/omanix.png" alt="Omanix, cutting a trail across the sea with balls closing in" width="100%"> | <img src="screenshots/omasweeper.png" alt="Omasweeper, an Intermediate board opening up with the no-guessing badge" width="100%"> |
+| <img src="screenshots/omanix.png" alt="Omanix, cutting a trail across the sea with balls closing in" width="100%"> | <img src="screenshots/omasweeper.png" alt="Omasweeper, an Intermediate board opening up" width="100%"> |
 
 This is a monorepo: games live under `games/`, everything shared (theming,
 fonts, app bootstrap, common QML controls) lives under `common/` and is compiled
