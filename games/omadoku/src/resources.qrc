@@ -15,6 +15,7 @@
         <file alias="SecondaryActions.qml">SecondaryActions.qml</file>
         <file alias="KeyReminder.qml">KeyReminder.qml</file>
         <file alias="WonOverlay.qml">WonOverlay.qml</file>
+        <file alias="BestTimesPanel.qml">BestTimesPanel.qml</file>
         <file alias="ConfirmDialog.qml">ConfirmDialog.qml</file>
     </qresource>
 </RCC>

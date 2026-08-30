@@ -36,6 +36,11 @@ current Omarchy theme.
   it, another digit switches it. It is the one thing in the game that does not
   follow the Omarchy theme: a highlighter pen is highlighter yellow, with dark
   ink on top, whatever the desktop looks like.
+- **Best times**: solving a puzzle files the clock, with the day, in that
+  level's top five, and the won screen says where it landed (*New best!*, or
+  *#3 for Hard*). The start screen shows the fastest under each level and
+  keeps the full tables behind *Best times* (`B`). Restarting or leaving a
+  puzzle files nothing.
 - An unfinished puzzle is saved automatically and offered as *Resume* the next
   time you start the game.
 
@@ -57,7 +62,8 @@ current Omarchy theme.
 | `Escape` | collapse the selection, else clear the highlight, else back to the start screen (confirms mid-puzzle) |
 | `Ctrl+Q` | quit |
 
-On the start screen `1`, `2`, `3`, `4` pick a difficulty and `R` resumes.
+On the start screen `1`, `2`, `3`, `4` pick a difficulty, `R` resumes and `B`
+shows the best times (`Escape` closes them).
 Every button shows its key, so nothing above needs memorising.
 
 ## Layout
@@ -130,4 +136,5 @@ bin/run omadoku       # play
 bin/install omadoku   # build + install the Arch package from a checkout
 ```
 
-Settings and the saved puzzle live in `~/.config/Omacom/omadoku.conf`.
+Settings, the best times and the saved puzzle live in
+`~/.config/Omacom/omadoku.conf`.

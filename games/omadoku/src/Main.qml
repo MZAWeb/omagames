@@ -71,6 +71,8 @@ ApplicationWindow {
         sourceComponent: WonOverlay {
             difficultyName: game.difficultyLabel
             seconds: game.elapsedSeconds
+            rank: game.newBestRank
+            best: game.bests[game.difficulty]
             onNewGameRequested: game.newGame(game.difficulty)
             onBackRequested: game.backToStart()
         }

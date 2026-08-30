@@ -7,6 +7,7 @@
 #include <QVariantList>
 #include <QVariantMap>
 
+#include "besttimes.h"
 #include "cellmodel.h"
 #include "sudokuboard.h"
 
@@ -39,6 +40,9 @@ class SudokuGame : public QObject {
     Q_PROPERTY(QVariantList digitCounts READ digitCounts NOTIFY boardChanged)
     Q_PROPERTY(int elapsedSeconds READ elapsedSeconds NOTIFY elapsedSecondsChanged)
     Q_PROPERTY(bool hasSavedGame READ hasSavedGame NOTIFY hasSavedGameChanged)
+    Q_PROPERTY(QVariantList bestTimes READ bestTimes NOTIFY bestTimesChanged)
+    Q_PROPERTY(QVariantMap bests READ bests NOTIFY bestTimesChanged)
+    Q_PROPERTY(int newBestRank READ newBestRank NOTIFY stateChanged)
 
 public:
     explicit SudokuGame(QObject *parent = nullptr);
@@ -84,6 +88,12 @@ public:
     static QColor highlightInk();
     int elapsedSeconds() const { return m_elapsedSeconds; }
     bool hasSavedGame() const { return m_hasSavedGame; }
+    // Every kept time as {difficulty, label, seconds, date}, fastest first
+    // within each level, and the fastest of each level by id.
+    QVariantList bestTimes() const;
+    QVariantMap bests() const;
+    // Where the win just now landed in its level's table (-1 = nowhere).
+    int newBestRank() const { return m_newBestRank; }
 
     // Which digit a key press means, 0 when it means none. QML asks rather
     // than deciding, so the layout quirks stay tested (see sudokukeys.h).
@@ -130,6 +140,7 @@ signals:
     void highlightDigitChanged();
     void elapsedSecondsChanged();
     void hasSavedGameChanged();
+    void bestTimesChanged();
 
 private:
     enum class Screen { Start, Playing, Won };
@@ -147,6 +158,7 @@ private:
     void setHighlightDigit(int digit);
     void setHasSavedGame(bool hasSavedGame);
     void selectFirstEmptyCell();
+    void recordWin();
     void loadSettings();
     void saveGame();
     void clearSavedGame();
@@ -160,6 +172,8 @@ private:
     int m_cursorIndex = -1;
     int m_highlightDigit = -1;
     int m_elapsedSeconds = 0;
+    BestTimes m_times;
+    int m_newBestRank = -1;
     ClickMode m_clickMode = ClickMode::Fill;
     bool m_hasSavedGame = false;
 };

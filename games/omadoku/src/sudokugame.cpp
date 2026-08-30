@@ -32,24 +32,6 @@ const auto kWonId = QStringLiteral("won");
 const auto kHighlightId = QStringLiteral("highlight");
 const auto kNoteId = QStringLiteral("note");
 const auto kFillId = QStringLiteral("fill");
-const auto kEasyId = QStringLiteral("easy");
-const auto kMediumId = QStringLiteral("medium");
-const auto kHardId = QStringLiteral("hard");
-const auto kExtraHardId = QStringLiteral("extrahard");
-
-QString idFor(Difficulty difficulty) {
-    switch (difficulty) {
-    case Difficulty::Easy:
-        return kEasyId;
-    case Difficulty::Medium:
-        return kMediumId;
-    case Difficulty::Hard:
-        return kHardId;
-    case Difficulty::ExtraHard:
-        return kExtraHardId;
-    }
-    return kEasyId;
-}
 
 QString techniqueName(SudokuGrader::Technique technique) {
     using SudokuGrader::Technique;
@@ -114,7 +96,7 @@ QString SudokuGame::state() const {
 }
 
 QString SudokuGame::difficulty() const {
-    return idFor(m_board.puzzle().difficulty);
+    return BestTimes::idFor(m_board.puzzle().difficulty);
 }
 
 QString SudokuGame::difficultyLabel() const {
@@ -145,7 +127,7 @@ QVariantList SudokuGame::difficulties() {
     QVariantList list;
     for (const Level &level : levels) {
         list.append(QVariantMap {
-            {QStringLiteral("id"), idFor(level.difficulty)},
+            {QStringLiteral("id"), BestTimes::idFor(level.difficulty)},
             {QStringLiteral("label"), level.label},
             {QStringLiteral("techniques"), techniquesIntroducedBy(level.difficulty)},
             {QStringLiteral("description"), level.description},
@@ -251,15 +233,13 @@ void SudokuGame::newGame(const QString &difficulty) {
     // An unknown id can only come from a caller with a stale idea of the
     // levels; Easy is the safe landing.
     Difficulty level = Difficulty::Easy;
-    for (int i = 0; i < kDifficultyCount; ++i) {
-        if (idFor(Difficulty(i)) == difficulty)
-            level = Difficulty(i);
-    }
+    BestTimes::difficultyFromId(difficulty, &level);
     m_board.setPuzzle(SudokuGenerator::generate(level));
     m_cells.refreshAll();
 
     m_elapsedSeconds = 0;
     emit elapsedSecondsChanged();
+    m_newBestRank = -1;
     clearHighlight();
     selectFirstEmptyCell();
     clearSavedGame();
@@ -270,6 +250,7 @@ void SudokuGame::newGame(const QString &difficulty) {
 void SudokuGame::resumeSavedGame() {
     if (!m_hasSavedGame)
         return;
+    m_newBestRank = -1;
     selectFirstEmptyCell();
     setScreen(Screen::Playing);
     emit boardChanged();
@@ -478,10 +459,48 @@ void SudokuGame::applyChange(const std::vector<int> &changed) {
     if (m_board.isSolved()) {
         m_clock.stop();
         clearSavedGame();
+        recordWin();
         setScreen(Screen::Won);
         return;
     }
     m_saveTimer.start();
+}
+
+QVariantList SudokuGame::bestTimes() const {
+    QVariantList list;
+    for (const QVariant &entry : difficulties()) {
+        const QVariantMap level = entry.toMap();
+        Difficulty difficulty = Difficulty::Easy;
+        if (!BestTimes::difficultyFromId(level.value(QStringLiteral("id")).toString(), &difficulty))
+            continue;
+        for (const TimeEntry &time : m_times.entries(difficulty)) {
+            list.append(QVariantMap {
+                {QStringLiteral("difficulty"), BestTimes::idFor(difficulty)},
+                {QStringLiteral("label"), level.value(QStringLiteral("label"))},
+                {QStringLiteral("seconds"), time.seconds},
+                {QStringLiteral("date"), time.date.toString(Qt::ISODate)},
+            });
+        }
+    }
+    return list;
+}
+
+QVariantMap SudokuGame::bests() const {
+    QVariantMap map;
+    for (int i = 0; i < kDifficultyCount; ++i)
+        map.insert(BestTimes::idFor(Difficulty(i)), m_times.best(Difficulty(i)));
+    return map;
+}
+
+// The clock has already stopped by the time this runs, so what goes in the
+// table is exactly the time the player is about to be shown.
+void SudokuGame::recordWin() {
+    m_newBestRank = m_times.insert(m_board.puzzle().difficulty,
+                                   {m_elapsedSeconds, QDate::currentDate()});
+    if (m_newBestRank < 0)
+        return;
+    m_times.save();
+    emit bestTimesChanged();
 }
 
 void SudokuGame::setScreen(Screen screen) {
@@ -521,6 +540,7 @@ void SudokuGame::selectFirstEmptyCell() {
 }
 
 void SudokuGame::loadSettings() {
+    m_times.load();
     const QSettings settings;
     // Off by default: a first puzzle should not correct you before you have
     // finished thinking. A choice already stored still wins.
