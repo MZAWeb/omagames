@@ -40,9 +40,11 @@ only a settings wipe clears it. When you're broke you can only start a new game.
 ## House Table
 
 The table is arranged around a themed oval: the dealer stays at top-center,
-AI table mates fill the upper arc symmetrically in deal order, and your
-larger accent-framed tray stays bottom-center. Dealt cards travel from the
-dealer's shoe to the seat they land on, one at a time as the deal paces them.
+AI table mates fill the arc symmetrically, and your larger accent-framed tray
+stays bottom-center, straight across from the dealer. Play follows the seating
+round the table, so the action reaches you when the sweep reaches the bottom.
+Dealt cards travel from the dealer's shoe to the seat they land on, one at a
+time as the deal paces them.
 Bets sit beside their hands as chips, with the insurance coin next to them
 when a seat has taken the side bet. The felt itself carries the last three
 table events and, when there is room, the house rules line. The fixed action
@@ -54,7 +56,7 @@ Heads-up and two-mate tables enlarge the dealer and player cards without
 drawing empty seats. The arc is re-spaced for the number of mates rather than
 reusing fixed slots, so seats never touch; at 160% text scale, or when those
 seats no longer fit at their minimum size, the table reflows into a large
-dealer/player stage and a scrollable deal-order roster. Identity, personality,
+dealer/player stage and a scrollable play-order roster. Identity, personality,
 bankroll, bet, cards, total, active state, result and net payout remain visible
 in both layouts. Split and long hands grow or wrap instead of covering seat
 details.
@@ -66,12 +68,15 @@ mates move to the stage-and-roster layout, where `[` can still send them home
 one at a time — and the cap lifts as soon as the window grows again. The saved
 table itself is always 0–6 mates.
 
-**Seating.** Bot seats are 190×132 logical pixels and fill the arc from the
-dealer outward in deal order, left first, so an odd extra mate sits dealer-left.
+**Seating.** Bot seats are 190×132 logical pixels and fill the arc in play
+order: the first mate sits at the dealer's left (the right of the screen), the
+rest follow down that side, past your tray at the bottom and up the far side to
+the dealer's right, so an odd extra mate takes the far side and the sweep ends
+on it.
 Up to four mates sit in two columns per side, spaced so a seat that grows with
 its cards can never cover its neighbour; five and six add a third row and need
 roughly a 1280×800 window, below which they reflow to the stage and scrollable
-roster, where all six mates remain available in deal order. The seat minimums
+roster, where all six mates remain available in play order. The seat minimums
 and the 430×181 human tray do not shrink.
 
 ## Decision Coach
@@ -91,8 +96,12 @@ and an `aggression` (bet sizing and appetite for risk: timid, steady, bold).
 Insurance is a losing bet, so pros always refuse it while rookies — the bolder
 the likelier — sometimes take it.
 Under its name it says how it bets and then how it plays — "timid pro",
-"bold rookie", "steady regular". A bot that goes broke leaves and a fresh one
-takes its seat. Change how many are at the table (0–6) between rounds with the
+"bold rookie", "steady regular". Play goes round the table in seating order:
+bets, cards, the insurance offer and the turns all start at the mate on the
+dealer's left, sweep down that side to your tray at the bottom, and carry on
+up the far side to the dealer's right — so at a four-mate table two mates act
+before you and two after. A bot that goes broke leaves and a fresh one takes
+its seat. Change how many are at the table (0–6) between rounds with the
 `−`/`+` buttons in the header; the choice is saved. A compact window caps the
 table at two mates — see **Small windows** above.
 

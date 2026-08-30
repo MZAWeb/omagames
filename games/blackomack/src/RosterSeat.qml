@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import OmaGames
 
-// High-scale semantic fallback: one full-information bot row in deal order.
+// High-scale semantic fallback: one full-information bot row in play order.
 OmaPanel {
     id: row
     property var seatData

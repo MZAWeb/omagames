@@ -76,7 +76,8 @@ public:
     bool roundOver() const { return m_phase == Phase::Payout && m_resolved; }
     QStringList takenNames() const;
 
-    // Setup — only between rounds (Betting). The human keeps the middle seat.
+    // Setup — only between rounds (Betting). The human keeps the bottom-centre
+    // seat, wherever the arc puts it in the order.
     void setHumanBankroll(int bankroll);
     bool addBot(const BotPersonality &personality, int bankroll = BlackjackRules::kStartingBankroll,
                 quint32 salt = 0);
