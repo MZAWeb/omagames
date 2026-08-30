@@ -12,7 +12,7 @@
 // The only bridge between the engine and QML: state as properties, actions as
 // invokables. It owns no rules of its own beyond screen flow and persistence.
 //
-// Screen state, difficulty and pad mode cross to QML as lowercase id strings
+// Screen state, difficulty and click mode cross to QML as lowercase id strings
 // rather than as enums: a C++-registered QML type would need a module for QML
 // tooling to resolve, and plain strings keep both sides (and qmllint) honest
 // without one. The matching display labels come from `difficulties`.
@@ -24,7 +24,7 @@ class SudokuGame : public QObject {
     Q_PROPERTY(QString difficultyLabel READ difficultyLabel NOTIFY boardChanged)
     Q_PROPERTY(QString techniqueLabel READ techniqueLabel NOTIFY boardChanged)
     Q_PROPERTY(QVariantList difficulties READ difficulties CONSTANT)
-    Q_PROPERTY(QString padMode READ padMode WRITE setPadMode NOTIFY padModeChanged)
+    Q_PROPERTY(QString clickMode READ clickMode WRITE setClickMode NOTIFY clickModeChanged)
     Q_PROPERTY(bool validateAsYouGo READ validateAsYouGo WRITE setValidateAsYouGo NOTIFY validateAsYouGoChanged)
     Q_PROPERTY(int selectedIndex READ selectedIndex WRITE select NOTIFY selectedIndexChanged)
     Q_PROPERTY(int selectedValue READ selectedValue NOTIFY selectedValueChanged)
@@ -52,10 +52,10 @@ public:
     static QVariantList difficulties();
     // The hardest technique the current puzzle needs, by name.
     QString techniqueLabel() const;
-    // What a digit does when no modifier overrides it: "highlight" | "note" |
-    // "fill". Applies to the keypad and to the plain number keys alike.
-    QString padMode() const;
-    void setPadMode(const QString &padMode);
+    // What a click on the keypad does: "highlight" | "note" | "fill". It has
+    // no say over the keyboard, whose mapping is fixed (see pressDigitKey).
+    QString clickMode() const;
+    void setClickMode(const QString &clickMode);
     bool validateAsYouGo() const { return m_board.validateAsYouGo(); }
     void setValidateAsYouGo(bool validateAsYouGo);
     int selectedIndex() const { return m_selectedIndex; }
@@ -78,15 +78,16 @@ public:
     Q_INVOKABLE void resumeSavedGame();
     Q_INVOKABLE void select(int index);
     Q_INVOKABLE void moveSelection(int deltaRow, int deltaColumn);
-    // The one entry point for a digit, from the keypad or the number row:
-    // `overrideMode` is a mode id when a modifier asked for a specific action
-    // (Ctrl fills, Shift notes, Alt highlights) and empty to follow padMode.
-    Q_INVOKABLE void pressDigit(int digit, const QString &overrideMode = QString());
+    // A digit from the number row. The mapping is fixed and owes nothing to
+    // the click mode: plain fills, Shift notes, Ctrl (or Alt) highlights.
+    Q_INVOKABLE void pressDigitKey(int digit, int modifiers);
+    // A digit clicked on the keypad, which is the one place clickMode decides.
+    Q_INVOKABLE void clickDigit(int digit);
     Q_INVOKABLE void enterValue(int digit);
     Q_INVOKABLE void toggleNote(int digit);
     Q_INVOKABLE void toggleHighlight(int digit);
     Q_INVOKABLE void clearHighlight();
-    Q_INVOKABLE void cyclePadMode();
+    Q_INVOKABLE void cycleClickMode();
     Q_INVOKABLE void erase();
     Q_INVOKABLE void undo();
     Q_INVOKABLE void restart();
@@ -98,7 +99,7 @@ public:
 signals:
     void stateChanged();
     void boardChanged();
-    void padModeChanged();
+    void clickModeChanged();
     void validateAsYouGoChanged();
     void selectedIndexChanged();
     void selectedValueChanged();
@@ -109,11 +110,11 @@ signals:
 private:
     enum class Screen { Start, Playing, Won };
 
-    // What a click on the digit pad does, mirroring the modifier-free, Shift
-    // and Ctrl meanings of the number row.
-    enum class PadMode { Highlight, Note, Fill };
+    // What a click on the digit pad does. Fill by default: writing digits is
+    // what a player does most, and every other action has its own chord.
+    enum class ClickMode { Highlight, Note, Fill };
 
-    static PadMode modeFromId(const QString &id, PadMode fallback);
+    static ClickMode modeFromId(const QString &id, ClickMode fallback);
     void applyChange(const std::vector<int> &changed);
     void setScreen(Screen screen);
     void setHighlightDigit(int digit);
@@ -131,6 +132,6 @@ private:
     int m_selectedIndex = -1;
     int m_highlightDigit = -1;
     int m_elapsedSeconds = 0;
-    PadMode m_padMode = PadMode::Highlight;
+    ClickMode m_clickMode = ClickMode::Fill;
     bool m_hasSavedGame = false;
 };

@@ -4,7 +4,7 @@ import QtQuick
 // It wraps to a second line before it elides, so a large text scale costs a
 // line rather than the sentence.
 Text {
-    text: qsTr("Arrows / hjkl move · N cycles mode · Esc backs out")
+    text: qsTr("Arrows / hjkl move · N cycles the click mode · Esc backs out")
     color: theme.mix(theme.background, theme.foreground, 0.5)
     font.pixelSize: 11 * theme.textScale
     wrapMode: Text.WordWrap

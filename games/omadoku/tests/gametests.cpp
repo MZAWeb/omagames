@@ -145,92 +145,87 @@ void GameTests::exposesDifficultiesWithLabels() {
     game.newGame(QStringLiteral("nonsense"));  // an unknown id lands on Easy
     QCOMPARE(game.difficulty(), QStringLiteral("easy"));
 
-    game.setPadMode(QStringLiteral("nonsense"));  // and an unknown mode on Highlight
-    QCOMPARE(game.padMode(), QStringLiteral("highlight"));
+    game.setClickMode(QStringLiteral("nonsense"));  // and an unknown mode on Fill
+    QCOMPARE(game.clickMode(), QStringLiteral("fill"));
 }
 
-void GameTests::padModeDecidesWhatADigitDoes() {
+void GameTests::clickModeDecidesWhatAKeypadClickDoes() {
     SudokuGame game;
     game.newGame(QStringLiteral("easy"));
     const int cell = game.selectedIndex();
-    QCOMPARE(game.padMode(), QStringLiteral("highlight"));  // the default
+    QCOMPARE(game.clickMode(), QStringLiteral("fill"));  // the default
 
-    game.pressDigit(6);
-    QCOMPARE(game.highlightDigit(), 6);
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 0);
-    game.pressDigit(6);  // the same digit again clears it
-    QCOMPARE(game.highlightDigit(), -1);
-
-    game.setPadMode(QStringLiteral("note"));
-    game.pressDigit(3);
-    game.pressDigit(8);
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), (1 << 2) | (1 << 7));
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 0);
-    game.pressDigit(3);  // toggles back off
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), 1 << 7);
-
-    game.setPadMode(QStringLiteral("fill"));
-    game.pressDigit(4);
+    game.clickDigit(4);
     QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 4);
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), 0);
-
-    // Without a selection there is nowhere to write, so any digit highlights.
-    game.select(-1);
-    game.pressDigit(2);
-    QCOMPARE(game.highlightDigit(), 2);
-    game.pressDigit(2, QStringLiteral("fill"));
     QCOMPARE(game.highlightDigit(), -1);
-}
-
-void GameTests::modifierOverridesBeatTheMode() {
-    SudokuGame game;
-    game.newGame(QStringLiteral("easy"));
-    const int cell = game.selectedIndex();
-
-    // Highlight is selected, yet Ctrl fills and Shift notes.
-    QCOMPARE(game.padMode(), QStringLiteral("highlight"));
-    game.pressDigit(5, QStringLiteral("fill"));
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 5);
-    game.pressDigit(5, QStringLiteral("fill"));  // same value again is a no-op
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 5);
 
     game.erase();
-    game.pressDigit(7, QStringLiteral("note"));
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), 1 << 6);
-    QCOMPARE(game.highlightDigit(), -1);  // no override touched the highlight
-
-    // ...and with Fill selected, Alt still only highlights.
-    game.setPadMode(QStringLiteral("fill"));
-    game.pressDigit(9, QStringLiteral("highlight"));
-    QCOMPARE(game.highlightDigit(), 9);
+    game.setClickMode(QStringLiteral("note"));
+    game.clickDigit(3);
+    game.clickDigit(8);
+    QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), (1 << 2) | (1 << 7));
     QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 0);
+    game.clickDigit(3);  // toggles back off
+    QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), 1 << 7);
 
-    // An unknown override means "no opinion": the mode decides.
-    game.pressDigit(2, QStringLiteral("nonsense"));
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 2);
+    game.setClickMode(QStringLiteral("highlight"));
+    game.clickDigit(6);
+    QCOMPARE(game.highlightDigit(), 6);
+    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 0);
+    game.clickDigit(6);  // the same digit again clears it
+    QCOMPARE(game.highlightDigit(), -1);
 }
 
-void GameTests::padModeCyclesAndPersists() {
+void GameTests::keyboardMappingIgnoresTheClickMode() {
+    SudokuGame game;
+    game.newGame(QStringLiteral("easy"));
+    const int cell = game.selectedIndex();
+
+    // Whichever mode the selector is on, the number row means the same thing.
+    const QStringList modes {QStringLiteral("highlight"), QStringLiteral("note"),
+                             QStringLiteral("fill")};
+    for (const QString &mode : modes) {
+        game.setClickMode(mode);
+
+        game.pressDigitKey(5, Qt::NoModifier);
+        QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 5);
+        game.erase();
+
+        game.pressDigitKey(7, Qt::ShiftModifier);
+        QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), 1 << 6);
+        QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 0);
+        game.pressDigitKey(7, Qt::ShiftModifier);
+        QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), 0);
+
+        game.pressDigitKey(9, Qt::ControlModifier);
+        QCOMPARE(game.highlightDigit(), 9);
+        game.pressDigitKey(9, Qt::AltModifier);  // Alt is an alias for Ctrl here
+        QCOMPARE(game.highlightDigit(), -1);
+        QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 0);
+    }
+}
+
+void GameTests::clickModeCyclesAndPersists() {
     {
         SudokuGame game;
-        QSignalSpy spy(&game, &SudokuGame::padModeChanged);
+        QSignalSpy spy(&game, &SudokuGame::clickModeChanged);
         game.newGame(QStringLiteral("easy"));
-        QCOMPARE(game.padMode(), QStringLiteral("highlight"));  // the default
+        QCOMPARE(game.clickMode(), QStringLiteral("fill"));  // the default
 
-        game.cyclePadMode();
-        QCOMPARE(game.padMode(), QStringLiteral("note"));
-        game.cyclePadMode();
-        QCOMPARE(game.padMode(), QStringLiteral("fill"));
-        game.cyclePadMode();
-        QCOMPARE(game.padMode(), QStringLiteral("highlight"));
+        game.cycleClickMode();
+        QCOMPARE(game.clickMode(), QStringLiteral("highlight"));
+        game.cycleClickMode();
+        QCOMPARE(game.clickMode(), QStringLiteral("note"));
+        game.cycleClickMode();
+        QCOMPARE(game.clickMode(), QStringLiteral("fill"));
         QCOMPARE(spy.count(), 3);
 
-        game.setPadMode(QStringLiteral("note"));
+        game.setClickMode(QStringLiteral("note"));
         game.newGame(QStringLiteral("hard"));
-        QCOMPARE(game.padMode(), QStringLiteral("note"));  // a preference, not game state
+        QCOMPARE(game.clickMode(), QStringLiteral("note"));  // a preference, not game state
     }
     SudokuGame restarted;
-    QCOMPARE(restarted.padMode(), QStringLiteral("note"));
+    QCOMPARE(restarted.clickMode(), QStringLiteral("note"));
 }
 
 void GameTests::highlightTogglesAndSwitchesDigits() {

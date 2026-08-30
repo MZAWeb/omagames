@@ -9,7 +9,8 @@
         <file alias="SudokuCell.qml">SudokuCell.qml</file>
         <file alias="NoteGrid.qml">NoteGrid.qml</file>
         <file alias="DigitPad.qml">DigitPad.qml</file>
-        <file alias="PadModeSelector.qml">PadModeSelector.qml</file>
+        <file alias="KeyboardMap.qml">KeyboardMap.qml</file>
+        <file alias="ClickModeSelector.qml">ClickModeSelector.qml</file>
         <file alias="ValidateToggle.qml">ValidateToggle.qml</file>
         <file alias="SecondaryActions.qml">SecondaryActions.qml</file>
         <file alias="KeyReminder.qml">KeyReminder.qml</file>

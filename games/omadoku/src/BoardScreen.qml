@@ -18,22 +18,10 @@ FocusScope {
         return minutes + ":" + (rest < 10 ? "0" : "") + rest;
     }
 
-    // A modifier names the action outright; without one the selected mode
-    // decides. The bridge does the deciding, this only reports what was typed.
-    function overrideFor(event) {
-        if (event.modifiers & Qt.ControlModifier)
-            return "fill";
-        if (event.modifiers & Qt.ShiftModifier)
-            return "note";
-        if (event.modifiers & Qt.AltModifier)
-            return "highlight";
-        return "";
-    }
-
     Keys.onPressed: function(event) {
         var digit = game.digitForKey(event.key, event.modifiers, event.text, event.nativeScanCode);
         if (digit > 0) {
-            game.pressDigit(digit, root.overrideFor(event));
+            game.pressDigitKey(digit, event.modifiers);
         } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H) {
             game.moveSelection(0, -1);
         } else if (event.key === Qt.Key_Right || event.key === Qt.Key_L) {
@@ -43,7 +31,7 @@ FocusScope {
         } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
             game.moveSelection(1, 0);
         } else if (event.key === Qt.Key_N) {
-            game.cyclePadMode();
+            game.cycleClickMode();
         } else if (event.key === Qt.Key_V) {
             game.validateAsYouGo = !game.validateAsYouGo;
         } else if (event.key === Qt.Key_R) {
@@ -108,7 +96,7 @@ FocusScope {
             // The rail needs this much height for its keypad to stay usable.
             readonly property real railMinHeight: 360 * theme.textScale
             readonly property bool tightSheet: width < 720 * theme.textScale
-            readonly property real sheetHeight: (tightSheet ? 196 : 150) * theme.textScale
+            readonly property real sheetHeight: (tightSheet ? 232 : 186) * theme.textScale
 
             readonly property real railBoard: Math.min(width - railWidth - gap, height)
             readonly property real sheetBoard: Math.min(width, height - sheetHeight - gap)

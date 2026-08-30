@@ -15,7 +15,9 @@ const auto kStateKey = QStringLiteral("state/v1");
 // Still the key it was first stored under, so an existing preference survives
 // the control's rename.
 const auto kValidateKey = QStringLiteral("play/checkAsYouGo");
-const auto kPadModeKey = QStringLiteral("play/padMode");
+// A new key: the old one stored what *every* digit did, which is not what
+// the selector means any more.
+const auto kClickModeKey = QStringLiteral("play/clickMode");
 const auto kGeometryKey = QStringLiteral("window/geometry");
 const auto kMaximizedKey = QStringLiteral("window/maximized");
 const auto kElapsedKey = QStringLiteral("elapsed");
@@ -145,25 +147,25 @@ QVariantList SudokuGame::difficulties() {
     return list;
 }
 
-// Unknown ids only reach here from a stale setting or an empty override, so
-// they mean "no opinion" rather than an error.
-SudokuGame::PadMode SudokuGame::modeFromId(const QString &id, PadMode fallback) {
+// An unknown id only reaches here from a stale setting, so it means "no
+// opinion" rather than an error.
+SudokuGame::ClickMode SudokuGame::modeFromId(const QString &id, ClickMode fallback) {
     if (id == kHighlightId)
-        return PadMode::Highlight;
+        return ClickMode::Highlight;
     if (id == kNoteId)
-        return PadMode::Note;
+        return ClickMode::Note;
     if (id == kFillId)
-        return PadMode::Fill;
+        return ClickMode::Fill;
     return fallback;
 }
 
-QString SudokuGame::padMode() const {
-    switch (m_padMode) {
-    case PadMode::Highlight:
+QString SudokuGame::clickMode() const {
+    switch (m_clickMode) {
+    case ClickMode::Highlight:
         return kHighlightId;
-    case PadMode::Note:
+    case ClickMode::Note:
         return kNoteId;
-    case PadMode::Fill:
+    case ClickMode::Fill:
         break;
     }
     return kFillId;
@@ -201,25 +203,25 @@ QVariantList SudokuGame::digitCounts() const {
     return counts;
 }
 
-void SudokuGame::setPadMode(const QString &padMode) {
-    const PadMode mode = modeFromId(padMode, PadMode::Highlight);
-    if (m_padMode == mode)
+void SudokuGame::setClickMode(const QString &clickMode) {
+    const ClickMode mode = modeFromId(clickMode, ClickMode::Fill);
+    if (m_clickMode == mode)
         return;
-    m_padMode = mode;
-    QSettings().setValue(kPadModeKey, this->padMode());
-    emit padModeChanged();
+    m_clickMode = mode;
+    QSettings().setValue(kClickModeKey, this->clickMode());
+    emit clickModeChanged();
 }
 
-void SudokuGame::cyclePadMode() {
-    switch (m_padMode) {
-    case PadMode::Highlight:
-        setPadMode(kNoteId);
+void SudokuGame::cycleClickMode() {
+    switch (m_clickMode) {
+    case ClickMode::Highlight:
+        setClickMode(kNoteId);
         break;
-    case PadMode::Note:
-        setPadMode(kFillId);
+    case ClickMode::Note:
+        setClickMode(kFillId);
         break;
-    case PadMode::Fill:
-        setPadMode(kHighlightId);
+    case ClickMode::Fill:
+        setClickMode(kHighlightId);
         break;
     }
 }
@@ -307,16 +309,31 @@ void SudokuGame::clearHighlight() {
     setHighlightDigit(-1);
 }
 
-void SudokuGame::pressDigit(int digit, const QString &overrideMode) {
-    const PadMode mode = modeFromId(overrideMode, m_padMode);
-    // With no cell to write into, a digit can only light itself up, whatever
-    // the mode or the modifier asked for.
-    if (mode == PadMode::Highlight || m_screen != Screen::Playing || m_selectedIndex < 0)
+void SudokuGame::pressDigitKey(int digit, int modifiers) {
+    // The one place the keyboard contract is written down. It is deliberately
+    // deaf to the click mode: a key does the same thing in every mode, so no
+    // player has to look at a selector before typing a digit.
+    const Qt::KeyboardModifiers mods(modifiers);
+    if (mods & (Qt::ControlModifier | Qt::AltModifier))
         toggleHighlight(digit);
-    else if (mode == PadMode::Note)
+    else if (mods & Qt::ShiftModifier)
         toggleNote(digit);
     else
         enterValue(digit);
+}
+
+void SudokuGame::clickDigit(int digit) {
+    switch (m_clickMode) {
+    case ClickMode::Highlight:
+        toggleHighlight(digit);
+        return;
+    case ClickMode::Note:
+        toggleNote(digit);
+        return;
+    case ClickMode::Fill:
+        enterValue(digit);
+        return;
+    }
 }
 
 void SudokuGame::erase() {
@@ -407,9 +424,8 @@ void SudokuGame::loadSettings() {
     // Off by default: a first puzzle should not correct you before you have
     // finished thinking. A choice already stored still wins.
     m_board.setValidateAsYouGo(settings.value(kValidateKey, false).toBool());
-    // Anything unrecognised (including the int this key held before the modes
-    // got names) falls back to the default.
-    m_padMode = modeFromId(settings.value(kPadModeKey).toString(), PadMode::Highlight);
+    // Anything unrecognised falls back to the default.
+    m_clickMode = modeFromId(settings.value(kClickModeKey).toString(), ClickMode::Fill);
 
     const QJsonObject json =
         QJsonDocument::fromJson(settings.value(kStateKey).toString().toUtf8()).object();

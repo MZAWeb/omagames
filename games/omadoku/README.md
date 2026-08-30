@@ -17,12 +17,13 @@ current Omarchy theme.
   digit clears that cell's own notes and nothing else: the marks you left in the
   rest of the row, column and box are your bookkeeping to keep or tidy. Notes
   are never checked.
-- **Mode** (the segmented control under the keypad in the rail) decides what a digit does,
-  typed or clicked: *Highlight*, *Note* or *Fill*. `N` cycles it and it is
-  remembered between sessions; Highlight is the default. Holding a modifier
-  overrides it for one press without switching mode, which is what each
-  segment's badge spells out: `Alt+1-9` highlights, `Shift+1-9` notes,
-  `Ctrl+1-9` fills — and with no cell selected any digit just highlights.
+- **The keyboard mapping is fixed** and never depends on anything on screen:
+  `1`-`9` fill, `Shift+1`-`9` note, `Ctrl+1`-`9` (or `Alt+1`-`9`) highlight. The
+  line under the keypad says so at all times.
+- **Mouse clicks** (the segmented control under that line) is the one thing the
+  *Highlight* / *Note* / *Fill* selector decides: what clicking a key on the
+  keypad does. It changes nothing about the keyboard. `N` cycles it and it is
+  remembered between sessions; Fill is the default.
 - **Highlighting** lights up every cell holding that digit, givens included.
   The same digit again (or `Escape`) clears it, another digit switches it.
 - An unfinished puzzle is saved automatically and offered as *Resume* the next
@@ -33,11 +34,10 @@ current Omarchy theme.
 | Key | Action |
 | --- | --- |
 | Arrows or `h` `j` `k` `l` | move the selection |
-| `1`–`9` | do the selected mode's action with that digit |
-| `Alt+1`–`Alt+9` | highlight every cell holding that digit |
+| `1`–`9` | fill the digit into the selected cell |
 | `Shift+1`–`Shift+9` | toggle the digit as a note in the selected cell |
-| `Ctrl+1`–`Ctrl+9` | fill the digit into the selected cell |
-| `N` | cycle the mode: Highlight → Note → Fill |
+| `Ctrl+1`–`Ctrl+9` (or `Alt+1`–`Alt+9`) | highlight every cell holding that digit |
+| `N` | cycle what a keypad click does: Highlight → Note → Fill |
 | `Backspace`, `Delete`, `0` | erase the cell |
 | `Ctrl+Z` | undo |
 | `R` | restart the puzzle |
@@ -52,8 +52,9 @@ Every button shows its key, so nothing above needs memorising.
 
 The board is the hero: square, centred, and given every pixel the controls do
 not need. Everything else lives in one rail, always in the same order — the
-3×3 keypad, the mode selector, *Validate as I go*, then Erase, Undo, Restart
-and New game, with a line of keyboard reminders at the foot.
+3×3 keypad, the line stating the keyboard mapping, the *Mouse clicks*
+selector, *Validate as I go*, then Erase, Undo, Restart and New game, with a
+line of keyboard reminders at the foot.
 
 The rail sits beside the board on the right, and folds into a bottom sheet
 under it when that leaves the board bigger — which is what a tall, narrow

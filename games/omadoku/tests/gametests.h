@@ -16,9 +16,9 @@ private slots:
     void selectionMovesWithinTheGrid();
     void digitsGoIntoTheSelectedCellOnly();
     void exposesDifficultiesWithLabels();
-    void padModeDecidesWhatADigitDoes();
-    void modifierOverridesBeatTheMode();
-    void padModeCyclesAndPersists();
+    void clickModeDecidesWhatAKeypadClickDoes();
+    void keyboardMappingIgnoresTheClickMode();
+    void clickModeCyclesAndPersists();
     void highlightTogglesAndSwitchesDigits();
     void selectedValueFollowsTheSelection();
     void undoRestartAndEraseGoThroughTheBoard();
