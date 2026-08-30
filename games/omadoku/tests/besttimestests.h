@@ -11,6 +11,7 @@ private slots:
     void initTestCase();
     void init();
 
+    void savedBestTimesReachQml();
     void aWinIsRecordedWithItsRank();
     void aHandEditedZeroIsNotATime();
     void restartingOrLeavingRecordsNothing();

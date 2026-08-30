@@ -7,7 +7,6 @@
 #include <deque>
 
 #include "omasnakegame.h"
-#include "scoretable.h"
 
 namespace {
 
@@ -283,23 +282,19 @@ void BridgeTests::modeOnlyChangesBetweenGames() {
     QCOMPARE(game.mode(), QStringLiteral("classic"));
 }
 
-// Ordering, the cap and the ranks are ScoreTable's own tests now; what is
+// Ordering, the cap and the ranks are ScoreTable's own tests now. What is
 // Omasnake's is that a table is keyed by the walls rule and the speed
-// together, and the shape it reaches QML in.
+// together, and that the JSON it wrote before the move still reads back: the
+// string below is the literal output of the old HighScores::toJson().
 void BridgeTests::savedHighScoresReachQml() {
-    {
-        OmaGames::ScoreTable scores({QStringLiteral("score"), QStringLiteral("length")}, 10,
-                                    OmaGames::ScoreTable::sameOrder({QStringLiteral("classic-normal"),
-                                                                     QStringLiteral("wrap-fast")},
-                                                                    OmaGames::ScoreTable::HigherIsBetter));
-        scores.insert(QStringLiteral("classic-normal"),
-                      {4200, QDate(2026, 8, 30), {{QStringLiteral("length"), 30}}});
-        scores.insert(QStringLiteral("classic-normal"),
-                      {900, QDate(2026, 8, 29), {{QStringLiteral("length"), 12}}});
-        scores.insert(QStringLiteral("wrap-fast"),
-                      {7000, QDate(2026, 8, 28), {{QStringLiteral("length"), 44}}});
-        scores.save();
-    }
+    QSettings settings;
+    settings.setValue(
+        QStringLiteral("scores/v1"),
+        QStringLiteral(R"({"classic-fast":[],"classic-normal":[{"date":"2026-08-30","length":24,"score":310},)"
+                       R"({"date":"2026-08-28","length":11,"score":90}],"classic-slow":[],)"
+                       R"("wrap-fast":[{"date":"2026-06-15","length":40,"score":770}],)"
+                       R"("wrap-normal":[],"wrap-slow":[]})"));
+    settings.sync();
 
     OmasnakeGame game;
     const QVariantList rows = game.highScores();
@@ -309,17 +304,17 @@ void BridgeTests::savedHighScoresReachQml() {
     QCOMPARE(first.value(QStringLiteral("mode")).toString(), QStringLiteral("classic"));
     QCOMPARE(first.value(QStringLiteral("difficulty")).toString(), QStringLiteral("normal"));
     QCOMPARE(first.value(QStringLiteral("label")).toString(), QStringLiteral("Normal"));
-    QCOMPARE(first.value(QStringLiteral("score")).toInt(), 4200);
-    QCOMPARE(first.value(QStringLiteral("length")).toInt(), 30);
+    QCOMPARE(first.value(QStringLiteral("score")).toInt(), 310);
+    QCOMPARE(first.value(QStringLiteral("length")).toInt(), 24);
     QCOMPARE(first.value(QStringLiteral("date")).toString(), QStringLiteral("2026-08-30"));
-    QCOMPARE(rows.at(1).toMap().value(QStringLiteral("score")).toInt(), 900);
+    QCOMPARE(rows.at(1).toMap().value(QStringLiteral("score")).toInt(), 90);
     QCOMPARE(rows.at(2).toMap().value(QStringLiteral("table")).toString(), QStringLiteral("wrap-fast"));
 
-    QCOMPARE(game.bests().value(QStringLiteral("classic-normal")).toInt(), 4200);
-    QCOMPARE(game.bests().value(QStringLiteral("wrap-fast")).toInt(), 7000);
+    QCOMPARE(game.bests().value(QStringLiteral("classic-normal")).toInt(), 310);
+    QCOMPARE(game.bests().value(QStringLiteral("wrap-fast")).toInt(), 770);
     QCOMPARE(game.bests().value(QStringLiteral("wrap-slow")).toInt(), 0);
     // `best` follows the walls rule and speed the start screen is showing.
-    QCOMPARE(game.best(), 4200);
+    QCOMPARE(game.best(), 310);
 }
 
 void BridgeTests::lastModeAndDifficultyAreRemembered() {

@@ -6,7 +6,6 @@
 #include <QtTest>
 
 #include "omasweepergame.h"
-#include "scoretable.h"
 #include "solver.h"
 
 namespace {
@@ -413,22 +412,18 @@ void BridgeTests::backToStartClearsTheBoard() {
     QCOMPARE(game.elapsedSeconds(), 0);
 }
 
-// Ordering, the cap and the ranks are ScoreTable's own tests now; what is
-// Omasweeper's is that the tables are keyed by preset and the shape they
-// reach QML in.
+// Ordering, the cap and the ranks are ScoreTable's own tests now. What is
+// Omasweeper's is that the tables are keyed by preset and that the JSON it
+// wrote before the move still reads back: the string below is the literal
+// output of the old BestTimes::toJson().
 void BridgeTests::savedBestTimesReachQml() {
-    const QDate day(2026, 8, 30);
-    {
-        OmaGames::ScoreTable times({QStringLiteral("seconds")}, 5,
-                                   OmaGames::ScoreTable::sameOrder({QStringLiteral("beginner"),
-                                                                    QStringLiteral("intermediate"),
-                                                                    QStringLiteral("expert")},
-                                                                   OmaGames::ScoreTable::LowerIsBetter));
-        times.insert(QStringLiteral("beginner"), {31, day, {}});
-        times.insert(QStringLiteral("beginner"), {12, day, {}});
-        times.insert(QStringLiteral("expert"), {999, day, {}});
-        times.save();
-    }
+    QSettings settings;
+    settings.setValue(
+        QStringLiteral("scores/v1"),
+        QStringLiteral(R"({"beginner":[{"date":"2026-08-27","seconds":22},)"
+                       R"({"date":"2026-08-30","seconds":41}],)"
+                       R"("expert":[{"date":"2026-03-09","seconds":602}],"intermediate":[]})"));
+    settings.sync();
 
     OmasweeperGame game;
     const QVariantList rows = game.bestTimes();
@@ -436,13 +431,13 @@ void BridgeTests::savedBestTimesReachQml() {
     const QVariantMap first = rows.first().toMap();
     QCOMPARE(first.value(QStringLiteral("preset")).toString(), QStringLiteral("beginner"));
     QCOMPARE(first.value(QStringLiteral("label")).toString(), QStringLiteral("Beginner"));
-    QCOMPARE(first.value(QStringLiteral("seconds")).toInt(), 12);
-    QCOMPARE(first.value(QStringLiteral("date")).toString(), QStringLiteral("2026-08-30"));
-    QCOMPARE(rows.at(1).toMap().value(QStringLiteral("seconds")).toInt(), 31);
+    QCOMPARE(first.value(QStringLiteral("seconds")).toInt(), 22);
+    QCOMPARE(first.value(QStringLiteral("date")).toString(), QStringLiteral("2026-08-27"));
+    QCOMPARE(rows.at(1).toMap().value(QStringLiteral("seconds")).toInt(), 41);
     QCOMPARE(rows.at(2).toMap().value(QStringLiteral("preset")).toString(), QStringLiteral("expert"));
 
-    QCOMPARE(game.bests().value(QStringLiteral("beginner")).toInt(), 12);
-    QCOMPARE(game.bests().value(QStringLiteral("expert")).toInt(), 999);
+    QCOMPARE(game.bests().value(QStringLiteral("beginner")).toInt(), 22);
+    QCOMPARE(game.bests().value(QStringLiteral("expert")).toInt(), 602);
     QCOMPARE(game.bests().value(QStringLiteral("intermediate")).toInt(), 0);
 }
 
