@@ -358,8 +358,8 @@ void SudokuGame::enterValue(int digit) {
 void SudokuGame::toggleNote(int digit) {
     if (m_screen != Screen::Playing)
         return;
-    // Every selected cell at once, as one undo step. This is what a
-    // multi-selection is for.
+    // Every selected cell at once, as one undo step, and all of them end the
+    // same way. This is what a multi-selection is for.
     applyChange(m_board.toggleNotes(m_selection, digit));
 }
 

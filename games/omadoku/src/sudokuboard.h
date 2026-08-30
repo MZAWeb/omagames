@@ -38,7 +38,10 @@ public:
     // exactly those rows. Givens and out-of-range indices are ignored.
     std::vector<int> setValue(int index, int value);
     // Pencilling one digit across several cells is one act and one undo step.
-    // Cells that already hold a value are skipped, not emptied.
+    // Cells that already hold a value are skipped, not emptied. The empty ones
+    // move together: the note is added to all of them unless every one already
+    // has it, in which case it is removed from all. Over a single cell that is
+    // the plain toggle it has always been.
     std::vector<int> toggleNotes(const std::vector<int> &indices, int digit);
     std::vector<int> toggleNote(int index, int digit) { return toggleNotes({index}, digit); }
     std::vector<int> erase(int index);

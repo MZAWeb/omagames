@@ -324,11 +324,26 @@ void InputTests::notesGoToEverySelectedEmptyCellAsOneStep() {
     QCOMPARE(notesOf(&game, empties.at(2)), 0);
     QCOMPARE(valueOf(&game, empties.at(1)), 5);      // the entry is still there
 
-    // Toggling twice puts every cell back where it started, still per cell.
+    // A mixed selection converges rather than flipping cell by cell: with the
+    // note in only one of them, one press writes it into both.
+    game.select(empties.at(0));
     game.toggleNote(7);
+    game.select(empties.at(0));
+    game.toggleSelection(empties.at(1));
+    game.toggleSelection(empties.at(2));
+    game.toggleNote(7);
+    QCOMPARE(notesOf(&game, empties.at(0)), 1 << 6);
+    QCOMPARE(notesOf(&game, empties.at(2)), 1 << 6);
+
+    // The press after that finds them all noted and clears the lot, in one
+    // step: the undo brings the whole converged selection back.
     game.toggleNote(7);
     QCOMPARE(notesOf(&game, empties.at(0)), 0);
     QCOMPARE(notesOf(&game, empties.at(2)), 0);
+    game.undo();
+    QCOMPARE(notesOf(&game, empties.at(0)), 1 << 6);
+    QCOMPARE(notesOf(&game, empties.at(2)), 1 << 6);
+    QCOMPARE(valueOf(&game, empties.at(1)), 5);      // still filled, still skipped
 }
 
 void InputTests::aValueGoesToTheCursorAndFoldsTheSelection() {
