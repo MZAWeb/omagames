@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QString>
 #include <array>
 
 // The three classic Minesweeper sizes. `key` is the stable id used for
@@ -25,5 +26,12 @@ constexpr std::array<PresetSpec, kPresetCount> kAll = {{
 }};
 
 constexpr const PresetSpec &spec(Preset preset) { return kAll[size_t(preset)]; }
+
+// A preset's key is the id everything outside the engine uses: the setting,
+// the QML model and the best-times table.
+QString id(Preset preset);
+QString label(Preset preset);
+// False, leaving `preset` untouched, when the id is not one of ours.
+bool fromId(const QString &id, Preset *preset);
 
 }  // namespace Presets

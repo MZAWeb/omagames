@@ -19,6 +19,7 @@ HEADERS += \
     bridgetests.h
 
 SOURCES += \
+    ../src/presets.cpp \
     ../src/board.cpp \
     ../src/frontier.cpp \
     ../src/solver.cpp \

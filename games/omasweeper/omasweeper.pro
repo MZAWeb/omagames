@@ -14,6 +14,7 @@ HEADERS += \
     src/fieldview.h
 SOURCES += \
     src/main.cpp \
+    src/presets.cpp \
     src/board.cpp \
     src/frontier.cpp \
     src/solver.cpp \
