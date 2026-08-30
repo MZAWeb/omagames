@@ -6,10 +6,10 @@
 #include <QRectF>
 #include <QSizeF>
 #include <QStringList>
-#include <QTimer>
 #include <QVariantList>
 #include <QVariantMap>
 
+#include "pacer.h"
 #include "table.h"
 
 // The only bridge between the engine and QML (`game` context property). Owns
@@ -87,7 +87,7 @@ public:
     // settings wipes it. True for the round that set it, so the dock can celebrate.
     int bestBankroll() const { return m_bestBankroll; }
     bool newBest() const { return m_newBest; }
-    int stepInterval() const { return m_stepMs; }
+    int stepInterval() const { return m_pacer.interval(); }
     void setStepInterval(int ms);
     QVariantList seats() const;
     QVariantMap dealerHand() const;
@@ -164,9 +164,8 @@ private:
 
     Table m_table;
     QRandomGenerator m_rng;
-    QTimer m_timer;
+    OmaGames::Pacer m_pacer;
     QStringList m_log;
-    int m_stepMs;
     int m_bet = 50;
     int m_handsPlayed = 0;
     int m_netResult = 0;
