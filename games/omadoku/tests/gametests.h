@@ -3,8 +3,8 @@
 #include <QObject>
 #include <QString>
 
-// The QML bridge: screen flow, selection, digit entry, undo and persistence
-// (games/omadoku/src/sudokugame.h).
+// The QML bridge itself: screen flow, entering and undoing digits, the
+// restart question and the clock (games/omadoku/src/sudokugame.h).
 class GameTests : public QObject {
     Q_OBJECT
 private slots:
@@ -14,11 +14,6 @@ private slots:
     void startsOnTheStartScreen();
     void newGameSelectsTheFirstEmptyCell();
     void digitsGoIntoTheSelectedCellOnly();
-    void clickModeDecidesWhatAKeypadClickDoes();
-    void keyboardMappingIgnoresTheClickMode();
-    void clickModeCyclesAndPersists();
-    void highlightTogglesAndSwitchesDigits();
-    void highlightWearsAFixedHighlighterYellow();
     void cursorValueFollowsTheCursor();
     void undoRestartAndEraseGoThroughTheBoard();
     void restartAsksBeforeWipingTheBoard();

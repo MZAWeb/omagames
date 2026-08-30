@@ -14,18 +14,10 @@ namespace {
 const auto kStartId = QStringLiteral("start");
 const auto kPlayingId = QStringLiteral("playing");
 const auto kWonId = QStringLiteral("won");
-const auto kHighlightId = QStringLiteral("highlight");
-const auto kNoteId = QStringLiteral("note");
-const auto kFillId = QStringLiteral("fill");
 
 // Writing on every keystroke would hit the disk far too often; a short delay
 // still survives a crash or a kill in practice.
 constexpr int kSaveDelayMs = 500;
-
-// Highlighter yellow, and an ink dark enough to stay readable on it. The one
-// place in the game that is deliberately deaf to the Omarchy theme.
-constexpr QColor kHighlightColor(0xff, 0xf0, 0x2b);
-constexpr QColor kHighlightInk(0x1a, 0x1a, 0x14);
 
 }  // namespace
 
@@ -57,28 +49,8 @@ QVariantList SudokuGame::difficulties() {
     return SudokuLevels::all();
 }
 
-// An unknown id only reaches here from a stale setting, so it means "no
-// opinion" rather than an error.
-SudokuGame::ClickMode SudokuGame::modeFromId(const QString &id, ClickMode fallback) {
-    if (id == kHighlightId)
-        return ClickMode::Highlight;
-    if (id == kNoteId)
-        return ClickMode::Note;
-    if (id == kFillId)
-        return ClickMode::Fill;
-    return fallback;
-}
-
 QString SudokuGame::clickMode() const {
-    switch (m_clickMode) {
-    case ClickMode::Highlight:
-        return kHighlightId;
-    case ClickMode::Note:
-        return kNoteId;
-    case ClickMode::Fill:
-        break;
-    }
-    return kFillId;
+    return m_input.clickMode();
 }
 
 SudokuGame::SudokuGame(QObject *parent) : QObject(parent), m_times(SudokuLevels::timesTable()) {
@@ -114,26 +86,14 @@ QVariantList SudokuGame::digitCounts() const {
 }
 
 void SudokuGame::setClickMode(const QString &clickMode) {
-    const ClickMode mode = modeFromId(clickMode, ClickMode::Fill);
-    if (m_clickMode == mode)
+    if (!m_input.setClickMode(clickMode))
         return;
-    m_clickMode = mode;
-    m_store.setClickMode(this->clickMode());
+    m_store.setClickMode(m_input.clickMode());
     emit clickModeChanged();
 }
 
 void SudokuGame::cycleClickMode() {
-    switch (m_clickMode) {
-    case ClickMode::Highlight:
-        setClickMode(kNoteId);
-        break;
-    case ClickMode::Note:
-        setClickMode(kFillId);
-        break;
-    case ClickMode::Fill:
-        setClickMode(kHighlightId);
-        break;
-    }
+    setClickMode(m_input.nextClickMode());
 }
 
 void SudokuGame::setValidateAsYouGo(bool validateAsYouGo) {
@@ -217,7 +177,7 @@ bool SudokuGame::backOut() {
         collapseSelection();
         return true;
     }
-    if (m_highlightDigit >= 0) {
+    if (m_input.highlightDigit() >= 0) {
         clearHighlight();
         return true;
     }
@@ -243,43 +203,40 @@ void SudokuGame::toggleNote(int digit) {
 }
 
 QColor SudokuGame::highlightColor() {
-    return kHighlightColor;
+    return SudokuInput::highlightColor();
 }
 
 QColor SudokuGame::highlightInk() {
-    return kHighlightInk;
+    return SudokuInput::highlightInk();
 }
 
 void SudokuGame::toggleHighlight(int digit) {
-    setHighlightDigit(digit >= 1 && digit <= 9 && digit != m_highlightDigit ? digit : -1);
+    if (m_input.toggleHighlight(digit))
+        emit highlightDigitChanged();
 }
 
 void SudokuGame::clearHighlight() {
-    setHighlightDigit(-1);
+    if (m_input.clearHighlight())
+        emit highlightDigitChanged();
 }
 
 void SudokuGame::pressDigitKey(int digit, int modifiers) {
-    // The one place the keyboard contract is written down. It is deliberately
-    // deaf to the click mode: a key does the same thing in every mode, so no
-    // player has to look at a selector before typing a digit.
-    const Qt::KeyboardModifiers mods(modifiers);
-    if (mods & (Qt::ControlModifier | Qt::AltModifier))
-        toggleHighlight(digit);
-    else if (mods & Qt::ShiftModifier)
-        toggleNote(digit);
-    else
-        enterValue(digit);
+    applyDigit(SudokuInput::keyAction(Qt::KeyboardModifiers(modifiers)), digit);
 }
 
 void SudokuGame::clickDigit(int digit) {
-    switch (m_clickMode) {
-    case ClickMode::Highlight:
+    applyDigit(m_input.clickAction(), digit);
+}
+
+void SudokuGame::applyDigit(SudokuInput::Action action, int digit) {
+    switch (action) {
+    case SudokuInput::Action::Highlight:
         toggleHighlight(digit);
         return;
-    case ClickMode::Note:
+    case SudokuInput::Action::Note:
         toggleNote(digit);
         return;
-    case ClickMode::Fill:
+    case SudokuInput::Action::Fill:
         enterValue(digit);
         return;
     }
@@ -414,13 +371,6 @@ void SudokuGame::setRestartPending(bool pending) {
     emit restartPendingChanged();
 }
 
-void SudokuGame::setHighlightDigit(int digit) {
-    if (m_highlightDigit == digit)
-        return;
-    m_highlightDigit = digit;
-    emit highlightDigitChanged();
-}
-
 void SudokuGame::setHasSavedGame(bool hasSavedGame) {
     if (m_hasSavedGame == hasSavedGame)
         return;
@@ -444,7 +394,7 @@ void SudokuGame::loadSettings() {
     // before you have finished thinking. A choice already stored still wins,
     // and anything unrecognised falls back to the default.
     m_board.setValidateAsYouGo(m_store.validateAsYouGo(false));
-    m_clickMode = modeFromId(m_store.clickMode(), ClickMode::Fill);
+    m_input.setClickMode(m_store.clickMode());
 
     const SudokuStore::SavedGame saved = m_store.savedGame();
     if (saved.board.isEmpty() || !SudokuBoard::fromJson(saved.board, &m_board))

@@ -1,71 +1,37 @@
 #include "inputtests.h"
 
-#include <QKeyEvent>
 #include <QSettings>
 #include <QTemporaryDir>
 #include <QtTest>
 
+#include <cmath>
+
 #include "gameprobe.h"
 #include "savedgame.h"
-#include "sudokukeys.h"
+#include "sudokuinput.h"
+
+using TestSupport::cellInt;
 
 namespace {
 
-// A US keyboard sends the digit row as keycodes 10-18. Events in these tests
-// carry codes from that window on purpose: nothing about the resolution may
-// depend on them, because a synthetic keymap can put any key there.
-constexpr quint32 kDigitRowScanCode = 10;
-
-int digitFor(int key, Qt::KeyboardModifiers modifiers = Qt::NoModifier,
-             const QString &text = QString()) {
-    return SudokuKeys::digitFor(key, modifiers, text);
+// WCAG relative luminance and contrast ratio, so "readable" is measured the
+// way a contrast checker would rather than guessed at.
+double luminance(const QColor &color) {
+    auto channel = [](double v) { return v <= 0.03928 ? v / 12.92 : std::pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * channel(color.redF()) + 0.7152 * channel(color.greenF())
+        + 0.0722 * channel(color.blueF());
 }
 
-// The dispatch BoardScreen.qml performs on every press, so a test drives the
-// same path the running game does.
-void deliver(SudokuGame *game, const QKeyEvent &event) {
-    if (event.type() != QEvent::KeyPress)
-        return;  // the board only ever reads presses
-    const int digit = game->digitForKey(event.key(), int(event.modifiers()), event.text());
-    if (digit > 0) {
-        game->pressDigitKey(digit, int(event.modifiers()));
-        return;
-    }
-    int deltaRow = 0;
-    int deltaColumn = 0;
-    switch (event.key()) {
-    case Qt::Key_Left:
-    case Qt::Key_H:
-        deltaColumn = -1;
-        break;
-    case Qt::Key_Right:
-    case Qt::Key_L:
-        deltaColumn = 1;
-        break;
-    case Qt::Key_Up:
-    case Qt::Key_K:
-        deltaRow = -1;
-        break;
-    case Qt::Key_Down:
-    case Qt::Key_J:
-        deltaRow = 1;
-        break;
-    default:
-        return;
-    }
-    if (event.modifiers() & Qt::ShiftModifier)
-        game->extendSelection(deltaRow, deltaColumn);
-    else
-        game->moveCursor(deltaRow, deltaColumn);
+double contrastRatio(const QColor &a, const QColor &b) {
+    const double first = luminance(a);
+    const double second = luminance(b);
+    return (std::max(first, second) + 0.05) / (std::min(first, second) + 0.05);
 }
 
 }  // namespace
 
-using TestSupport::notesOf;
-using TestSupport::selectionOf;
-using TestSupport::valueOf;
-
 void InputTests::initTestCase() {
+    // Never touch the real ~/.config/Omacom while testing.
     static QTemporaryDir dir;
     QVERIFY(dir.isValid());
     m_settingsDir = dir.path();
@@ -78,110 +44,186 @@ void InputTests::init() {
     settings.sync();
 }
 
-void InputTests::plainDigitKeysResolve() {
-    for (int digit = 1; digit <= 9; ++digit) {
-        const int key = Qt::Key_0 + digit;
-        QCOMPARE(digitFor(key, Qt::NoModifier, QString::number(digit)), digit);
-        // A modifier changes what the digit does, never which digit it is.
-        QCOMPARE(digitFor(key, Qt::ControlModifier), digit);
-        QCOMPARE(digitFor(key, Qt::AltModifier), digit);
-        QCOMPARE(digitFor(key, Qt::ShiftModifier), digit);
+void InputTests::theClickModeWalksTheThreeActions() {
+    SudokuInput input;
+    QCOMPARE(input.clickMode(), QStringLiteral("fill"));  // the default
+    QCOMPARE(int(input.clickAction()), int(SudokuInput::Action::Fill));
+
+    const QStringList walk {QStringLiteral("highlight"), QStringLiteral("note"),
+                            QStringLiteral("fill")};
+    for (const QString &next : walk) {
+        QCOMPARE(input.nextClickMode(), next);
+        QVERIFY(input.setClickMode(next));
+        QCOMPARE(input.clickMode(), next);
     }
-    QCOMPARE(digitFor(Qt::Key_0, Qt::NoModifier, QStringLiteral("0")), 0);  // erase, not a digit
+    QVERIFY(!input.setClickMode(QStringLiteral("fill")));  // already there
+
+    // An unknown id is a stale setting, not an error: it means Fill.
+    input.setClickMode(QStringLiteral("note"));
+    QVERIFY(input.setClickMode(QStringLiteral("nonsense")));
+    QCOMPARE(input.clickMode(), QStringLiteral("fill"));
 }
 
-void InputTests::shiftedDigitsResolveOnUsLayouts() {
-    // The character the key produced names the digit.
-    QCOMPARE(digitFor(Qt::Key_Exclam, Qt::ShiftModifier, QStringLiteral("!")), 1);
-    QCOMPARE(digitFor(Qt::Key_Percent, Qt::ShiftModifier, QStringLiteral("%")), 5);
-    // No text on the event: the key itself still names it.
-    QCOMPARE(digitFor(Qt::Key_ParenLeft, Qt::ShiftModifier), 9);
-
-    // Without Shift those same symbols are just symbols, and a key whose only
-    // claim to being a digit was where it sits on the keyboard is not one:
-    // guessing from the hardware is what let an arrow write a note.
-    QCOMPARE(digitFor(Qt::Key_Exclam, Qt::NoModifier, QStringLiteral("!")), 0);
-    QCOMPARE(digitFor(Qt::Key_Eacute, Qt::NoModifier, QStringLiteral("é")), 0);
-    QCOMPARE(digitFor(Qt::Key_Minus, Qt::NoModifier, QStringLiteral("-")), 0);
+void InputTests::theNumberRowIgnoresTheClickMode() {
+    using Action = SudokuInput::Action;
+    QCOMPARE(int(SudokuInput::keyAction(Qt::NoModifier)), int(Action::Fill));
+    QCOMPARE(int(SudokuInput::keyAction(Qt::ShiftModifier)), int(Action::Note));
+    QCOMPARE(int(SudokuInput::keyAction(Qt::ControlModifier)), int(Action::Highlight));
+    QCOMPARE(int(SudokuInput::keyAction(Qt::AltModifier)), int(Action::Highlight));
+    // Ctrl wins over Shift, and a keypad modifier changes nothing.
+    QCOMPARE(int(SudokuInput::keyAction(Qt::ControlModifier | Qt::ShiftModifier)),
+             int(Action::Highlight));
+    QCOMPARE(int(SudokuInput::keyAction(Qt::KeypadModifier)), int(Action::Fill));
 }
 
-void InputTests::modifiersAndOtherKeysResolveToNothing() {
-    // The bug this guards: a bare Shift carries no text, and an empty string
-    // used to match the first shifted digit and type a 1.
-    const QList<int> modifierKeys {Qt::Key_Shift, Qt::Key_Control, Qt::Key_Alt, Qt::Key_AltGr,
-                                   Qt::Key_Meta, Qt::Key_Super_L, Qt::Key_CapsLock,
-                                   Qt::Key_NumLock, Qt::Key_Mode_switch};
-    // Every other key the board binds means itself, never a digit — the arrows
-    // most of all, since Shift+arrow is how a selection is swept.
-    const QList<int> otherKeys {Qt::Key_H, Qt::Key_J, Qt::Key_K, Qt::Key_L, Qt::Key_N, Qt::Key_R,
-                                Qt::Key_V, Qt::Key_Left, Qt::Key_Right, Qt::Key_Up, Qt::Key_Down,
-                                Qt::Key_Escape, Qt::Key_Backspace, Qt::Key_Delete, Qt::Key_Space,
-                                Qt::Key_Tab, Qt::Key_F1, Qt::Key_unknown};
-    for (int key : modifierKeys + otherKeys) {
-        QCOMPARE(digitFor(key), 0);
-        QCOMPARE(digitFor(key, Qt::ShiftModifier), 0);
-        QCOMPARE(digitFor(key, Qt::ControlModifier), 0);
-        // Nor does the text a compositor may attach to them make a difference.
-        QCOMPARE(digitFor(key, Qt::ShiftModifier, QString()), 0);
-    }
+void InputTests::theHighlightTakesOneDigitAtATime() {
+    SudokuInput input;
+    QCOMPARE(input.highlightDigit(), -1);
+    QVERIFY(!input.clearHighlight());  // nothing lit: nothing to announce
+
+    QVERIFY(input.toggleHighlight(4));
+    QCOMPARE(input.highlightDigit(), 4);
+    QVERIFY(input.toggleHighlight(7));  // another digit switches
+    QCOMPARE(input.highlightDigit(), 7);
+    QVERIFY(input.toggleHighlight(7));  // the same digit clears
+    QCOMPARE(input.highlightDigit(), -1);
+
+    // Only 1-9 light anything up; anything else clears.
+    QVERIFY(!input.toggleHighlight(0));
+    QVERIFY(!input.toggleHighlight(10));
+    input.toggleHighlight(3);
+    QVERIFY(input.toggleHighlight(0));
+    QCOMPARE(input.highlightDigit(), -1);
 }
 
-void InputTests::theBridgeAnswersTheSameAsTheHelper() {
-    SudokuGame game;
-    QCOMPARE(game.digitForKey(Qt::Key_4, Qt::NoModifier, QStringLiteral("4")), 4);
-    QCOMPARE(game.digitForKey(Qt::Key_Shift, Qt::ShiftModifier, QString()), 0);
-    QCOMPARE(game.digitForKey(Qt::Key_Exclam, Qt::ShiftModifier, QStringLiteral("!")), 1);
-}
-
-void InputTests::aShiftHeldSweepNeverWritesANote() {
+void InputTests::clickModeDecidesWhatAKeypadClickDoes() {
     SudokuGame game;
     game.newGame(QStringLiteral("easy"));
+    const int cell = game.cursorIndex();
+    QCOMPARE(game.clickMode(), QStringLiteral("fill"));  // the default
 
-    // Somewhere the sweep has room to run, starting on a cell the player may
-    // actually write in, so a stray note would have somewhere to land.
-    int start = -1;
-    for (int index = 0; index < Sudoku::kCells && start < 0; ++index) {
-        if (Sudoku::rowOf(index) <= 6 && Sudoku::colOf(index) <= 5 && valueOf(&game, index) == 0)
-            start = index;
+    game.clickDigit(4);
+    QCOMPARE(cellInt(&game, cell, CellModel::ValueRole), 4);
+    QCOMPARE(game.highlightDigit(), -1);
+
+    game.erase();
+    game.setClickMode(QStringLiteral("note"));
+    game.clickDigit(3);
+    game.clickDigit(8);
+    QCOMPARE(cellInt(&game, cell, CellModel::NotesRole), (1 << 2) | (1 << 7));
+    QCOMPARE(cellInt(&game, cell, CellModel::ValueRole), 0);
+    game.clickDigit(3);  // toggles back off
+    QCOMPARE(cellInt(&game, cell, CellModel::NotesRole), 1 << 7);
+
+    game.setClickMode(QStringLiteral("highlight"));
+    game.clickDigit(6);
+    QCOMPARE(game.highlightDigit(), 6);
+    QCOMPARE(cellInt(&game, cell, CellModel::ValueRole), 0);
+    game.clickDigit(6);  // the same digit again clears it
+    QCOMPARE(game.highlightDigit(), -1);
+
+    game.setClickMode(QStringLiteral("nonsense"));  // an unknown mode lands on Fill
+    QCOMPARE(game.clickMode(), QStringLiteral("fill"));
+}
+
+void InputTests::keyboardMappingIgnoresTheClickMode() {
+    SudokuGame game;
+    game.newGame(QStringLiteral("easy"));
+    const int cell = game.cursorIndex();
+
+    // Whichever mode the selector is on, the number row means the same thing.
+    const QStringList modes {QStringLiteral("highlight"), QStringLiteral("note"),
+                             QStringLiteral("fill")};
+    for (const QString &mode : modes) {
+        game.setClickMode(mode);
+
+        game.pressDigitKey(5, Qt::NoModifier);
+        QCOMPARE(cellInt(&game, cell, CellModel::ValueRole), 5);
+        game.erase();
+
+        game.pressDigitKey(7, Qt::ShiftModifier);
+        QCOMPARE(cellInt(&game, cell, CellModel::NotesRole), 1 << 6);
+        QCOMPARE(cellInt(&game, cell, CellModel::ValueRole), 0);
+        game.pressDigitKey(7, Qt::ShiftModifier);
+        QCOMPARE(cellInt(&game, cell, CellModel::NotesRole), 0);
+
+        game.pressDigitKey(9, Qt::ControlModifier);
+        QCOMPARE(game.highlightDigit(), 9);
+        game.pressDigitKey(9, Qt::AltModifier);  // Alt is an alias for Ctrl here
+        QCOMPARE(game.highlightDigit(), -1);
+        QCOMPARE(cellInt(&game, cell, CellModel::ValueRole), 0);
     }
-    QVERIFY(start >= 0);
-    game.select(start);
+}
 
-    // Hold Shift, sweep right, right, down, let Shift go. The events carry
-    // keycodes from the window a US keyboard uses for its digit row, which is
-    // exactly what a synthetic keymap (wtype driving the real app) put an
-    // arrow on: the resolution must not care.
-    struct Press {
-        QEvent::Type type;
-        int key;
-        Qt::KeyboardModifiers modifiers;
-        quint32 scanCode;
-    };
-    const QList<Press> sequence {
-        {QEvent::KeyPress, Qt::Key_Shift, Qt::ShiftModifier, 50},
-        {QEvent::KeyPress, Qt::Key_Right, Qt::ShiftModifier, kDigitRowScanCode},
-        {QEvent::KeyPress, Qt::Key_Right, Qt::ShiftModifier, kDigitRowScanCode},
-        {QEvent::KeyPress, Qt::Key_Down, Qt::ShiftModifier, kDigitRowScanCode + 1},
-        {QEvent::KeyRelease, Qt::Key_Shift, Qt::NoModifier, 50},
-    };
-    for (const Press &press : sequence) {
-        const QKeyEvent event(press.type, press.key, press.modifiers, press.scanCode, 0, 0, QString());
-        deliver(&game, event);
+void InputTests::clickModeCyclesAndPersists() {
+    {
+        SudokuGame game;
+        QSignalSpy spy(&game, &SudokuGame::clickModeChanged);
+        game.newGame(QStringLiteral("easy"));
+        QCOMPARE(game.clickMode(), QStringLiteral("fill"));  // the default
+
+        game.cycleClickMode();
+        QCOMPARE(game.clickMode(), QStringLiteral("highlight"));
+        game.cycleClickMode();
+        QCOMPARE(game.clickMode(), QStringLiteral("note"));
+        game.cycleClickMode();
+        QCOMPARE(game.clickMode(), QStringLiteral("fill"));
+        QCOMPARE(spy.count(), 3);
+
+        game.setClickMode(QStringLiteral("note"));
+        game.newGame(QStringLiteral("hard"));
+        QCOMPARE(game.clickMode(), QStringLiteral("note"));  // a preference, not game state
     }
+    SudokuGame restarted;
+    QCOMPARE(restarted.clickMode(), QStringLiteral("note"));
+}
 
-    // Nothing was written anywhere, and there is nothing to undo.
-    for (int index = 0; index < Sudoku::kCells; ++index)
-        QCOMPARE(notesOf(&game, index), 0);
-    QVERIFY(!game.canUndo());
+void InputTests::highlightTogglesAndSwitchesDigits() {
+    SudokuGame game;
+    game.newGame(QStringLiteral("easy"));
+    QCOMPARE(game.highlightDigit(), -1);
 
-    // ...and the sweep itself went where it was aimed.
-    QCOMPARE(selectionOf(game), QList<int>({start, start + 1, start + 2, start + 2 + Sudoku::kSize}));
-    QCOMPARE(game.cursorIndex(), start + 2 + Sudoku::kSize);
+    QSignalSpy spy(&game, &SudokuGame::highlightDigitChanged);
+    game.toggleHighlight(4);
+    QCOMPARE(game.highlightDigit(), 4);
+    game.toggleHighlight(4);  // same digit clears
+    QCOMPARE(game.highlightDigit(), -1);
 
-    // The very same sweep with a digit in it still notes, so the guard has not
-    // simply switched the keyboard off.
-    const QKeyEvent five(QEvent::KeyPress, Qt::Key_5, Qt::ShiftModifier, 14, 0, 0, QStringLiteral("%"));
-    deliver(&game, five);
-    QCOMPARE(notesOf(&game, start), 1 << 4);
-    QVERIFY(game.canUndo());
+    game.toggleHighlight(4);
+    game.toggleHighlight(7);  // another digit switches
+    QCOMPARE(game.highlightDigit(), 7);
+    game.clearHighlight();
+    QCOMPARE(game.highlightDigit(), -1);
+    QCOMPARE(spy.count(), 5);
+
+    game.toggleHighlight(0);  // not a digit
+    QCOMPARE(game.highlightDigit(), -1);
+
+    game.toggleHighlight(2);
+    game.newGame(QStringLiteral("easy"));
+    QCOMPARE(game.highlightDigit(), -1);  // a new puzzle starts clean
+
+    game.toggleHighlight(2);
+    game.backToStart();
+    QCOMPARE(game.highlightDigit(), -1);
+}
+
+void InputTests::highlightWearsAFixedHighlighterYellow() {
+    // The deliberate exception to the theming rule: this pair never moves with
+    // the desktop theme, so the test states what it is meant to look like.
+    const QColor yellow = SudokuGame::highlightColor();
+    QCOMPARE(yellow, SudokuInput::highlightColor());
+    QVERIFY(yellow.isValid());
+    QCOMPARE(yellow.alpha(), 255);
+    QVERIFY(yellow.hslHueF() * 360.0 > 45.0);   // yellow, not orange or green
+    QVERIFY(yellow.hslHueF() * 360.0 < 70.0);
+    QVERIFY(yellow.hslSaturationF() > 0.8);     // a marker, not a pastel
+    QVERIFY(yellow.lightnessF() > 0.5);
+
+    // Dark ink on it, with room to spare over the 7:1 a contrast checker asks
+    // of small text.
+    const QColor ink = SudokuGame::highlightInk();
+    QCOMPARE(ink, SudokuInput::highlightInk());
+    QVERIFY(ink.lightnessF() < 0.15);
+    QVERIFY(contrastRatio(yellow, ink) > 7.0);
 }

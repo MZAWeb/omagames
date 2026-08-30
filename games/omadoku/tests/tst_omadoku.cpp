@@ -5,6 +5,7 @@
 #include "gametests.h"
 #include "besttimestests.h"
 #include "inputtests.h"
+#include "keytests.h"
 #include "generatortests.h"
 #include "persistencetests.h"
 #include "gradertests.h"
@@ -36,6 +37,8 @@ int main(int argc, char *argv[]) {
     status |= QTest::qExec(&gameTests, argc, argv);
     SelectionTests selection;
     status |= QTest::qExec(&selection, argc, argv);
+    KeyTests keys;
+    status |= QTest::qExec(&keys, argc, argv);
     InputTests input;
     status |= QTest::qExec(&input, argc, argv);
     BestTimesTests bestTimes;
