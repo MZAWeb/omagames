@@ -2,7 +2,8 @@ import QtQuick
 import QtQuick.Layouts
 import OmaGames
 
-// The top ten of each difficulty, for one mode at a time.
+// The top ten of each speed, for one edges setting at a time: the same two
+// groups as the start screen, so a table always says which rules it belongs to.
 OmaPanel {
     id: root
 
@@ -30,11 +31,15 @@ OmaPanel {
             font.bold: true
         }
 
-        OmaHintButton {
+        EdgesSelector {
             Layout.alignment: Qt.AlignHCenter
-            text: qsTr("%1 mode").arg(game.modeLabel)
-            hint: qsTr("M")
-            onClicked: game.toggleMode()
+            Layout.preferredWidth: Math.min(root.width - 2 * root.padding, 320 * theme.textScale)
+        }
+
+        SectionHeading {
+            Layout.fillWidth: true
+            Layout.topMargin: 4 * theme.textScale
+            text: qsTr("Speed")
         }
 
         RowLayout {

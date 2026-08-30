@@ -2,6 +2,8 @@
     <qresource prefix="/">
         <file alias="Main.qml">Main.qml</file>
         <file alias="StartScreen.qml">StartScreen.qml</file>
+        <file alias="SectionHeading.qml">SectionHeading.qml</file>
+        <file alias="EdgesSelector.qml">EdgesSelector.qml</file>
         <file alias="HighScoresPanel.qml">HighScoresPanel.qml</file>
         <file alias="PlayScreen.qml">PlayScreen.qml</file>
         <file alias="PlayHeader.qml">PlayHeader.qml</file>
