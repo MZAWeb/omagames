@@ -29,9 +29,10 @@ table seats four of them.
   cover the extra bet.
 
 You start with Ø 1,000. The bankroll, your table mates and session stats are
-saved between launches, as are the window's size and position. Your session net
-appears with round and shoe context in the action dock; every seat shows its own
-cumulative net beside its bankroll.
+saved between launches, as are the window's size and position. The action dock
+carries the at-a-glance line — round, shoe depth, your wallet and your session
+net — and the big balance under your seat repeats the wallet; every seat shows
+its own cumulative net beside its bankroll.
 At the payout every hand shows what it paid. Your best bankroll ever sits in the
 same line and lights up for the round that sets it; it survives new games and
 only a settings wipe clears it. When you're broke you can only start a new game.
@@ -46,7 +47,8 @@ Bets sit beside their hands as chips, with the insurance coin next to them
 when a seat has taken the side bet. The felt itself carries the last three
 table events and, when there is room, the house rules line. The fixed action
 dock shows only the current phase's commands together with the round, shoe
-depth and latest table event.
+depth, your wallet, your session net, your best bankroll and the latest table
+event.
 
 Heads-up and two-mate tables enlarge the dealer and player cards without
 drawing empty seats. The arc is re-spaced for the number of mates rather than

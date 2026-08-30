@@ -23,14 +23,24 @@ OmaPanel {
         RowLayout {
             width: parent.width
             spacing: 10 * theme.textScale
-            // Round, shoe depth and your session net read as one sentence, so
-            // they sit in their own tight row rather than spread across the dock.
+            // Round, shoe depth, your wallet and your session net read as one
+            // sentence, so they sit in their own tight row rather than spread
+            // across the dock.
             Row {
                 spacing: 5 * theme.textScale
                 Text {
                     text: "Round " + (game.handsPlayed + 1) + " · Shoe " + game.shoePercent + "%"
                     color: theme.foreground
                     opacity: 0.78
+                    font.pixelSize: 11 * theme.textScale
+                    font.bold: true
+                }
+                // The wallet is the number you check between hands, so it sits
+                // here at full strength even though the seat repeats it.
+                Text {
+                    text: "· Ø " + Number(game.bankroll).toLocaleString(Qt.locale(), "f", 0)
+                    color: theme.foreground
+                    opacity: 0.9
                     font.pixelSize: 11 * theme.textScale
                     font.bold: true
                 }
