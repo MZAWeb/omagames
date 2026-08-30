@@ -4,11 +4,52 @@
 
 #include <algorithm>
 
+#include "windowgeometry.h"
+
 #include "sudoku.h"
 #include "sudokugrader.h"
 #include "sudokukeys.h"
 
 namespace {
+
+// Levels cross to QML, and name a best-times table, as these ids. They are
+// stored under the same ids QML sees, so a table survives their order
+// changing.
+QString difficultyId(Difficulty difficulty) {
+    switch (difficulty) {
+    case Difficulty::Easy:
+        return QStringLiteral("easy");
+    case Difficulty::Medium:
+        return QStringLiteral("medium");
+    case Difficulty::Hard:
+        return QStringLiteral("hard");
+    case Difficulty::ExtraHard:
+        break;
+    }
+    return QStringLiteral("extrahard");
+}
+
+bool difficultyFromId(const QString &id, Difficulty *difficulty) {
+    for (int i = 0; i < kDifficultyCount; ++i) {
+        if (difficultyId(Difficulty(i)) == id) {
+            *difficulty = Difficulty(i);
+            return true;
+        }
+    }
+    return false;
+}
+
+// The five fastest solves per level. Faster is better, and a solve of no
+// time at all is a hand-edited file, not a record.
+OmaGames::ScoreTable timesTable() {
+    QStringList ids;
+    for (int i = 0; i < kDifficultyCount; ++i)
+        ids << difficultyId(Difficulty(i));
+    OmaGames::ScoreTable table({QStringLiteral("seconds")}, 5,
+                               OmaGames::ScoreTable::sameOrder(ids, OmaGames::ScoreTable::LowerIsBetter));
+    table.setMinimumValue(1);
+    return table;
+}
 
 // Ids shared with QML. They are stable identifiers, never shown to the player:
 // the labels beside them are.
@@ -84,7 +125,7 @@ QString SudokuGame::state() const {
 }
 
 QString SudokuGame::difficulty() const {
-    return BestTimes::idFor(m_board.puzzle().difficulty);
+    return difficultyId(m_board.puzzle().difficulty);
 }
 
 QString SudokuGame::difficultyLabel() const {
@@ -115,7 +156,7 @@ QVariantList SudokuGame::difficulties() {
     QVariantList list;
     for (const Level &level : levels) {
         list.append(QVariantMap {
-            {QStringLiteral("id"), BestTimes::idFor(level.difficulty)},
+            {QStringLiteral("id"), difficultyId(level.difficulty)},
             {QStringLiteral("label"), level.label},
             {QStringLiteral("techniques"), techniquesIntroducedBy(level.difficulty)},
             {QStringLiteral("description"), level.description},
@@ -148,7 +189,7 @@ QString SudokuGame::clickMode() const {
     return kFillId;
 }
 
-SudokuGame::SudokuGame(QObject *parent) : QObject(parent) {
+SudokuGame::SudokuGame(QObject *parent) : QObject(parent), m_times(timesTable()) {
     m_clock.setInterval(1000);
     connect(&m_clock, &QTimer::timeout, this, [this]() {
         ++m_elapsedSeconds;
@@ -221,7 +262,7 @@ void SudokuGame::newGame(const QString &difficulty) {
     // An unknown id can only come from a caller with a stale idea of the
     // levels; Easy is the safe landing.
     Difficulty level = Difficulty::Easy;
-    BestTimes::difficultyFromId(difficulty, &level);
+    difficultyFromId(difficulty, &level);
     m_board.setPuzzle(SudokuGenerator::generate(level));
     m_cells.refreshAll();
 
@@ -484,15 +525,14 @@ QVariantList SudokuGame::bestTimes() const {
     for (const QVariant &entry : difficulties()) {
         const QVariantMap level = entry.toMap();
         Difficulty difficulty = Difficulty::Easy;
-        if (!BestTimes::difficultyFromId(level.value(QStringLiteral("id")).toString(), &difficulty))
+        if (!difficultyFromId(level.value(QStringLiteral("id")).toString(), &difficulty))
             continue;
-        for (const TimeEntry &time : m_times.entries(difficulty)) {
-            list.append(QVariantMap {
-                {QStringLiteral("difficulty"), BestTimes::idFor(difficulty)},
-                {QStringLiteral("label"), level.value(QStringLiteral("label"))},
-                {QStringLiteral("seconds"), time.seconds},
-                {QStringLiteral("date"), time.date.toString(Qt::ISODate)},
-            });
+        const QString id = difficultyId(difficulty);
+        for (const QVariant &time : m_times.toVariantList(id)) {
+            QVariantMap row = time.toMap();
+            row.insert(QStringLiteral("difficulty"), id);
+            row.insert(QStringLiteral("label"), level.value(QStringLiteral("label")));
+            list.append(row);
         }
     }
     return list;
@@ -501,15 +541,15 @@ QVariantList SudokuGame::bestTimes() const {
 QVariantMap SudokuGame::bests() const {
     QVariantMap map;
     for (int i = 0; i < kDifficultyCount; ++i)
-        map.insert(BestTimes::idFor(Difficulty(i)), m_times.best(Difficulty(i)));
+        map.insert(difficultyId(Difficulty(i)), m_times.best(difficultyId(Difficulty(i))));
     return map;
 }
 
 // The clock has already stopped by the time this runs, so what goes in the
 // table is exactly the time the player is about to be shown.
 void SudokuGame::recordWin() {
-    m_newBestRank = m_times.insert(m_board.puzzle().difficulty,
-                                   {m_elapsedSeconds, QDate::currentDate()});
+    m_newBestRank = m_times.insert(difficultyId(m_board.puzzle().difficulty),
+                                   {m_elapsedSeconds, QDate::currentDate(), {}});
     if (m_newBestRank < 0)
         return;
     m_times.save();
@@ -592,19 +632,9 @@ void SudokuGame::clearSavedGame() {
 }
 
 QVariantMap SudokuGame::windowGeometry() const {
-    const SudokuStore::WindowGeometry geometry = m_store.windowGeometry();
-    QVariantMap map;
-    // Positions can legitimately be negative on monitors left of or above the
-    // primary, so validity travels separately instead of being encoded as -1.
-    map.insert(QStringLiteral("valid"), geometry.rect.isValid());
-    map.insert(QStringLiteral("x"), geometry.rect.x());
-    map.insert(QStringLiteral("y"), geometry.rect.y());
-    map.insert(QStringLiteral("width"), geometry.rect.width());
-    map.insert(QStringLiteral("height"), geometry.rect.height());
-    map.insert(QStringLiteral("maximized"), geometry.maximized);
-    return map;
+    return OmaGames::WindowGeometry::toVariantMap();
 }
 
 void SudokuGame::saveWindowGeometry(int x, int y, int width, int height, bool maximized) {
-    m_store.saveWindowGeometry(QRect(x, y, width, height), maximized);
+    OmaGames::WindowGeometry::save(QRect(x, y, width, height), maximized);
 }
