@@ -2,17 +2,30 @@ import QtQuick
 import QtQuick.Layouts
 import OmaGames
 
-// Difficulty picker and a way back into a saved game.
+// Difficulty picker, each level's best time, and a way back into a saved game.
 FocusScope {
     id: root
 
+    property bool showingTimes: false
+
     focus: true
+
+    function formatTime(seconds) {
+        var rest = seconds % 60;
+        return Math.floor(seconds / 60) + ":" + (rest < 10 ? "0" : "") + rest;
+    }
+
     Keys.onPressed: function(event) {
+        if (event.key === Qt.Key_B) {
+            root.showingTimes = !root.showingTimes;
+        } else if (event.key === Qt.Key_Escape && root.showingTimes) {
+            root.showingTimes = false;
+        } else if (root.showingTimes) {
+            return;  // the panel is modal enough that nothing else applies
         // The number keys pick the nth difficulty the game offers, so the list
         // stays the engine's to define.
-        var level = event.key - Qt.Key_1;
-        if (level >= 0 && level < game.difficulties.length) {
-            game.newGame(game.difficulties[level].id);
+        } else if (event.key - Qt.Key_1 >= 0 && event.key - Qt.Key_1 < game.difficulties.length) {
+            game.newGame(game.difficulties[event.key - Qt.Key_1].id);
         } else if (event.key === Qt.Key_R) {
             if (game.hasSavedGame)
                 game.resumeSavedGame();
@@ -26,6 +39,7 @@ FocusScope {
         anchors.centerIn: parent
         width: Math.min(parent.width - 48 * theme.textScale, 340 * theme.textScale)
         spacing: 10 * theme.textScale
+        visible: !root.showingTimes
 
         Text {
             Layout.alignment: Qt.AlignHCenter
@@ -47,31 +61,46 @@ FocusScope {
             model: game.difficulties
 
             // A level is its button and, under it, the techniques it asks for
-            // beyond the level above: the promise the generator keeps.
+            // beyond the level above — the promise the generator keeps — and
+            // the fastest you have solved it.
             ColumnLayout {
+                id: level
                 required property var modelData
                 required property int index
+                readonly property int best: game.bests[modelData.id]
 
                 Layout.fillWidth: true
                 spacing: 3 * theme.textScale
 
                 OmaHintButton {
                     Layout.fillWidth: true
-                    text: parent.modelData.label
-                    primary: parent.index === 0
-                    hint: (parent.index + 1).toString()
-                    onClicked: game.newGame(parent.modelData.id)
+                    text: level.modelData.label
+                    primary: level.index === 0
+                    hint: (level.index + 1).toString()
+                    onClicked: game.newGame(level.modelData.id)
                 }
-                Text {
+                RowLayout {
                     Layout.fillWidth: true
                     Layout.leftMargin: 12 * theme.textScale
                     Layout.rightMargin: 12 * theme.textScale
                     Layout.bottomMargin: 4 * theme.textScale
-                    text: parent.modelData.techniques.join(" · ")
-                    color: theme.mix(theme.background, theme.foreground, 0.55)
-                    font.pixelSize: 11 * theme.textScale
-                    wrapMode: Text.WordWrap
-                    horizontalAlignment: Text.AlignHCenter
+                    spacing: 8 * theme.textScale
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: level.modelData.techniques.join(" · ")
+                        color: theme.mix(theme.background, theme.foreground, 0.55)
+                        font.pixelSize: 11 * theme.textScale
+                        wrapMode: Text.WordWrap
+                    }
+                    Text {
+                        Layout.alignment: Qt.AlignTop
+                        visible: level.best > 0
+                        text: qsTr("best %1").arg(root.formatTime(level.best))
+                        color: theme.mix(theme.background, theme.foreground, 0.55)
+                        font.pixelSize: 11 * theme.textScale
+                        font.bold: true
+                    }
                 }
             }
         }
@@ -83,5 +112,17 @@ FocusScope {
             hint: qsTr("R")
             onClicked: game.resumeSavedGame()
         }
+        OmaHintButton {
+            Layout.fillWidth: true
+            text: qsTr("Best times")
+            hint: qsTr("B")
+            onClicked: root.showingTimes = true
+        }
+    }
+
+    BestTimesPanel {
+        anchors.centerIn: parent
+        visible: root.showingTimes
+        onCloseRequested: root.showingTimes = false
     }
 }

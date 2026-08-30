@@ -13,14 +13,15 @@ private slots:
 
     void startsOnTheStartScreen();
     void newGameSelectsTheFirstEmptyCell();
-    void selectionMovesWithinTheGrid();
+    void cursorMovesWithinTheGrid();
     void digitsGoIntoTheSelectedCellOnly();
     void exposesDifficultiesWithLabels();
-    void padModeDecidesWhatADigitDoes();
-    void modifierOverridesBeatTheMode();
-    void padModeCyclesAndPersists();
+    void clickModeDecidesWhatAKeypadClickDoes();
+    void keyboardMappingIgnoresTheClickMode();
+    void clickModeCyclesAndPersists();
     void highlightTogglesAndSwitchesDigits();
-    void selectedValueFollowsTheSelection();
+    void highlightWearsAFixedHighlighterYellow();
+    void cursorValueFollowsTheCursor();
     void undoRestartAndEraseGoThroughTheBoard();
     void untouchedPuzzleIsNotInProgress();
     void validateAsYouGoFlipsMidGame();

@@ -18,56 +18,29 @@ FocusScope {
         return minutes + ":" + (rest < 10 ? "0" : "") + rest;
     }
 
-    // Which digit a key press means. Layouts disagree loudly here: US sends
-    // the symbol row with Shift (Key_Exclam and friends), AZERTY sends the
-    // digits themselves with Shift, and anything else falls back to the
-    // physical top-row scan codes (X11 keycodes 10-18).
-    readonly property var shiftedRowKeys: [Qt.Key_Exclam, Qt.Key_At, Qt.Key_NumberSign,
-        Qt.Key_Dollar, Qt.Key_Percent, Qt.Key_AsciiCircum, Qt.Key_Ampersand,
-        Qt.Key_Asterisk, Qt.Key_ParenLeft]
-
-    function digitFor(event) {
-        if (event.key >= Qt.Key_1 && event.key <= Qt.Key_9)
-            return event.key - Qt.Key_0;
-        if (event.modifiers & Qt.ShiftModifier) {
-            var symbol = "!@#$%^&*(".indexOf(event.text);
-            if (symbol >= 0)
-                return symbol + 1;
-            var known = root.shiftedRowKeys.indexOf(event.key);
-            if (known >= 0)
-                return known + 1;
-        }
-        if (event.nativeScanCode >= 10 && event.nativeScanCode <= 18)
-            return event.nativeScanCode - 9;
-        return 0;
-    }
-
-    // A modifier names the action outright; without one the selected mode
-    // decides. The bridge does the deciding, this only reports what was typed.
-    function overrideFor(event) {
-        if (event.modifiers & Qt.ControlModifier)
-            return "fill";
+    // Shift turns a move into a sweep: the cursor goes the same way and every
+    // cell it crosses joins the selection.
+    function moveBy(event, deltaRow, deltaColumn) {
         if (event.modifiers & Qt.ShiftModifier)
-            return "note";
-        if (event.modifiers & Qt.AltModifier)
-            return "highlight";
-        return "";
+            game.extendSelection(deltaRow, deltaColumn);
+        else
+            game.moveCursor(deltaRow, deltaColumn);
     }
 
     Keys.onPressed: function(event) {
-        var digit = root.digitFor(event);
+        var digit = game.digitForKey(event.key, event.modifiers, event.text);
         if (digit > 0) {
-            game.pressDigit(digit, root.overrideFor(event));
+            game.pressDigitKey(digit, event.modifiers);
         } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H) {
-            game.moveSelection(0, -1);
+            root.moveBy(event, 0, -1);
         } else if (event.key === Qt.Key_Right || event.key === Qt.Key_L) {
-            game.moveSelection(0, 1);
+            root.moveBy(event, 0, 1);
         } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
-            game.moveSelection(-1, 0);
+            root.moveBy(event, -1, 0);
         } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
-            game.moveSelection(1, 0);
+            root.moveBy(event, 1, 0);
         } else if (event.key === Qt.Key_N) {
-            game.cyclePadMode();
+            game.cycleClickMode();
         } else if (event.key === Qt.Key_V) {
             game.validateAsYouGo = !game.validateAsYouGo;
         } else if (event.key === Qt.Key_R) {
@@ -132,7 +105,7 @@ FocusScope {
             // The rail needs this much height for its keypad to stay usable.
             readonly property real railMinHeight: 360 * theme.textScale
             readonly property bool tightSheet: width < 720 * theme.textScale
-            readonly property real sheetHeight: (tightSheet ? 196 : 150) * theme.textScale
+            readonly property real sheetHeight: (tightSheet ? 232 : 186) * theme.textScale
 
             readonly property real railBoard: Math.min(width - railWidth - gap, height)
             readonly property real sheetBoard: Math.min(width, height - sheetHeight - gap)

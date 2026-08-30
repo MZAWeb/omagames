@@ -93,31 +93,36 @@ std::vector<int> SudokuBoard::setValue(int index, int value) {
     if (m_values[size_t(index)] == value)
         return {};
 
-    // Placing a digit also retracts it from the pencil marks of every peer,
-    // which is what players do by hand anyway.
-    std::vector<int> changed {index};
-    const quint16 bit = quint16(1u << (value - 1));
-    for (int peer : Sudoku::peers(index)) {
-        if (m_notes[size_t(peer)] & bit)
-            changed.push_back(peer);
-    }
-    pushUndo(changed);
-
+    // Only this cell changes: the pencil marks of its peers are the player's
+    // own bookkeeping and stay exactly as they were left.
+    pushUndo({index});
     m_values[size_t(index)] = value;
     m_notes[size_t(index)] = 0;
-    for (int peer : Sudoku::peers(index))
-        m_notes[size_t(peer)] &= quint16(~bit);
     refreshWrong();
-    return changed;
+    return {index};
 }
 
-std::vector<int> SudokuBoard::toggleNote(int index, int digit) {
-    // Notes only make sense in an empty cell; filled cells must be erased first.
-    if (!inRange(index) || isGiven(index) || digit < 1 || digit > 9 || m_values[size_t(index)] != 0)
+std::vector<int> SudokuBoard::toggleNotes(const std::vector<int> &indices, int digit) {
+    if (digit < 1 || digit > 9)
         return {};
-    pushUndo({index});
-    m_notes[size_t(index)] ^= quint16(1u << (digit - 1));
-    return {index};
+    // Notes only make sense in an empty cell, so anything else in the list is
+    // quietly passed over: pencilling across a selection should not care that
+    // some of it is already solved.
+    std::vector<int> changed;
+    for (int index : indices) {
+        if (!inRange(index) || isGiven(index) || m_values[size_t(index)] != 0)
+            continue;
+        if (std::find(changed.begin(), changed.end(), index) == changed.end())
+            changed.push_back(index);
+    }
+    if (changed.empty())
+        return {};
+
+    pushUndo(changed);  // one step, however many cells it covers
+    const quint16 bit = quint16(1u << (digit - 1));
+    for (int index : changed)
+        m_notes[size_t(index)] ^= bit;
+    return changed;
 }
 
 std::vector<int> SudokuBoard::erase(int index) {

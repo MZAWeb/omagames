@@ -20,7 +20,7 @@ RowLayout {
         Layout.alignment: Qt.AlignVCenter
         keySize: Math.max(18, Math.min(44 * theme.textScale, sheet.height / 3.24,
                                        sheet.width * 0.3 / 3.24))
-        onDigitPressed: function(digit) { game.pressDigit(digit); }
+        onDigitPressed: function(digit) { game.clickDigit(digit); }
     }
 
     ColumnLayout {
@@ -28,12 +28,14 @@ RowLayout {
         Layout.alignment: Qt.AlignVCenter
         spacing: 8 * theme.textScale
 
+        KeyboardMap { Layout.fillWidth: true }
+
         RowLayout {
             Layout.fillWidth: true
             spacing: 8 * theme.textScale
 
-            PadModeSelector { Layout.fillWidth: true }
-            ValidateToggle { compact: true }
+            ClickModeSelector { Layout.fillWidth: true }
+            ValidateToggle { Layout.alignment: Qt.AlignBottom; compact: true }
         }
 
         SecondaryActions {
