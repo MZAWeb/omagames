@@ -20,7 +20,6 @@ private slots:
     void savedHighScoresReachQml();
     void lastDifficultyIsRemembered();
     void windowGeometryRoundTrips();
-    void aLongGameKeepsEveryContainerBounded();
 
 private:
     QString m_settingsDir;

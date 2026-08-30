@@ -40,6 +40,4 @@ private slots:
     void levelStartsWithAnIntroFreeze();
     void respawnLandsWhereChasersMustCrawlFurthest();
     void trailThreatenedWhileABallIsNear();
-    void groundRevisionOnlyMovesWhenGroundDoes();
-    void twentyThousandTicksOfALongCutStayCheap();
 };

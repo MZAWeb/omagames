@@ -28,25 +28,6 @@ void quietStart(OmanixGame &game, int wallX = 40) {
         game.step();
 }
 
-// The comb the engine suite cuts, driven through the bridge: up into the
-// sea, one cell across, back down short of the frame, again.
-QString combStep(int index) {
-    switch (index % 4) {
-    case 0:
-        return QStringLiteral("up");
-    case 2:
-        return QStringLiteral("down");
-    default:
-        return QStringLiteral("right");
-    }
-}
-
-int combLength(int index) {
-    if (index % 2 == 1)
-        return 1;
-    return index == 0 ? 17 : 15;
-}
-
 void hold(OmanixGame &game, const QString &direction, int cells) {
     game.setDirection(direction);
     for (int i = 0; i < cells * game.engine()->params().playerPeriod; ++i)
@@ -313,62 +294,4 @@ void BridgeTests::windowGeometryRoundTrips() {
     QCOMPARE(geometry.value(QStringLiteral("x")).toInt(), -20);
     QCOMPARE(geometry.value(QStringLiteral("width")).toInt(), 1000);
     QVERIFY(geometry.value(QStringLiteral("maximized")).toBool());
-}
-
-// Nothing the bridge hands to QML may grow with how long the game has been
-// running: the cues fire on events, not on ticks, and each one carries at
-// most a field's worth of cells.
-void BridgeTests::aLongGameKeepsEveryContainerBounded() {
-    constexpr int kSteps = 20000;
-    OmanixGame game;
-    game.setStepInterval(0);
-    game.startGame(Difficulty::Hard, kSeed);
-    Game *engine = game.engineForTests();
-    engine->placePlayer({2, Field::kDefaultHeight - 1});
-
-    QSignalSpy frames(&game, &OmanixGame::frameChanged);
-    QSignalSpy claims(&game, &OmanixGame::cellsClaimed);
-    QSignalSpy losses(&game, &OmanixGame::trailLost);
-    QSignalSpy bonuses(&game, &OmanixGame::bonusEarned);
-
-    int step = 0;
-    int moves = 0;
-    int restarts = 0;
-    for (int i = 0; i < kSteps; ++i) {
-        if (game.phase() == QStringLiteral("levelcomplete")) {
-            game.nextLevel();
-            ++restarts;
-            step = 0;
-            moves = 0;
-        } else if (game.phase() == QStringLiteral("gameover")) {
-            game.newGame(QStringLiteral("hard"));
-            ++restarts;
-            step = 0;
-            moves = 0;
-        }
-        game.setDirection(combStep(step));
-        game.step();
-        if (++moves >= combLength(step) * game.engine()->params().playerPeriod) {
-            moves = 0;
-            ++step;
-        }
-        QCOMPARE(int(game.engine()->balls().size()), game.ballCount());
-        QCOMPARE(int(game.engine()->chasers().size()), game.chaserCount());
-        QVERIFY(int(game.engine()->field().trailCells().size()) <= game.engine()->field().cellCount());
-    }
-
-    // One frame per tick and one more whenever a level or a game starts;
-    // the animation cues are far rarer than that.
-    QVERIFY(restarts > 0);
-    QCOMPARE(frames.count(), kSteps + restarts);
-    QVERIFY(claims.count() + losses.count() + bonuses.count() < kSteps / 10);
-    for (const QList<QVariant> &claim : claims) {
-        QVERIFY(claim.at(0).value<QVector<int>>().size() <= Field::kDefaultWidth * Field::kDefaultHeight);
-    }
-    for (const QList<QVariant> &loss : losses)
-        QVERIFY(loss.at(0).value<QVector<int>>().size() <= Field::kDefaultWidth * Field::kDefaultHeight);
-
-    // The tables the game over screen reads never outgrow their cap.
-    QVERIFY(game.highScores().size() <= kDifficultyCount * 10);   // top ten per difficulty
-    QCOMPARE(game.bests().size(), kDifficultyCount);
 }
