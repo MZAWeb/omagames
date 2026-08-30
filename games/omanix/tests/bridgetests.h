@@ -21,6 +21,7 @@ private slots:
     void highScoresRoundTripThroughSettings();
     void lastDifficultyIsRemembered();
     void windowGeometryRoundTrips();
+    void aLongGameKeepsEveryContainerBounded();
 
 private:
     QString m_settingsDir;

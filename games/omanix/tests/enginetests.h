@@ -38,4 +38,5 @@ private slots:
     void respawnLandsWhereChasersMustCrawlFurthest();
     void trailThreatenedWhileABallIsNear();
     void groundRevisionOnlyMovesWhenGroundDoes();
+    void twentyThousandTicksOfALongCutStayCheap();
 };
