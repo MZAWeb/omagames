@@ -66,6 +66,7 @@ void FieldView::setSource(QObject *source) {
         connect(m_source, &OmanixGame::trailLost, this, &FieldView::onTrailLost);
     }
     m_history.clear();
+    m_lastChasers.clear();
     emit sourceChanged();
     invalidateGround();
 }
@@ -92,23 +93,59 @@ const Game *FieldView::engine() const {
     return m_source ? m_source->engine() : nullptr;
 }
 
+// The engine ticks sixty times a second but each mover steps every few
+// ticks, so most ticks leave the picture exactly as it was: those cost no
+// repaint, and with them no re-upload of the whole field.
 void FieldView::onFrame() {
     const Game *game = engine();
-    if (game) {
-        const std::vector<Ball> &balls = game->balls();
-        m_history.resize(int(balls.size()));
-        for (int i = 0; i < int(balls.size()); ++i) {
-            QVector<QPoint> &trail = m_history[i];
-            if (trail.isEmpty() || trail.first() != balls[size_t(i)].pos) {
-                trail.prepend(balls[size_t(i)].pos);
-                if (trail.size() > kGhosts + 1)
-                    trail.resize(kGhosts + 1);
-            }
-        }
-    } else {
+    if (!game) {
         m_history.clear();
+        m_lastChasers.clear();
+        update();
+        return;
     }
-    update();
+    bool moved = false;
+
+    const std::vector<Ball> &balls = game->balls();
+    if (m_history.size() != int(balls.size())) {
+        m_history.resize(int(balls.size()));
+        moved = true;
+    }
+    for (int i = 0; i < int(balls.size()); ++i) {
+        QVector<QPoint> &trail = m_history[i];
+        if (trail.isEmpty() || trail.first() != balls[size_t(i)].pos) {
+            trail.prepend(balls[size_t(i)].pos);
+            if (trail.size() > kGhosts + 1)
+                trail.resize(kGhosts + 1);
+            moved = true;
+        }
+    }
+
+    const std::vector<Chaser> &chasers = game->chasers();
+    if (m_lastChasers.size() != int(chasers.size())) {
+        m_lastChasers.resize(int(chasers.size()));
+        moved = true;
+    }
+    for (int i = 0; i < int(chasers.size()); ++i) {
+        if (m_lastChasers[i] != chasers[size_t(i)].pos) {
+            m_lastChasers[i] = chasers[size_t(i)].pos;
+            moved = true;
+        }
+    }
+
+    const Player &player = game->player();
+    if (player.pos != m_lastPlayer || player.onTrail != m_lastOnTrail) {
+        m_lastPlayer = player.pos;
+        m_lastOnTrail = player.onTrail;
+        moved = true;
+    }
+    if (game->field().revision() != m_fieldRevision) {
+        m_fieldRevision = game->field().revision();
+        moved = true;
+    }
+
+    if (moved)
+        update();
 }
 
 void FieldView::onClaimed(const QVector<int> &cells, int x, int y) {

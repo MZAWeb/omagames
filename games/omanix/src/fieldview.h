@@ -102,6 +102,11 @@ private:
     QImage m_ground;
     int m_groundRevision = -1;
     bool m_groundDirty = true;
+    // Last frame's field and movers, so a tick that moved nothing is free.
+    int m_fieldRevision = -1;
+    QPoint m_lastPlayer {-1, -1};
+    bool m_lastOnTrail = false;
+    QVector<QPoint> m_lastChasers;
     // Each ball's last few cells, newest first, for its motion trail.
     QVector<QVector<QPoint>> m_history;
 };
