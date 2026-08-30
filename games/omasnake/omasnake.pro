@@ -9,12 +9,14 @@ HEADERS += \
     src/snake.h \
     src/game.h \
     src/highscores.h \
-    src/omasnakegame.h
+    src/omasnakegame.h \
+    src/fieldview.h
 SOURCES += \
     src/main.cpp \
     src/rules.cpp \
     src/snake.cpp \
     src/game.cpp \
     src/highscores.cpp \
-    src/omasnakegame.cpp
+    src/omasnakegame.cpp \
+    src/fieldview.cpp
 RESOURCES += src/resources.qrc

@@ -4,11 +4,13 @@
 #include <QUrl>
 
 #include "appsetup.h"
+#include "fieldview.h"
 #include "omasnakegame.h"
 
 int main(int argc, char *argv[]) {
     QGuiApplication app(argc, argv);
     OmarchyTheme *theme = OmaGames::setupApplication(app, {QStringLiteral("omasnake"), QStringLiteral("Omasnake")});
+    qmlRegisterType<FieldView>("Omasnake", 1, 0, "FieldView");
 
     // Declared before the engine so it outlives the QML bindings on shutdown.
     OmasnakeGame game(&app);
