@@ -86,15 +86,15 @@ Grid carve(const Grid &solution, const std::vector<int> &order, int target, Diff
 Technique SudokuGenerator::ceiling(Difficulty difficulty) {
     switch (difficulty) {
     case Difficulty::Easy:
-        return Technique::HiddenSingle;
+        return Technique::NakedSingle;
     case Difficulty::Medium:
-        return Technique::Claiming;
+        return Technique::NakedPair;
     case Difficulty::Hard:
-        return Technique::XWing;
+        return Technique::HiddenTriple;
     case Difficulty::ExtraHard:
         break;
     }
-    return Technique::Swordfish;
+    return Technique::XYWing;
 }
 
 bool SudokuGenerator::meetsLevel(const Grid &givens, Difficulty difficulty) {
@@ -111,7 +111,7 @@ int SudokuGenerator::minClues(Difficulty difficulty) {
     case Difficulty::Easy:
         return 38;
     case Difficulty::Medium:
-        return 30;
+        return 32;
     case Difficulty::Hard:
         return 26;
     case Difficulty::ExtraHard:
@@ -125,7 +125,7 @@ int SudokuGenerator::maxClues(Difficulty difficulty) {
     case Difficulty::Easy:
         return 42;
     case Difficulty::Medium:
-        return 34;
+        return 36;
     case Difficulty::Hard:
         return 30;
     case Difficulty::ExtraHard:

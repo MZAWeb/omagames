@@ -29,9 +29,9 @@ int clueCount(const Sudoku::Grid &grid) {
 }  // namespace
 
 void GeneratorTests::ceilingsClimbTheLadder() {
-    QCOMPARE(SudokuGenerator::ceiling(Difficulty::Easy), Technique::HiddenSingle);
-    QCOMPARE(SudokuGenerator::ceiling(Difficulty::Medium), Technique::Claiming);
-    QCOMPARE(SudokuGenerator::ceiling(Difficulty::Hard), Technique::XWing);
+    QCOMPARE(SudokuGenerator::ceiling(Difficulty::Easy), Technique::NakedSingle);
+    QCOMPARE(SudokuGenerator::ceiling(Difficulty::Medium), Technique::NakedPair);
+    QCOMPARE(SudokuGenerator::ceiling(Difficulty::Hard), Technique::HiddenTriple);
     QCOMPARE(SudokuGenerator::ceiling(Difficulty::ExtraHard), SudokuGrader::kHardestTechnique);
     for (int level = 1; level < kDifficultyCount; ++level)
         QVERIFY(SudokuGenerator::ceiling(Difficulty(level)) > SudokuGenerator::ceiling(Difficulty(level - 1)));
@@ -41,7 +41,7 @@ void GeneratorTests::everyLevelNeedsExactlyItsTechniques_data() {
     QTest::addColumn<int>("difficulty");
     QTest::addColumn<quint32>("seed");
 
-    const QVector<quint32> seeds {1u, 7u, 4242u, 987654321u};
+    const QVector<quint32> seeds {1u, 7u, 42u, 4242u, 31337u, 987654321u};
     for (const auto &level : kLevels) {
         for (quint32 seed : seeds)
             QTest::newRow(qPrintable(QStringLiteral("%1-%2").arg(level.first).arg(seed)))
@@ -75,6 +75,12 @@ void GeneratorTests::everyLevelNeedsExactlyItsTechniques() {
         QVERIFY(puzzle.hardest > below);
     }
     QVERIFY(puzzle.hardest <= ceiling);
+    // Easy never sends the player scanning rows and columns; Medium is
+    // still singles apart from the naked pair.
+    if (level == Difficulty::Easy)
+        QVERIFY(SudokuGrader::solvableWith(puzzle.givens, Technique::NakedSingle));
+    if (level == Difficulty::Medium)
+        QVERIFY(puzzle.hardest == Technique::HiddenSingleLine || puzzle.hardest == Technique::NakedPair);
     QVERIFY(SudokuGenerator::meetsLevel(puzzle.givens, level));
     QCOMPARE(puzzle.hardest, SudokuGrader::grade(puzzle.givens).hardest);
 

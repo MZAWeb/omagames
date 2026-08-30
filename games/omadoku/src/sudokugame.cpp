@@ -22,28 +22,30 @@ const auto kFillId = QStringLiteral("fill");
 QString techniqueName(SudokuGrader::Technique technique) {
     using SudokuGrader::Technique;
     switch (technique) {
+    case Technique::LastDigit:
+        return SudokuGame::tr("Last digit");
+    case Technique::HiddenSingleBox:
+        return SudokuGame::tr("Hidden single (box)");
     case Technique::NakedSingle:
         return SudokuGame::tr("Naked single");
-    case Technique::HiddenSingle:
-        return SudokuGame::tr("Hidden single");
+    case Technique::HiddenSingleLine:
+        return SudokuGame::tr("Hidden single (line)");
     case Technique::NakedPair:
         return SudokuGame::tr("Naked pair");
     case Technique::HiddenPair:
         return SudokuGame::tr("Hidden pair");
-    case Technique::PointingPair:
-        return SudokuGame::tr("Pointing pair");
-    case Technique::Claiming:
-        return SudokuGame::tr("Claiming");
     case Technique::NakedTriple:
         return SudokuGame::tr("Naked triple");
+    case Technique::HiddenTriple:
+        return SudokuGame::tr("Hidden triple");
     case Technique::XWing:
         return SudokuGame::tr("X-wing");
-    case Technique::YWing:
-        return SudokuGame::tr("Y-wing");
     case Technique::Swordfish:
+        return SudokuGame::tr("Swordfish");
+    case Technique::XYWing:
         break;
     }
-    return SudokuGame::tr("Swordfish");
+    return SudokuGame::tr("XY-wing");
 }
 
 // The rungs a level adds on top of the level below: everything between the
@@ -105,10 +107,10 @@ QVariantList SudokuGame::difficulties() {
         QString description;
     };
     const QVector<Level> levels {
-        {Difficulty::Easy, tr("Easy"), tr("Singles only: every step is a digit with one place left.")},
-        {Difficulty::Medium, tr("Medium"), tr("Adds pairs and box-line eliminations.")},
-        {Difficulty::Hard, tr("Hard"), tr("Adds naked triples and X-wings.")},
-        {Difficulty::ExtraHard, tr("Extra hard"), tr("Needs a Y-wing or a swordfish somewhere.")},
+        {Difficulty::Easy, tr("Easy"), tr("Plenty of clues; a box scan or a lone digit always moves you on.")},
+        {Difficulty::Medium, tr("Medium"), tr("Fewer clues; scan rows and columns too, or spot a naked pair.")},
+        {Difficulty::Hard, tr("Hard"), tr("Needs pencil marks: a hidden pair, naked triple or hidden triple.")},
+        {Difficulty::ExtraHard, tr("Extra hard"), tr("Needs an X-wing, swordfish or XY-wing somewhere.")},
     };
     QVariantList list;
     for (const Level &level : levels) {

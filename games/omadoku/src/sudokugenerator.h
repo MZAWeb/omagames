@@ -17,7 +17,7 @@ struct Puzzle {
     quint32 seed = 0;
     // The hardest rung of the ladder the puzzle actually needs, as graded at
     // generation, so what the player is told is what they will meet.
-    SudokuGrader::Technique hardest = SudokuGrader::Technique::NakedSingle;
+    SudokuGrader::Technique hardest = SudokuGrader::Technique::LastDigit;
 };
 
 // Generates puzzles with exactly one solution. Deterministic for a given
@@ -29,7 +29,9 @@ public:
     // The hardest technique a level may need. Every puzzle of a level is
     // solvable with the ladder up to its ceiling, and (Easy aside) not with
     // the ladder up to the previous level's, so each level asks for something
-    // the one below never does.
+    // the one below never does. Easy is singles without the line hidden
+    // single, Medium adds that and the naked pair, Hard the hidden pair and
+    // the triples, Extra hard the fish and the XY-wing.
     static SudokuGrader::Technique ceiling(Difficulty difficulty);
     static bool meetsLevel(const Sudoku::Grid &givens, Difficulty difficulty);
 

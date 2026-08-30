@@ -1,6 +1,6 @@
 #include "sudokutechniques.h"
 
-// The techniques that live inside one unit or where a box meets a line. The
+// The techniques that live inside one unit. The
 // fish and wings, which reach across the grid, are in sudokufish.cpp.
 namespace SudokuGrader {
 namespace {
@@ -17,6 +17,32 @@ Mask spotsIn(const CandidateGrid &grid, const Unit &unit, int digit) {
 
 int soleSlot(Mask spots) { return soleDigit(spots) - 1; }
 
+// A hidden single over the given range of units (see units() for the layout).
+bool hiddenSingleIn(CandidateGrid &grid, int firstUnit, int lastUnit) {
+    for (int u = firstUnit; u <= lastUnit; ++u) {
+        const Unit &unit = units()[size_t(u)];
+        for (int d = 1; d <= 9; ++d) {
+            const Mask spots = spotsIn(grid, unit, d);
+            if (popCount(spots) == 1) {
+                grid.place(unit[size_t(soleSlot(spots))], d);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+// Digits `keep` are confined to the `cells` slots of `unit`, so those cells
+// hold nothing else.
+bool eliminateOthersFromSlots(CandidateGrid &grid, const Unit &unit, Mask cells, Mask keep) {
+    bool changed = false;
+    for (int slot = 0; slot < 9; ++slot) {
+        if (cells & Mask(1u << slot))
+            changed |= grid.eliminate(unit[size_t(slot)], Mask(kAllDigits & ~keep));
+    }
+    return changed;
+}
+
 // Removes `digits` from every cell of `unit` outside the `keep` slots.
 bool eliminateFromUnit(CandidateGrid &grid, const Unit &unit, Mask digits, Mask keep) {
     bool changed = false;
@@ -27,71 +53,34 @@ bool eliminateFromUnit(CandidateGrid &grid, const Unit &unit, Mask digits, Mask 
     return changed;
 }
 
-// Removes `digit` from the cells of `unit` that lie outside `other`.
-bool eliminateOutside(CandidateGrid &grid, const Unit &unit, const Unit &other, int digit) {
-    bool changed = false;
-    for (int index : unit) {
-        if (std::find(other.begin(), other.end(), index) == other.end())
-            changed |= grid.eliminate(index, digit);
-    }
-    return changed;
-}
-
-// The single line (row when `byRow`, else column) holding every cell of
-// `spots` in `unit`, or -1 when they spread over several.
-int commonLine(const Unit &unit, Mask spots, bool byRow) {
-    int line = -1;
-    for (int slot = 0; slot < 9; ++slot) {
-        if (!(spots & Mask(1u << slot)))
-            continue;
-        const int index = unit[size_t(slot)];
-        const int here = byRow ? Sudoku::rowOf(index) : Sudoku::colOf(index);
-        if (line >= 0 && here != line)
-            return -1;
-        line = here;
-    }
-    return line;
-}
-
-int commonBox(const Unit &unit, Mask spots) {
-    int box = -1;
-    for (int slot = 0; slot < 9; ++slot) {
-        if (!(spots & Mask(1u << slot)))
-            continue;
-        const int here = Sudoku::boxOf(unit[size_t(slot)]);
-        if (box >= 0 && here != box)
-            return -1;
-        box = here;
-    }
-    return box;
-}
-
 }  // namespace
 
 QString techniqueId(Technique technique) {
     switch (technique) {
+    case Technique::LastDigit:
+        return QStringLiteral("last-digit");
+    case Technique::HiddenSingleBox:
+        return QStringLiteral("hidden-single-box");
     case Technique::NakedSingle:
         return QStringLiteral("naked-single");
-    case Technique::HiddenSingle:
-        return QStringLiteral("hidden-single");
+    case Technique::HiddenSingleLine:
+        return QStringLiteral("hidden-single-line");
     case Technique::NakedPair:
         return QStringLiteral("naked-pair");
     case Technique::HiddenPair:
         return QStringLiteral("hidden-pair");
-    case Technique::PointingPair:
-        return QStringLiteral("pointing-pair");
-    case Technique::Claiming:
-        return QStringLiteral("claiming");
     case Technique::NakedTriple:
         return QStringLiteral("naked-triple");
+    case Technique::HiddenTriple:
+        return QStringLiteral("hidden-triple");
     case Technique::XWing:
         return QStringLiteral("x-wing");
-    case Technique::YWing:
-        return QStringLiteral("y-wing");
     case Technique::Swordfish:
+        return QStringLiteral("swordfish");
+    case Technique::XYWing:
         break;
     }
-    return QStringLiteral("swordfish");
+    return QStringLiteral("xy-wing");
 }
 
 bool techniqueFromId(const QString &id, Technique *technique) {
@@ -104,6 +93,34 @@ bool techniqueFromId(const QString &id, Technique *technique) {
     return false;
 }
 
+// The last empty cell of a row, column or box: Sudoku Explainer's "last
+// value", the one placement that needs no reasoning at all.
+bool lastDigit(CandidateGrid &grid) {
+    for (const Unit &unit : units()) {
+        int empty = -1;
+        int count = 0;
+        for (int index : unit) {
+            if (grid.value(index) == 0) {
+                empty = index;
+                ++count;
+            }
+        }
+        if (count == 1) {
+            grid.place(empty, soleDigit(grid.candidates(empty)));
+            return true;
+        }
+    }
+    return false;
+}
+
+bool hiddenSingleBox(CandidateGrid &grid) {
+    return hiddenSingleIn(grid, 18, kUnits - 1);
+}
+
+bool hiddenSingleLine(CandidateGrid &grid) {
+    return hiddenSingleIn(grid, 0, 17);
+}
+
 bool nakedSingle(CandidateGrid &grid) {
     for (int i = 0; i < Sudoku::kCells; ++i) {
         if (grid.value(i) != 0)
@@ -111,19 +128,6 @@ bool nakedSingle(CandidateGrid &grid) {
         if (const int digit = soleDigit(grid.candidates(i))) {
             grid.place(i, digit);
             return true;
-        }
-    }
-    return false;
-}
-
-bool hiddenSingle(CandidateGrid &grid) {
-    for (const Unit &unit : units()) {
-        for (int d = 1; d <= 9; ++d) {
-            const Mask spots = spotsIn(grid, unit, d);
-            if (popCount(spots) == 1) {
-                grid.place(unit[size_t(soleSlot(spots))], d);
-                return true;
-            }
         }
     }
     return false;
@@ -157,53 +161,9 @@ bool hiddenPair(CandidateGrid &grid) {
             for (int d2 = d1 + 1; d2 <= 9; ++d2) {
                 if (spots[size_t(d2)] != spots[size_t(d1)])
                     continue;
-                // Those two cells hold the pair, so nothing else fits in them.
-                const Mask others = Mask(kAllDigits & ~(bitOf(d1) | bitOf(d2)));
-                bool changed = false;
-                for (int slot = 0; slot < 9; ++slot) {
-                    if (spots[size_t(d1)] & Mask(1u << slot))
-                        changed |= grid.eliminate(unit[size_t(slot)], others);
-                }
-                if (changed)
+                if (eliminateOthersFromSlots(grid, unit, spots[size_t(d1)], Mask(bitOf(d1) | bitOf(d2))))
                     return true;
             }
-        }
-    }
-    return false;
-}
-
-bool pointingPair(CandidateGrid &grid) {
-    for (int box = 0; box < 9; ++box) {
-        const Unit &unit = boxUnit(box);
-        for (int d = 1; d <= 9; ++d) {
-            const Mask spots = spotsIn(grid, unit, d);
-            if (popCount(spots) < 2)
-                continue;
-            // All of a box's spots for a digit on one line: the digit is in that
-            // line's slice of the box, so nowhere else on the line.
-            const int row = commonLine(unit, spots, true);
-            if (row >= 0 && eliminateOutside(grid, rowUnit(row), unit, d))
-                return true;
-            const int column = commonLine(unit, spots, false);
-            if (column >= 0 && eliminateOutside(grid, columnUnit(column), unit, d))
-                return true;
-        }
-    }
-    return false;
-}
-
-bool claiming(CandidateGrid &grid) {
-    for (int line = 0; line < 18; ++line) {
-        const Unit &unit = units()[size_t(line)];
-        for (int d = 1; d <= 9; ++d) {
-            const Mask spots = spotsIn(grid, unit, d);
-            if (popCount(spots) < 2)
-                continue;
-            // The mirror image: a line's spots all inside one box claim the
-            // digit for that box, so the box's other cells lose it.
-            const int box = commonBox(unit, spots);
-            if (box >= 0 && eliminateOutside(grid, boxUnit(box), unit, d))
-                return true;
         }
     }
     return false;
@@ -238,30 +198,62 @@ bool nakedTriple(CandidateGrid &grid) {
     return false;
 }
 
+bool hiddenTriple(CandidateGrid &grid) {
+    for (const Unit &unit : units()) {
+        std::array<Mask, 10> spots {};
+        for (int d = 1; d <= 9; ++d) {
+            const Mask mask = spotsIn(grid, unit, d);
+            // Only digits that can be part of a triple: two or three spots.
+            spots[size_t(d)] = (popCount(mask) == 2 || popCount(mask) == 3) ? mask : 0;
+        }
+        for (int d1 = 1; d1 <= 9; ++d1) {
+            if (!spots[size_t(d1)])
+                continue;
+            for (int d2 = d1 + 1; d2 <= 9; ++d2) {
+                if (!spots[size_t(d2)])
+                    continue;
+                for (int d3 = d2 + 1; d3 <= 9; ++d3) {
+                    if (!spots[size_t(d3)])
+                        continue;
+                    const Mask cells = Mask(spots[size_t(d1)] | spots[size_t(d2)] | spots[size_t(d3)]);
+                    if (popCount(cells) != 3)
+                        continue;
+                    const Mask keep = Mask(bitOf(d1) | bitOf(d2) | bitOf(d3));
+                    if (eliminateOthersFromSlots(grid, unit, cells, keep))
+                        return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
 bool apply(Technique technique, CandidateGrid &grid) {
     switch (technique) {
+    case Technique::LastDigit:
+        return lastDigit(grid);
+    case Technique::HiddenSingleBox:
+        return hiddenSingleBox(grid);
     case Technique::NakedSingle:
         return nakedSingle(grid);
-    case Technique::HiddenSingle:
-        return hiddenSingle(grid);
+    case Technique::HiddenSingleLine:
+        return hiddenSingleLine(grid);
     case Technique::NakedPair:
         return nakedPair(grid);
     case Technique::HiddenPair:
         return hiddenPair(grid);
-    case Technique::PointingPair:
-        return pointingPair(grid);
-    case Technique::Claiming:
-        return claiming(grid);
     case Technique::NakedTriple:
         return nakedTriple(grid);
+    case Technique::HiddenTriple:
+        return hiddenTriple(grid);
     case Technique::XWing:
         return xWing(grid);
-    case Technique::YWing:
-        return yWing(grid);
     case Technique::Swordfish:
+        return swordfish(grid);
+    case Technique::XYWing:
         break;
     }
-    return swordfish(grid);
+    return xyWing(grid);
 }
 
 }
