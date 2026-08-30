@@ -12,9 +12,10 @@ private slots:
     void init();
 
     void plainDigitKeysResolve();
-    void shiftedDigitsResolveOnEveryLayout();
+    void shiftedDigitsResolveOnUsLayouts();
     void modifiersAndOtherKeysResolveToNothing();
     void theBridgeAnswersTheSameAsTheHelper();
+    void aShiftHeldSweepNeverWritesANote();
 
     void ctrlClickTogglesCellsInAndOutOfTheSelection();
     void shiftArrowsSweepTheCellsTheCursorCrosses();

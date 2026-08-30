@@ -225,8 +225,8 @@ void SudokuGame::setValidateAsYouGo(bool validateAsYouGo) {
     emit boardChanged();
 }
 
-int SudokuGame::digitForKey(int key, int modifiers, const QString &text, int nativeScanCode) const {
-    return SudokuKeys::digitFor(key, Qt::KeyboardModifiers(modifiers), text, quint32(nativeScanCode));
+int SudokuGame::digitForKey(int key, int modifiers, const QString &text) const {
+    return SudokuKeys::digitFor(key, Qt::KeyboardModifiers(modifiers), text);
 }
 
 void SudokuGame::newGame(const QString &difficulty) {

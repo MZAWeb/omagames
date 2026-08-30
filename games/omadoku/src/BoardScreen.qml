@@ -28,7 +28,7 @@ FocusScope {
     }
 
     Keys.onPressed: function(event) {
-        var digit = game.digitForKey(event.key, event.modifiers, event.text, event.nativeScanCode);
+        var digit = game.digitForKey(event.key, event.modifiers, event.text);
         if (digit > 0) {
             game.pressDigitKey(digit, event.modifiers);
         } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H) {

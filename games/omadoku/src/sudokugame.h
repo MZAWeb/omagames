@@ -97,7 +97,7 @@ public:
 
     // Which digit a key press means, 0 when it means none. QML asks rather
     // than deciding, so the layout quirks stay tested (see sudokukeys.h).
-    Q_INVOKABLE int digitForKey(int key, int modifiers, const QString &text, int nativeScanCode) const;
+    Q_INVOKABLE int digitForKey(int key, int modifiers, const QString &text) const;
 
     Q_INVOKABLE void newGame(const QString &difficulty);
     Q_INVOKABLE void resumeSavedGame();
