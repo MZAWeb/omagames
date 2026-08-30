@@ -35,12 +35,81 @@ or two tries; Expert about six, still well under a hundredth of a second.
 
 The solver has a bounded search budget and the generator a bounded number
 of tries. Neither bound has been hit on any seed tested, but if either ever
-is, the game says so ("may require guessing") rather than pretending.
+is, the game says so rather than pretending.
 
-## Keys
+That is what the badge in the header is for. **no guessing** means this
+board was proved solvable before you saw it: every mine on it can be
+deduced, and if you are stuck, you have missed something. **may need a
+guess** means the generator ran out of tries and handed over the last layout
+it drew, unproven — the board is perfectly playable, it just comes with no
+promise, and somewhere on it there may be a position only luck gets past.
 
-_To be written with the UI._
+## Keyboard
 
-## Install
+Everything is reachable without a mouse; each button shows its key as a badge.
 
-_To be written with the packaging._
+| Key | Action |
+|---|---|
+| `←` `↑` `↓` `→` or `H` `J` `K` `L` | Move the cursor |
+| `Space` / `Enter` | Open the cell — or chord it, when the cursor is on a number whose flags already satisfy it |
+| `F` | Flag / unflag |
+| `R` | Restart: same preset, a new board |
+| `1` `2` `3` | Start a Beginner / Intermediate / Expert board (start screen) |
+| `H` | Best times (start screen) |
+| `Enter` / `Space` | Play again after a win or a loss |
+| `Esc` | Leave the board (confirmed while the clock is running), close the best times |
+| `Y` / `Enter`, `N` / `Esc` | Confirm / cancel a dialog |
+| `Ctrl+Q` | Quit |
+
+## Mouse
+
+The cursor belongs to the keyboard — hovering never moves it — but every
+click plants it where you clicked, so the two never disagree.
+
+| Button | Action |
+|---|---|
+| Left | Open the cell, or chord it when it is a satisfied number |
+| Right | Flag / unflag |
+| Middle, or left and right together | Chord |
+
+Left and right are acted on when the button comes up, so pressing both
+chords once instead of also opening or flagging.
+
+## Best times
+
+The five fastest wins per preset, with the day they happened, are kept in
+`~/.config/Omacom/omasweeper.conf`. The start screen shows the best time
+beside each preset, `H` opens all three tables, and the win overlay names
+your rank when the run made the table. The last preset played is
+preselected.
+
+## Layout
+
+The board is painted by one `FieldView` item at a whole number of pixels per
+cell, centred in the window: hidden cells are raised lids, revealed ones lie
+flat, numbers 1–8 each take their own theme color, and a freshly opened
+cascade flips in from the cell you clicked over about a quarter of a second.
+The header carries the preset, the no-guess badge, the mine counter and the
+clock; the legend under the board names every key.
+
+The window scales with the desktop text size. The minimum is 640×480 logical
+pixels at 100%, which still gives an Expert board 20 pixels per cell; the
+board never shrinks below 8 pixels per cell.
+
+## Build, test, run
+
+```sh
+bin/build omasweeper
+bin/test omasweeper
+bin/run omasweeper
+```
+
+Settings live in `~/.config/Omacom/omasweeper.conf`.
+
+## Install (Arch)
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/MZAWeb/omagames/main/install.sh | bash -s omasweeper
+```
+
+or from a checkout, `bin/install omasweeper`.
