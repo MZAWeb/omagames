@@ -74,27 +74,30 @@ solvable with that level's techniques and **not** solvable with the level
 below's, so each level really asks for something new. The bands follow the
 grading most apps and graders agree on: two singles-only levels that differ
 in how hard the scanning is, then a level where pencil marks become
-necessary, then one for the pattern techniques. The start screen lists the
-techniques under each level; the board header shows the hardest one the
-current puzzle needs.
+necessary, then one for the pattern techniques. Only techniques a casual
+player recognises are used, named as in the sudoku.coach lessons
+(<https://sudoku.coach/en/learn>); locked candidates (pointing pairs,
+claiming) are deliberately not part of the ladder, so no puzzle ever needs
+them. The start screen lists the techniques under each level; the board
+header shows the hardest one the current puzzle needs.
 
 | Level | Techniques it adds | Feel | Typical clues |
 | --- | --- | --- | --- |
 | Easy | naked single | some cell always has one digit left; no pencil marks | 38–42 |
 | Medium | hidden single | singles only, but you must scan each unit for where a digit has to go | 25–36 |
-| Hard | naked pair, hidden pair, pointing pair, claiming, naked triple | pencil marks and eliminations | 21–30 |
-| Extra hard | X-wing, Y-wing, swordfish | at least one pattern technique somewhere | 23–28 |
+| Hard | naked pair, hidden pair, naked triple | pencil marks and eliminations | 21–30 |
+| Extra hard | X-wing, XY-wing, swordfish | at least one pattern technique somewhere | 23–28 |
 
 Clue counts are a target the generator aims for, not a promise: the
 technique requirement always wins. A Medium is never solvable with naked
 singles alone, a Hard never with singles alone, an Extra hard never without
-a fish or a Y-wing.
+a fish or an XY-wing.
 
 ### How grading works
 
 The grader is a human-technique solver that never guesses. It climbs a fixed
-ladder — naked single, hidden single, naked pair, hidden pair, pointing pair,
-claiming, naked triple, X-wing, Y-wing, swordfish — always trying the easiest
+ladder — naked single, hidden single, naked pair, hidden pair, naked
+triple, X-wing, XY-wing, swordfish — always trying the easiest
 rung first and starting over from the bottom after every step, exactly as a
 player would. The hardest rung it has to climb is the puzzle's grade. A grid
 it cannot finish is beyond the ladder (that is where chains, uniqueness
