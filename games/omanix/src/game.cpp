@@ -285,7 +285,7 @@ void Game::moveBalls(std::vector<Event> &events) {
 
 void Game::moveChasers(std::vector<Event> &events) {
     for (Chaser &c : m_chasers) {
-        c.step(m_field);
+        c.step(m_field, m_rng);
         if (c.pos == m_player.pos) {
             loseLife(LifeLostReason::ChaserHit, events);
             return;

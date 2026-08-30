@@ -68,7 +68,7 @@ void Ball::step(const Field &field) {
         pos += dir;
 }
 
-void Chaser::step(const Field &field) {
+void Chaser::step(const Field &field, QRandomGenerator &rng) {
     if (!field.isEdge(pos)) {
         walkBackToTheEdge(field);
         return;
@@ -77,16 +77,27 @@ void Chaser::step(const Field &field) {
     // right and let the edge steer it from there.
     if (std::abs(dir.x()) + std::abs(dir.y()) != 1)
         dir = {1, 0};
-    // Hug the sea: turn toward it first, then carry straight on, then away
-    // from it, and only turn around when the edge dead-ends.
-    const QPoint options[] = {clockwise(dir), dir, -clockwise(dir), -dir};
-    for (QPoint option : options) {
-        if (field.isEdge(pos + option)) {
-            dir = option;
-            pos += option;
-            return;
-        }
+    crawl(field, rng);
+}
+
+// One step along the boundary. The ways on are the neighbouring edge cells
+// other than the one the chaser came from; where the boundary branches there
+// is more than one and the seed picks. Turning back is for dead ends only.
+void Chaser::crawl(const Field &field, QRandomGenerator &rng) {
+    QPoint ways[3];
+    int count = 0;
+    for (QPoint way : {clockwise(dir), dir, -clockwise(dir)}) {
+        if (field.isEdge(pos + way))
+            ways[count++] = way;
     }
+    if (count == 0) {
+        if (!field.isEdge(pos - dir))
+            return;
+        dir = -dir;
+    } else {
+        dir = ways[count == 1 ? 0 : int(rng.bounded(count))];
+    }
+    pos += dir;
 }
 
 // A claim can bury a chaser deep inside the ground it used to hug. Walk it

@@ -19,6 +19,7 @@ private slots:
     void chaserFollowsNewlyClaimedGround();
     void chaserReversesAtADeadEnd();
     void chaserBuriedByAClaimWalksBackToTheEdge();
+    void chaserPicksJunctionsFromTheSeed();
     void tapMovesOneCellAndHoldKeepsMoving();
     void marchingIntoOpenSeaCutsATrailUntilGround();
     void cannotReverseOntoTheTrail();

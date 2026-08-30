@@ -212,25 +212,39 @@ void EngineTests::ballNeverSqueezesBetweenDiagonalBlockers() {
 
 void EngineTests::chaserCrawlsTheFrameClockwise() {
     Field field;
+    QRandomGenerator rng(kSeed);
     Chaser chaser {{10, 0}, {1, 0}};
     // Along the top edge to the corner, then round it and down the right one.
     for (int i = 0; i < 53; ++i)
-        chaser.step(field);
+        chaser.step(field, rng);
     QCOMPARE(chaser.pos, QPoint(63, 0));
-    chaser.step(field);
+    chaser.step(field, rng);
     QCOMPARE(chaser.pos, QPoint(63, 1));
     QCOMPARE(chaser.dir, QPoint(0, 1));
-    // The frame is one unbroken ring, and a full lap brings it home.
-    const int ring = 2 * (field.width() + field.height()) - 4;
-    for (int i = 0; i < ring - 54; ++i)
-        chaser.step(field);
-    QCOMPARE(chaser.pos, QPoint(10, 0));
-    QCOMPARE(chaser.dir, QPoint(1, 0));
     // It never leaves the ground.
+    const int ring = 2 * (field.width() + field.height()) - 4;
     for (int i = 0; i < 3 * ring; ++i) {
-        chaser.step(field);
+        chaser.step(field, rng);
         QCOMPARE(field.at(chaser.pos), Cell::Claimed);
     }
+
+    // The frame is one unbroken ring with nowhere to branch off to, so a
+    // chaser never has a choice to make: it crawls every cell of the ring and
+    // a full lap brings it home facing the way it set out.
+    Chaser lap {{10, 0}, {1, 0}};
+    std::vector<bool> seen(size_t(field.cellCount()), false);
+    int distinct = 0;
+    for (int i = 0; i < ring; ++i) {
+        lap.step(field, rng);
+        const int index = field.index(lap.pos);
+        if (!seen[size_t(index)]) {
+            seen[size_t(index)] = true;
+            ++distinct;
+        }
+    }
+    QCOMPARE(distinct, ring);
+    QCOMPARE(lap.pos, QPoint(10, 0));
+    QCOMPARE(lap.dir, QPoint(1, 0));
 }
 
 void EngineTests::chaserFollowsNewlyClaimedGround() {
@@ -238,24 +252,29 @@ void EngineTests::chaserFollowsNewlyClaimedGround() {
     // A one-cell spur claimed downward from the top frame at column 30.
     for (int y = 1; y <= 5; ++y)
         field.set({30, y}, Cell::Claimed);
+    // The foot of the spur is a junction, and this seed turns down it. (The
+    // chaser used to take the spur every time, keeping the sea on its right;
+    // now which way it goes is the seed's business.)
+    QRandomGenerator rng(kSeed + 1);
     Chaser chaser {{28, 0}, {1, 0}};
-    chaser.step(field);
+    chaser.step(field, rng);
     QCOMPARE(chaser.pos, QPoint(29, 0));
-    chaser.step(field);
+    chaser.step(field, rng);
     QCOMPARE(chaser.pos, QPoint(30, 0));
-    // The sea is on its right, so it turns down the new edge...
+    // Down the edge the claim added...
     for (int y = 1; y <= 5; ++y) {
-        chaser.step(field);
+        chaser.step(field, rng);
         QCOMPARE(chaser.pos, QPoint(30, y));
     }
-    // ...turns around at the tip, climbs the spur's other side...
+    // ...turns around at the tip, with only one way back up...
     for (int y = 4; y >= 0; --y) {
-        chaser.step(field);
+        chaser.step(field, rng);
         QCOMPARE(chaser.pos, QPoint(30, y));
     }
-    // ...and carries on along the top edge.
-    chaser.step(field);
-    QCOMPARE(chaser.pos, QPoint(31, 0));
+    // ...and the frame carries it on, whichever way the junction sends it.
+    chaser.step(field, rng);
+    QCOMPARE(chaser.pos.y(), 0);
+    QVERIFY(chaser.pos == QPoint(29, 0) || chaser.pos == QPoint(31, 0));
 }
 
 void EngineTests::chaserReversesAtADeadEnd() {
@@ -264,16 +283,17 @@ void EngineTests::chaserReversesAtADeadEnd() {
     // are dead ends, so a chaser can only pace it.
     for (int x = 5; x <= 8; ++x)
         field.set({x, 6}, Cell::Claimed);
+    QRandomGenerator rng(kSeed);
     Chaser chaser {{6, 6}, {1, 0}};
-    chaser.step(field);
+    chaser.step(field, rng);
     QCOMPARE(chaser.pos, QPoint(7, 6));
-    chaser.step(field);
+    chaser.step(field, rng);
     QCOMPARE(chaser.pos, QPoint(8, 6));
-    chaser.step(field);
+    chaser.step(field, rng);
     QCOMPARE(chaser.pos, QPoint(7, 6));
     QCOMPARE(chaser.dir, QPoint(-1, 0));
     for (int i = 0; i < 40; ++i) {
-        chaser.step(field);
+        chaser.step(field, rng);
         QCOMPARE(chaser.pos.y(), 6);
         QVERIFY(chaser.pos.x() >= 5 && chaser.pos.x() <= 8);
     }
@@ -286,17 +306,38 @@ void EngineTests::chaserBuriedByAClaimWalksBackToTheEdge() {
         for (int x = 1; x <= 18; ++x)
             field.set({x, y}, Cell::Claimed);
     }
+    QRandomGenerator rng(kSeed);
     Chaser chaser {{9, 2}, {1, 0}};
     QVERIFY(!field.isEdge(chaser.pos));
     // Straight down to the nearest edge, one cell a step, then it hugs it.
-    chaser.step(field);
+    chaser.step(field, rng);
     QCOMPARE(chaser.pos, QPoint(9, 3));
-    chaser.step(field);
+    chaser.step(field, rng);
     QCOMPARE(chaser.pos, QPoint(9, 4));
     QVERIFY(field.isEdge(chaser.pos));
-    chaser.step(field);
+    chaser.step(field, rng);
     QCOMPARE(chaser.pos.y(), 4);
     QVERIFY(field.isEdge(chaser.pos));
+}
+
+void EngineTests::chaserPicksJunctionsFromTheSeed() {
+    // A spur off the top frame gives the chaser a junction to decide at every
+    // time it passes the spur's foot or climbs back to it.
+    const auto crawl = [](quint32 seed) {
+        Field field;
+        for (int y = 1; y <= 8; ++y)
+            field.set({30, y}, Cell::Claimed);
+        QRandomGenerator rng(seed);
+        Chaser chaser {{28, 0}, {1, 0}};
+        QString path;
+        for (int i = 0; i < 200; ++i) {
+            chaser.step(field, rng);
+            path += QStringLiteral("%1,%2;").arg(chaser.pos.x()).arg(chaser.pos.y());
+        }
+        return path;
+    };
+    QCOMPARE(crawl(kSeed), crawl(kSeed));
+    QVERIFY(crawl(kSeed) != crawl(kSeed + 1));
 }
 
 void EngineTests::tapMovesOneCellAndHoldKeepsMoving() {
