@@ -68,6 +68,9 @@ public:
     bool inLevelIntro() const { return m_introTicks > 0; }
     // A ball is within kCloseCallDistance of the trail right now.
     bool trailThreatened() const;
+    // Counts the ticks on which something visible changed; the bridge only
+    // wakes the renderer when it advances.
+    quint64 frame() const { return m_frame; }
     int levelTicks() const { return m_levelTicks; }
     double claimedPercent() const { return m_field.claimedPercent(); }
     const LevelStats &lastLevel() const { return m_lastLevel; }
@@ -119,6 +122,7 @@ private:
     Phase m_phase = Phase::Playing;
     int m_level = Level::kFirstLevel;
     int m_score = 0;
+    quint64 m_frame = 0;
     int m_lives = kStartLives;
     int m_nextExtraLife = kExtraLifeScore;
     int m_ticks = 0;

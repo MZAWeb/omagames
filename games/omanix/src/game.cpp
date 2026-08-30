@@ -99,12 +99,25 @@ std::vector<Event> Game::tick() {
         --m_freezeTicks;
         return events;
     }
-    if (m_ticks % m_params.playerPeriod == 0)
+    if (m_ticks % m_params.playerPeriod == 0) {
+        const QPoint before = m_player.pos;
+        const bool wasOnTrail = m_player.onTrail;
         movePlayer(events);
-    if (m_phase == Phase::Playing && m_ticks % m_params.ballPeriod == 0)
+        if (m_player.pos != before || m_player.onTrail != wasOnTrail)
+            ++m_frame;
+    }
+    if (m_phase == Phase::Playing && m_ticks % m_params.ballPeriod == 0) {
         moveBalls(events);
-    if (m_phase == Phase::Playing && m_ticks % m_params.chaserPeriod == 0)
+        if (!m_balls.empty())
+            ++m_frame;
+    }
+    if (m_phase == Phase::Playing && m_ticks % m_params.chaserPeriod == 0) {
         moveChasers(events);
+        if (!m_chasers.empty())
+            ++m_frame;
+    }
+    if (!events.empty())
+        ++m_frame;
     return events;
 }
 
