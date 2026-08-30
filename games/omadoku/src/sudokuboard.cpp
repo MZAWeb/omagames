@@ -93,22 +93,13 @@ std::vector<int> SudokuBoard::setValue(int index, int value) {
     if (m_values[size_t(index)] == value)
         return {};
 
-    // Placing a digit also retracts it from the pencil marks of every peer,
-    // which is what players do by hand anyway.
-    std::vector<int> changed {index};
-    const quint16 bit = quint16(1u << (value - 1));
-    for (int peer : Sudoku::peers(index)) {
-        if (m_notes[size_t(peer)] & bit)
-            changed.push_back(peer);
-    }
-    pushUndo(changed);
-
+    // Only this cell changes: the pencil marks of its peers are the player's
+    // own bookkeeping and stay exactly as they were left.
+    pushUndo({index});
     m_values[size_t(index)] = value;
     m_notes[size_t(index)] = 0;
-    for (int peer : Sudoku::peers(index))
-        m_notes[size_t(peer)] &= quint16(~bit);
     refreshWrong();
-    return changed;
+    return {index};
 }
 
 std::vector<int> SudokuBoard::toggleNote(int index, int digit) {

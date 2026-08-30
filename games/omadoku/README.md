@@ -14,8 +14,9 @@ current Omarchy theme.
   only once all 81 cells are filled; flip it mid-game and the marks appear or
   vanish immediately.
 - **Notes** are pencil marks: up to nine small digits per empty cell. Placing a
-  digit clears that cell's notes and retracts the digit from the notes of every
-  cell in the same row, column and box. Notes are never checked.
+  digit clears that cell's own notes and nothing else: the marks you left in the
+  rest of the row, column and box are your bookkeeping to keep or tidy. Notes
+  are never checked.
 - **Mode** (the segmented control under the keypad in the rail) decides what a digit does,
   typed or clicked: *Highlight*, *Note* or *Fill*. `N` cycles it and it is
   remembered between sessions; Highlight is the default. Holding a modifier
@@ -59,8 +60,8 @@ under it when that leaves the board bigger — which is what a tall, narrow
 window or a large desktop text scale amounts to. The controls keep their order
 across the switch; only their number of columns changes, so nothing a hand has
 learnt moves. Feedback stays local to the cell that changed: a placement
-settles, retracted pencil marks fade where they stood, and a wrong entry marks
-its own corner instead of the board reacting as a whole.
+settles and a wrong entry marks its own corner, instead of the board reacting
+as a whole.
 
 The window is at least 700×560 logical pixels, both multiplied by the desktop
 text scale (so 1400×1120 at 200%). It opens at 880×640 the first time and

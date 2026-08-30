@@ -3,9 +3,8 @@ import QtQuick
 // One board cell: a digit, or its pencil marks, tinted by how it relates to
 // the current selection. Knows nothing about the game object.
 //
-// Feedback stays local to the cell that changed — a placement settles, a note
-// the placement retracted fades out where it stood, a wrong entry marks its own
-// corner. Nothing ever flashes the whole board.
+// Feedback stays local to the cell that changed — a placement settles, a wrong
+// entry marks its own corner. Nothing ever flashes the whole board.
 Item {
     id: cell
 
@@ -20,9 +19,8 @@ Item {
     property real cellSize: width
 
     // Feedback timings, all named so the board's rhythm is read in one place.
-    readonly property int tintMs: 90          // selection and peer shading
-    readonly property int settleMs: 110       // accent settle on a placement
-    readonly property int retractionMs: 260   // a note fading out of a peer
+    readonly property int tintMs: 90     // selection and peer shading
+    readonly property int settleMs: 110  // accent settle on a placement
 
     signal clicked()
 
@@ -30,28 +28,14 @@ Item {
     // when it stops being built: a puzzle loading into 81 cells is not 81
     // placements.
     property bool ready: false
-    property int previousNotes: 0
-    property int retractedNotes: 0
 
-    Component.onCompleted: {
-        cell.previousNotes = cell.notes;
-        cell.ready = true;
-    }
+    Component.onCompleted: cell.ready = true
 
     // A digit only ever lands in the selected cell, which is also what keeps a
     // wholesale refresh (a new puzzle, a restart) quiet.
     onValueChanged: {
         if (cell.ready && cell.selected && cell.value > 0 && !cell.given)
             settle.restart();
-    }
-
-    onNotesChanged: {
-        var gone = cell.previousNotes & ~cell.notes;
-        cell.previousNotes = cell.notes;
-        if (cell.ready && gone !== 0 && cell.value === 0) {
-            cell.retractedNotes = gone;
-            retraction.restart();
-        }
     }
 
     Rectangle {
@@ -114,28 +98,6 @@ Item {
         cellSize: cell.cellSize
         mask: cell.notes
         visible: cell.value === 0 && cell.notes !== 0
-    }
-
-    // The marks a placement elsewhere just took away, held for a moment where
-    // they stood so the retraction is something you see rather than notice.
-    NoteGrid {
-        id: ghost
-        anchors.fill: parent
-        anchors.margins: Math.round(cell.cellSize * 0.06)
-        cellSize: cell.cellSize
-        mask: cell.retractedNotes
-        opacity: 0
-        visible: opacity > 0
-
-        NumberAnimation {
-            id: retraction
-            target: ghost
-            property: "opacity"
-            from: 0.7
-            to: 0
-            duration: cell.retractionMs
-            easing.type: Easing.OutCubic
-        }
     }
 
     MouseArea {

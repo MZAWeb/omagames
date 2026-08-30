@@ -77,7 +77,7 @@ void BoardTests::givensAreImmutable() {
     QVERIFY(!m_board.canUndo());
 }
 
-void BoardTests::entryClearsOwnAndPeerNotes() {
+void BoardTests::entryClearsOnlyItsOwnNotes() {
     const int cell = emptyCell();
     const int peer = emptyPeerOf(cell);
     const int elsewhere = emptyNonPeerOf(cell);
@@ -87,14 +87,14 @@ void BoardTests::entryClearsOwnAndPeerNotes() {
     m_board.toggleNote(peer, 7);
     m_board.toggleNote(elsewhere, 7);
 
-    const std::vector<int> changed = m_board.setValue(cell, 7);
-    QVERIFY(std::find(changed.begin(), changed.end(), cell) != changed.end());
-    QVERIFY(std::find(changed.begin(), changed.end(), peer) != changed.end());
-
+    QCOMPARE(m_board.setValue(cell, 7), std::vector<int>({cell}));
     QCOMPARE(m_board.value(cell), 7);
-    QCOMPARE(m_board.notes(cell), quint16(0));                 // own notes cleared
-    QCOMPARE(m_board.notes(peer) & quint16(1u << 6), quint16(0));  // 7 retracted from the peer
-    QVERIFY(m_board.notes(elsewhere) & quint16(1u << 6));       // unrelated cell untouched
+    QCOMPARE(m_board.notes(cell), quint16(0));  // own notes cleared
+
+    // Pencil marks elsewhere are the player's own bookkeeping: a placement
+    // never tidies them up, peer or not.
+    QVERIFY(m_board.notes(peer) & quint16(1u << 6));
+    QVERIFY(m_board.notes(elsewhere) & quint16(1u << 6));
 }
 
 void BoardTests::notesToggleOnlyInEmptyCells() {
@@ -126,18 +126,21 @@ void BoardTests::eraseClearsValueAndNotes() {
 
 void BoardTests::undoRestoresValuesAndNotes() {
     const int cell = emptyCell();
-    const int peer = emptyPeerOf(cell);
+    const int other = emptyCell(1);
 
-    m_board.toggleNote(peer, 8);
+    m_board.toggleNote(other, 8);
+    m_board.toggleNote(cell, 3);
     m_board.setValue(cell, 8);
     QVERIFY(m_board.canUndo());
 
     m_board.undo();
     QCOMPARE(m_board.value(cell), 0);
-    QVERIFY(m_board.notes(peer) & quint16(1u << 7));  // peer note came back
+    QCOMPARE(m_board.notes(cell), quint16(1u << 2));  // the cleared note came back
 
     m_board.undo();
-    QCOMPARE(m_board.notes(peer), quint16(0));
+    m_board.undo();
+    QCOMPARE(m_board.notes(cell), quint16(0));
+    QCOMPARE(m_board.notes(other), quint16(0));
     QVERIFY(!m_board.canUndo());
     QVERIFY(m_board.undo().empty());
 }
