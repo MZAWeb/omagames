@@ -25,6 +25,7 @@ SOURCES += \
     ../src/solver.cpp \
     ../src/generator.cpp \
     ../src/omasweepergame.cpp \
+    ../src/omasweepergamemodel.cpp \
     boardtests.cpp \
     solvertests.cpp \
     generatortests.cpp \

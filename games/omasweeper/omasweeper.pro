@@ -20,5 +20,6 @@ SOURCES += \
     src/solver.cpp \
     src/generator.cpp \
     src/omasweepergame.cpp \
+    src/omasweepergamemodel.cpp \
     src/fieldview.cpp
 RESOURCES += src/resources.qrc
