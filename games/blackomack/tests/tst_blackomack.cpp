@@ -680,6 +680,41 @@ private slots:
         QCOMPARE(persisted.bots.size(), BlackjackRules::kMaxBots);
         QCOMPARE(persisted.bots.last().personality.name, QStringLiteral("Saved 6"));
     }
+    // A saved table comes back whole and in its place round the felt: every
+    // mate keeps its identity and the order it was saved in, and the human
+    // still sits where the sweep reaches the bottom of the oval.
+    void bridgeLoadsSavedTableInPlayOrder() {
+        QSettings().clear();
+        GameState state;
+        const QStringList names{QStringLiteral("Zed"), QStringLiteral("Mona"),
+                                QStringLiteral("Bucky"), QStringLiteral("Ivy")};
+        for (int i = 0; i < names.size(); ++i)
+            state.bots.append({{names[i], 0.5, 0.5, quint32(i + 1)}, 900 + i});
+        QSettings().setValue(QString::fromLatin1(GameState::kKey), state.toString());
+
+        BlackjackGame g;
+        QCOMPARE(g.botCount(), names.size());
+        QCOMPARE(g.humanSeat(), SeatLayout::matesBeforeHuman(names.size()));
+        QStringList seated;
+        for (int i = 0, mate = 0; i < g.seats().size(); ++i) {
+            const QVariantMap seat = g.seats().at(i).toMap();
+            if (seat.value(QStringLiteral("human")).toBool()) {
+                QCOMPARE(i, g.humanSeat());
+                continue;
+            }
+            QCOMPARE(seat.value(QStringLiteral("bankroll")).toInt(), 900 + mate++);
+            seated.append(seat.value(QStringLiteral("name")).toString());
+        }
+        QCOMPARE(seated, names);
+
+        g.setBotCount(3);                       // sending one home rewrites the rest in order
+        const GameState written = GameState::fromString(
+            QSettings().value(QString::fromLatin1(GameState::kKey)).toString());
+        QStringList savedAgain;
+        for (const GameState::Bot &b : written.bots)
+            savedAgain.append(b.personality.name);
+        QCOMPARE(savedAgain, QStringList(names.mid(0, 3)));
+    }
     void bridgeCoachDefaultsOffAndPersists() {
         {
             BlackjackGame fresh;
