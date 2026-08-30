@@ -32,5 +32,6 @@ SOURCES += \
     src/sessionstats.cpp \
     src/seatlayout.cpp \
     src/blackjackgame.cpp \
+    src/blackjackgamestore.cpp \
     src/blackjackgamemodel.cpp
 RESOURCES += src/resources.qrc

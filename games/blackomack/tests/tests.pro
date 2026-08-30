@@ -32,4 +32,5 @@ SOURCES += tst_blackomack.cpp \
     ../src/sessionstats.cpp \
     ../src/seatlayout.cpp \
     ../src/blackjackgame.cpp \
+    ../src/blackjackgamestore.cpp \
     ../src/blackjackgamemodel.cpp
