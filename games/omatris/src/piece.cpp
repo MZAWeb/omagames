@@ -1,5 +1,7 @@
 #include "piece.h"
 
+#include <algorithm>
+
 namespace {
 
 using Shape = std::array<PieceCells, Piece::kStates>;
@@ -105,6 +107,21 @@ int Piece::boxSize(PieceType type) {
 
 const PieceCells &Piece::cells(PieceType type, int rotation) {
     return kShapes[int(type)][size_t(turn(rotation, 0))];
+}
+
+Piece::SpawnBox Piece::spawnBox(PieceType type) {
+    SpawnBox box {cells(type, 0), 0, 0};
+    QPoint origin = box.cells.front();
+    QPoint far = box.cells.front();
+    for (QPoint cell : box.cells) {
+        origin = {std::min(origin.x(), cell.x()), std::min(origin.y(), cell.y())};
+        far = {std::max(far.x(), cell.x()), std::max(far.y(), cell.y())};
+    }
+    for (QPoint &cell : box.cells)
+        cell -= origin;
+    box.width = far.x() - origin.x() + 1;
+    box.height = far.y() - origin.y() + 1;
+    return box;
 }
 
 int Piece::spawnColumn(PieceType type, int boardWidth) {

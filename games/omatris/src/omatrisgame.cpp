@@ -70,20 +70,12 @@ QVariantMap OmatrisGame::pieceShape(int piece) const {
     QVariantList cells;
     if (piece < 0 || piece >= kPieceCount)
         return {{QStringLiteral("cells"), cells}, {QStringLiteral("width"), 0}, {QStringLiteral("height"), 0}};
-    const PieceCells shape = Piece::cells(PieceType(piece), 0);
-    QPoint origin = shape.front();
-    QPoint far = shape.front();
-    for (QPoint cell : shape) {
-        origin = {std::min(origin.x(), cell.x()), std::min(origin.y(), cell.y())};
-        far = {std::max(far.x(), cell.x()), std::max(far.y(), cell.y())};
-    }
-    for (QPoint cell : shape) {
-        cells.append(QVariantMap {{QStringLiteral("x"), cell.x() - origin.x()},
-                                  {QStringLiteral("y"), cell.y() - origin.y()}});
-    }
+    const Piece::SpawnBox box = Piece::spawnBox(PieceType(piece));
+    for (QPoint cell : box.cells)
+        cells.append(QVariantMap {{QStringLiteral("x"), cell.x()}, {QStringLiteral("y"), cell.y()}});
     return {{QStringLiteral("cells"), cells},
-            {QStringLiteral("width"), far.x() - origin.x() + 1},
-            {QStringLiteral("height"), far.y() - origin.y() + 1}};
+            {QStringLiteral("width"), box.width},
+            {QStringLiteral("height"), box.height}};
 }
 
 void OmatrisGame::setStepInterval(int interval) {

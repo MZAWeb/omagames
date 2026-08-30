@@ -168,6 +168,25 @@ void PieceTests::oPieceNeverMovesWhenTurned() {
     }
 }
 
+// The hold and next boxes draw a piece on its own, without the empty rows and
+// columns of the box it turns inside.
+void PieceTests::spawnBoxTrimsAPieceToItsOwnCells() {
+    const Piece::SpawnBox bar = Piece::spawnBox(PieceType::I);
+    QCOMPARE(bar.width, 4);
+    QCOMPARE(bar.height, 1);
+    QCOMPARE(shape(bar.cells), QStringLiteral("0,0 1,0 2,0 3,0"));
+
+    const Piece::SpawnBox block = Piece::spawnBox(PieceType::O);
+    QCOMPARE(block.width, 2);
+    QCOMPARE(block.height, 2);
+    QCOMPARE(shape(block.cells), QStringLiteral("0,0 1,0 0,1 1,1"));
+
+    const Piece::SpawnBox tee = Piece::spawnBox(PieceType::T);
+    QCOMPARE(tee.width, 3);
+    QCOMPARE(tee.height, 2);
+    QCOMPARE(shape(tee.cells), QStringLiteral("1,0 0,1 1,1 2,1"));
+}
+
 void PieceTests::sevenBagDealsEveryPieceOncePerSeven() {
     Bag bag(kSeed);
     int totals[kPieceCount] = {};

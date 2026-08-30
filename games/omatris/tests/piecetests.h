@@ -14,6 +14,7 @@ private slots:
     void iPieceKicksOffAWall();
     void tPieceKicksAgainstBothWalls();
     void oPieceNeverMovesWhenTurned();
+    void spawnBoxTrimsAPieceToItsOwnCells();
     void sevenBagDealsEveryPieceOncePerSeven();
     void sameSeedPlaysTheSameGame();
 };

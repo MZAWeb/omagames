@@ -27,6 +27,14 @@ struct Placement {
 
 namespace Piece {
 
+// A piece's spawn shape squared up: its cells with the empty rows and columns
+// trimmed off, and the box that leaves. What a hold or next box draws.
+struct SpawnBox {
+    PieceCells cells;
+    int width = 0;
+    int height = 0;
+};
+
 constexpr int kStates = 4;
 constexpr int kMaxKicks = 5;
 // The last kick of a table is the one that lifts a mini T-spin to a full one.
@@ -35,6 +43,7 @@ constexpr int kSpinKick = kMaxKicks - 1;
 // The box a piece rotates inside: 4 for I and O, 3 for the other five.
 int boxSize(PieceType type);
 const PieceCells &cells(PieceType type, int rotation);
+SpawnBox spawnBox(PieceType type);
 // Where a piece enters: its box centred over the columns, left of centre when
 // the two cannot be halved evenly.
 int spawnColumn(PieceType type, int boardWidth);
