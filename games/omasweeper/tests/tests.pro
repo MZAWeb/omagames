@@ -9,9 +9,15 @@ INCLUDEPATH += ../src
 HEADERS += \
     ../src/presets.h \
     ../src/board.h \
-    boardtests.h
+    ../src/frontier.h \
+    ../src/solver.h \
+    boardtests.h \
+    solvertests.h
 
 SOURCES += \
     ../src/board.cpp \
+    ../src/frontier.cpp \
+    ../src/solver.cpp \
     boardtests.cpp \
+    solvertests.cpp \
     tst_omasweeper.cpp

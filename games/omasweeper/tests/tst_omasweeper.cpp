@@ -2,6 +2,7 @@
 #include <QtTest>
 
 #include "boardtests.h"
+#include "solvertests.h"
 
 // One binary runs every suite so each area keeps its own small file.
 int main(int argc, char *argv[]) {
@@ -12,5 +13,7 @@ int main(int argc, char *argv[]) {
     int status = 0;
     BoardTests board;
     status |= QTest::qExec(&board, argc, argv);
+    SolverTests solver;
+    status |= QTest::qExec(&solver, argc, argv);
     return status;
 }
