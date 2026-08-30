@@ -6,6 +6,7 @@
 #include <QVector>
 #include <memory>
 
+#include "autoshift.h"
 #include "game.h"
 #include "pacer.h"
 #include "scoretable.h"
@@ -14,9 +15,9 @@
 // invokables, persistence and pacing. Modes cross to QML as lowercase id
 // strings, pieces as their PieceType number, like the other games.
 //
-// Delayed auto shift lives here rather than in the engine, because it is the
-// one rule that is about keys being held down: the engine only ever moves a
-// piece one cell at a time.
+// Delayed auto shift lives beside it in AutoShift rather than in the engine,
+// because it is the one rule that is about keys being held down: the engine
+// only ever moves a piece one cell at a time.
 class OmatrisGame : public QObject {
     Q_OBJECT
     // "start" | "playing" | "gameover" | "finished"
@@ -48,10 +49,6 @@ class OmatrisGame : public QObject {
 public:
     // One simulation tick per timer shot: 60 ticks a second.
     static constexpr int kDefaultStepIntervalMs = 16;
-    // Delayed auto shift: how long a held key waits before it starts
-    // repeating, and how often it repeats after that.
-    static constexpr int kDasTicks = 10;  // ~167 ms
-    static constexpr int kArrTicks = 2;   // ~33 ms
 
     explicit OmatrisGame(QObject *parent = nullptr);
 
@@ -157,7 +154,6 @@ private:
     void press(int direction);
     void release(int direction);
     void turn(int quarters);
-    void autoShift();
     void apply(const std::vector<Event> &events);
     void handle(const Event &event);
     void announce(const ClearInfo &clear, QPoint where);
@@ -171,9 +167,7 @@ private:
     OmaGames::ScoreTable m_scores;
     OmaGames::Pacer m_pacer;
     Mode m_mode = Mode::Marathon;
+    AutoShift m_shift;
     int m_newHighScoreRank = -1;
     bool m_ghostEnabled = true;
-    // -1 left, +1 right, 0 nothing held; and how long it has been held.
-    int m_shift = 0;
-    int m_shiftTicks = 0;
 };

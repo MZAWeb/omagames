@@ -216,8 +216,7 @@ void OmatrisGame::startGame(Mode mode, quint32 seed) {
     QSettings().setValue(kModeKey, modeId(mode));
     m_game = std::make_unique<Game>(mode, seed);
     m_newHighScoreRank = -1;
-    m_shift = 0;
-    m_shiftTicks = 0;
+    m_shift.clear();
     emit modeChanged();
     emit scoreChanged();
     emit levelChanged();
@@ -256,8 +255,7 @@ void OmatrisGame::backToStart() {
 void OmatrisGame::press(int direction) {
     if (!playing())
         return;
-    m_shift = direction;
-    m_shiftTicks = 0;
+    m_shift.press(direction);
     const Snapshot before = snapshot();
     if (direction < 0)
         m_game->moveLeft();
@@ -268,20 +266,7 @@ void OmatrisGame::press(int direction) {
 }
 
 void OmatrisGame::release(int direction) {
-    if (m_shift == direction)
-        m_shift = 0;
-}
-
-void OmatrisGame::autoShift() {
-    if (m_shift == 0)
-        return;
-    ++m_shiftTicks;
-    if (m_shiftTicks < kDasTicks || (m_shiftTicks - kDasTicks) % kArrTicks != 0)
-        return;
-    if (m_shift < 0)
-        m_game->moveLeft();
-    else
-        m_game->moveRight();
+    m_shift.release(direction);
 }
 
 void OmatrisGame::turn(int quarters) {
@@ -318,7 +303,7 @@ void OmatrisGame::pause() {
     if (!playing())
         return;
     m_game->setPaused(true);
-    m_shift = 0;
+    m_shift.clear();
     m_game->setSoftDrop(false);
     syncTimer();
     emit pausedChanged();
@@ -350,7 +335,10 @@ void OmatrisGame::step() {
     if (!playing())
         return;
     const Snapshot before = snapshot();
-    autoShift();
+    if (const int shift = m_shift.tick(); shift < 0)
+        m_game->moveLeft();
+    else if (shift > 0)
+        m_game->moveRight();
     apply(m_game->tick());
     publish(before);
     emit frameChanged();
@@ -436,7 +424,7 @@ void OmatrisGame::finishGame() {
         m_scores.save();
         emit highScoresChanged();
     }
-    m_shift = 0;
+    m_shift.clear();
     emit phaseChanged();
     syncTimer();
 }

@@ -1,6 +1,7 @@
 #include <QCoreApplication>
 #include <QtTest>
 
+#include "autoshifttests.h"
 #include "bridgetests.h"
 #include "enginetests.h"
 
@@ -13,6 +14,8 @@ int main(int argc, char *argv[]) {
     int status = 0;
     EngineTests engine;
     status |= QTest::qExec(&engine, argc, argv);
+    AutoShiftTests autoShift;
+    status |= QTest::qExec(&autoShift, argc, argv);
     BridgeTests bridge;
     status |= QTest::qExec(&bridge, argc, argv);
     return status;

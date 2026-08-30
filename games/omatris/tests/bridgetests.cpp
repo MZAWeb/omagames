@@ -121,24 +121,24 @@ void BridgeTests::autoShiftWaitsThenRepeats() {
     game.pressLeft();
     QCOMPARE(engine->piece().origin.x(), start - 1);
     // Nothing more until the delay is up.
-    for (int i = 0; i < OmatrisGame::kDasTicks - 1; ++i)
+    for (int i = 0; i < AutoShift::kDelayTicks - 1; ++i)
         game.step();
     QCOMPARE(engine->piece().origin.x(), start - 1);
     game.step();
     QCOMPARE(engine->piece().origin.x(), start - 2);
     // Then one cell every repeat interval.
-    for (int i = 0; i < OmatrisGame::kArrTicks; ++i)
+    for (int i = 0; i < AutoShift::kRepeatTicks; ++i)
         game.step();
     QCOMPARE(engine->piece().origin.x(), start - 3);
 
     // Letting go stops it; the other key takes over from scratch.
     game.releaseLeft();
-    for (int i = 0; i < 2 * OmatrisGame::kDasTicks; ++i)
+    for (int i = 0; i < 2 * AutoShift::kDelayTicks; ++i)
         game.step();
     QCOMPARE(engine->piece().origin.x(), start - 3);
     game.pressRight();
     QCOMPARE(engine->piece().origin.x(), start - 2);
-    for (int i = 0; i < OmatrisGame::kDasTicks - 1; ++i)
+    for (int i = 0; i < AutoShift::kDelayTicks - 1; ++i)
         game.step();
     QCOMPARE(engine->piece().origin.x(), start - 2);
     game.step();

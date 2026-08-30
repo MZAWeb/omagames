@@ -12,8 +12,10 @@ HEADERS += \
     ../src/bag.h \
     ../src/rules.h \
     ../src/game.h \
+    ../src/autoshift.h \
     ../src/omatrisgame.h \
     enginetests.h \
+    autoshifttests.h \
     bridgetests.h
 
 SOURCES += \
@@ -22,7 +24,9 @@ SOURCES += \
     ../src/bag.cpp \
     ../src/rules.cpp \
     ../src/game.cpp \
+    ../src/autoshift.cpp \
     ../src/omatrisgame.cpp \
     enginetests.cpp \
+    autoshifttests.cpp \
     bridgetests.cpp \
     tst_omatris.cpp
