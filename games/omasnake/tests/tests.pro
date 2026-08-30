@@ -21,6 +21,7 @@ SOURCES += \
     ../src/snake.cpp \
     ../src/game.cpp \
     ../src/omasnakegame.cpp \
+    ../src/omasnakegamemodel.cpp \
     enginetests.cpp \
     bridgetests.cpp \
     tst_omasnake.cpp

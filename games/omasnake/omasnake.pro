@@ -18,5 +18,6 @@ SOURCES += \
     src/snake.cpp \
     src/game.cpp \
     src/omasnakegame.cpp \
+    src/omasnakegamemodel.cpp \
     src/fieldview.cpp
 RESOURCES += src/resources.qrc
