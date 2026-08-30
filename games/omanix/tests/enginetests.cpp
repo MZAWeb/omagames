@@ -69,6 +69,28 @@ Game quietGame(int wallX = 40) {
     return game;
 }
 
+// Cuts a comb: up into the sea, one cell across, back down, again — the
+// shape a player makes fencing off a slice, and the one that grows the trail
+// to hundreds of cells before it closes.
+Direction combStep(int index) {
+    switch (index % 4) {
+    case 0:
+        return Direction::Up;
+    case 2:
+        return Direction::Down;
+    default:
+        return Direction::Right;
+    }
+}
+
+// The first stroke leaves the bottom frame; every one after it turns short of
+// the frame, so the trail keeps growing instead of closing every tooth.
+int combLength(int index) {
+    if (index % 2 == 1)
+        return 1;
+    return index == 0 ? 17 : 15;
+}
+
 // Cuts a full-height column at the marker's x, from the bottom frame up to the top.
 std::vector<Event> cutColumn(Game &game) {
     std::vector<Event> events;
@@ -808,4 +830,112 @@ void EngineTests::trailThreatenedWhileABallIsNear() {
     walk(game, Direction::Down, 3);
     QVERIFY(!game.player().onTrail);
     QVERIFY(!game.trailThreatened());
+}
+
+// The renderer caches the painted ground against this counter, so it has to
+// move for every claim and stand still for everything else.
+void EngineTests::groundRevisionOnlyMovesWhenGroundDoes() {
+    Game game = quietGame();
+    const Field &field = game.field();
+    const int atStart = field.groundRevision();
+    const int revisionAtStart = field.revision();
+
+    walk(game, Direction::Up, 3);
+    QVERIFY(game.player().onTrail);
+    // Three cells of trail: cells changed, but no ground was won.
+    QCOMPARE(field.groundRevision(), atStart);
+    QVERIFY(field.revision() > revisionAtStart);
+
+    const int beforeClaim = field.revision();
+    cutColumn(game);
+    QVERIFY(!game.player().onTrail);
+    QVERIFY(field.groundRevision() > atStart);
+    QVERIFY(field.revision() > beforeClaim);
+
+    // Standing still changes nothing at all.
+    const int settled = field.revision();
+    const int settledGround = field.groundRevision();
+    for (int i = 0; i < 100; ++i)
+        game.tick();
+    QCOMPARE(field.revision(), settled);
+    QCOMPARE(field.groundRevision(), settledGround);
+}
+
+// The tick is what paces the game: it has to stay flat however long the cut
+// has grown and however many movers are on the field. A trail of hundreds of
+// cells used to make every tick walk all of them, once per ball.
+void EngineTests::twentyThousandTicksOfALongCutStayCheap() {
+    constexpr int kTicks = 20000;
+    constexpr int kBalls = 8;
+    constexpr int kChasers = 4;
+    // This run costs about 10 ms on a desktop and 125 ms with the trail
+    // walked once per ball, the shape this guards against. A CI runner is a
+    // few times slower than a desktop, not twenty-five times.
+    constexpr qint64 kBudgetMs = 250;
+
+    // Every ball walled into a pocket of its own high up the field, so a cut
+    // below can grow to hundreds of cells without a ball ending it: the cost
+    // of a long trail is the subject here, not how long one survives.
+    const auto parkTheBalls = [](Game &game) {
+        std::vector<Ball> balls;
+        for (int i = 0; i < kBalls; ++i)
+            balls.push_back({{5 + 7 * i, 4}, {1, 1}});
+        game.placeBalls(balls);
+        for (const Ball &ball : balls)
+            fence(game, ball.pos);
+    };
+
+    Game game(Difficulty::Hard, kSeed);
+    std::vector<Chaser> chasers;
+    for (int i = 0; i < kChasers; ++i)
+        chasers.push_back({{5 + 15 * i, 0}, {1, 0}});
+    game.placeChasers(chasers);
+    parkTheBalls(game);
+    game.placePlayer({2, game.field().height() - 1});
+    skipIntro(game);
+
+    int step = 0;
+    int moves = 0;
+    int ticks = 0;
+    int threatened = 0;
+    int longestTrail = 0;
+    QElapsedTimer clock;
+    clock.start();
+    for (int i = 0; i < kTicks; ++i) {
+        if (game.phase() != Phase::Playing) {
+            if (game.phase() == Phase::LevelComplete)
+                game.nextLevel();
+            else
+                break;
+            game.placeChasers(chasers);
+            parkTheBalls(game);
+            game.placePlayer({2, game.field().height() - 1});
+            skipIntro(game);
+            step = 0;
+            moves = 0;
+        }
+        game.setDirection(combStep(step));
+        game.tick();
+        // What the bridge samples on every tick to drive the trail's pulse:
+        // part of the per-tick cost, and the part that used to grow with the
+        // cut.
+        if (game.trailThreatened())
+            ++threatened;
+        ++ticks;
+        if (++moves >= combLength(step) * game.params().playerPeriod) {
+            moves = 0;
+            ++step;
+        }
+        // Sampled rather than counted every tick: walking the field is the
+        // very thing this test says a tick must not do.
+        if (i % 32 == 0)
+            longestTrail = std::max(longestTrail, int(game.field().trailCells().size()));
+    }
+    const qint64 elapsed = clock.elapsed();
+
+    // The scenario has to be the one claimed, or the budget means nothing.
+    QVERIFY2(ticks == kTicks, qPrintable(QStringLiteral("only %1 ticks ran").arg(ticks)));
+    QVERIFY2(longestTrail >= 300, qPrintable(QStringLiteral("longest trail was %1 cells").arg(longestTrail)));
+    QCOMPARE(threatened, 0);
+    QVERIFY2(elapsed < kBudgetMs, qPrintable(QStringLiteral("%1 ticks took %2 ms").arg(kTicks).arg(elapsed)));
 }
