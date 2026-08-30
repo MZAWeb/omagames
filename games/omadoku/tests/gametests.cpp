@@ -117,7 +117,10 @@ void GameTests::exposesDifficultiesWithLabels() {
     QVERIFY(!easy.value(QStringLiteral("label")).toString().isEmpty());
     QVERIFY(!easy.value(QStringLiteral("description")).toString().isEmpty());
     QCOMPARE(easy.value(QStringLiteral("techniques")).toStringList(),
-             QStringList({QStringLiteral("Naked single"), QStringLiteral("Hidden single")}));
+             QStringList({QStringLiteral("Naked single")}));
+    const QVariantMap medium = levels.at(1).toMap();
+    QCOMPARE(medium.value(QStringLiteral("techniques")).toStringList(),
+             QStringList({QStringLiteral("Hidden single")}));
 
     // Every level introduces at least one rung, and no rung is listed twice.
     QStringList seen;

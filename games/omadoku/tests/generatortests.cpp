@@ -29,9 +29,9 @@ int clueCount(const Sudoku::Grid &grid) {
 }  // namespace
 
 void GeneratorTests::ceilingsClimbTheLadder() {
-    QCOMPARE(SudokuGenerator::ceiling(Difficulty::Easy), Technique::HiddenSingle);
-    QCOMPARE(SudokuGenerator::ceiling(Difficulty::Medium), Technique::Claiming);
-    QCOMPARE(SudokuGenerator::ceiling(Difficulty::Hard), Technique::XWing);
+    QCOMPARE(SudokuGenerator::ceiling(Difficulty::Easy), Technique::NakedSingle);
+    QCOMPARE(SudokuGenerator::ceiling(Difficulty::Medium), Technique::HiddenSingle);
+    QCOMPARE(SudokuGenerator::ceiling(Difficulty::Hard), Technique::NakedTriple);
     QCOMPARE(SudokuGenerator::ceiling(Difficulty::ExtraHard), SudokuGrader::kHardestTechnique);
     for (int level = 1; level < kDifficultyCount; ++level)
         QVERIFY(SudokuGenerator::ceiling(Difficulty(level)) > SudokuGenerator::ceiling(Difficulty(level - 1)));
@@ -41,7 +41,7 @@ void GeneratorTests::everyLevelNeedsExactlyItsTechniques_data() {
     QTest::addColumn<int>("difficulty");
     QTest::addColumn<quint32>("seed");
 
-    const QVector<quint32> seeds {1u, 7u, 4242u, 987654321u};
+    const QVector<quint32> seeds {1u, 7u, 42u, 4242u, 31337u, 987654321u};
     for (const auto &level : kLevels) {
         for (quint32 seed : seeds)
             QTest::newRow(qPrintable(QStringLiteral("%1-%2").arg(level.first).arg(seed)))
@@ -75,6 +75,12 @@ void GeneratorTests::everyLevelNeedsExactlyItsTechniques() {
         QVERIFY(puzzle.hardest > below);
     }
     QVERIFY(puzzle.hardest <= ceiling);
+    // Easy and Medium never ask for more than singles; Medium is the one
+    // that makes the player hunt for hidden ones.
+    if (level == Difficulty::Easy || level == Difficulty::Medium)
+        QVERIFY(SudokuGrader::solvableWith(puzzle.givens, Technique::HiddenSingle));
+    if (level == Difficulty::Medium)
+        QVERIFY(!SudokuGrader::solvableWith(puzzle.givens, Technique::NakedSingle));
     QVERIFY(SudokuGenerator::meetsLevel(puzzle.givens, level));
     QCOMPARE(puzzle.hardest, SudokuGrader::grade(puzzle.givens).hardest);
 

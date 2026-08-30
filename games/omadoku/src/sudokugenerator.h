@@ -29,7 +29,9 @@ public:
     // The hardest technique a level may need. Every puzzle of a level is
     // solvable with the ladder up to its ceiling, and (Easy aside) not with
     // the ladder up to the previous level's, so each level asks for something
-    // the one below never does.
+    // the one below never does. The bands follow the mainstream grading feel:
+    // Easy and Medium are singles only (Medium insists on hidden ones), Hard
+    // is where pencil-mark techniques begin, Extra hard where fish do.
     static SudokuGrader::Technique ceiling(Difficulty difficulty);
     static bool meetsLevel(const Sudoku::Grid &givens, Difficulty difficulty);
 
