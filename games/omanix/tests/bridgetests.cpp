@@ -369,6 +369,6 @@ void BridgeTests::aLongGameKeepsEveryContainerBounded() {
         QVERIFY(loss.at(0).value<QVector<int>>().size() <= Field::kDefaultWidth * Field::kDefaultHeight);
 
     // The tables the game over screen reads never outgrow their cap.
-    QVERIFY(game.highScores().size() <= kDifficultyCount * HighScores::kMaxEntries);
+    QVERIFY(game.highScores().size() <= kDifficultyCount * 10);   // top ten per difficulty
     QCOMPARE(game.bests().size(), kDifficultyCount);
 }

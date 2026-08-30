@@ -37,6 +37,7 @@ void Field::setCell(int index, Cell cell) {
         ++m_groundRevision;
     slot = cell;
     ++m_revision;
+}
 
 std::vector<int> Field::openRegions() const {
     std::vector<int> region(size_t(cellCount()), kNoRegion);
