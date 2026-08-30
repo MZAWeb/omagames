@@ -63,10 +63,16 @@ ColumnLayout {
         color: "transparent"
         border.width: 1
         border.color: theme.alpha(theme.foreground, 0.25)
-        clip: true  // squares off the inner segments against the rounded frame
 
+        // The segments sit inside the frame, and the two on the ends carry its
+        // corner radius: a selected Highlight or Fill then fills the rounded
+        // shape instead of squaring it off. Clipping cannot do this — Qt clips
+        // to the bounding rectangle, corners and all.
         Row {
+            id: segments
+
             anchors.fill: parent
+            anchors.margins: group.border.width
 
             Repeater {
                 model: root.modes
@@ -75,12 +81,20 @@ ColumnLayout {
                     required property var modelData
                     required property int index
                     readonly property bool selected: game.clickMode === modelData.mode
+                    readonly property real firstRadius:
+                        index === 0 ? group.radius - group.border.width : 0
+                    readonly property real lastRadius:
+                        index === root.modes.length - 1 ? group.radius - group.border.width : 0
 
-                    width: group.width / 3
-                    height: group.height
+                    width: segments.width / 3
+                    height: segments.height
 
                     Rectangle {
                         anchors.fill: parent
+                        topLeftRadius: parent.firstRadius
+                        bottomLeftRadius: parent.firstRadius
+                        topRightRadius: parent.lastRadius
+                        bottomRightRadius: parent.lastRadius
                         color: parent.selected ? theme.accent
                              : mouse.containsMouse ? theme.alpha(theme.foreground, 0.10)
                              : "transparent"
