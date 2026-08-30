@@ -5,6 +5,7 @@
 #include <QSettings>
 #include <algorithm>
 
+#include "bonuses.h"
 #include "windowgeometry.h"
 
 namespace {
@@ -12,97 +13,24 @@ namespace {
 const auto kModeKey = QStringLiteral("play/mode");
 const auto kGhostKey = QStringLiteral("play/ghost");
 
-const auto kMarathonId = QStringLiteral("marathon");
-const auto kSprintId = QStringLiteral("sprint");
-const auto kZenId = QStringLiteral("zen");
-
 const auto kStartId = QStringLiteral("start");
 const auto kPlayingId = QStringLiteral("playing");
 const auto kGameOverId = QStringLiteral("gameover");
 const auto kFinishedId = QStringLiteral("finished");
 
-struct ModeInfo {
-    Mode mode;
-    QString label;
-    QString description;
-};
-
-// Modes cross to QML, and name a score table, as these ids.
-QString modeId(Mode mode) {
-    switch (mode) {
-    case Mode::Sprint:
-        return kSprintId;
-    case Mode::Zen:
-        return kZenId;
-    case Mode::Marathon:
-        break;
-    }
-    return kMarathonId;
-}
-
-bool modeFromId(const QString &id, Mode *mode) {
-    for (int i = 0; i < kModeCount; ++i) {
-        if (modeId(Mode(i)) == id) {
-            *mode = Mode(i);
-            return true;
-        }
-    }
-    return false;
-}
-
-// The top ten per mode. A run keeps its score, lines, level and clock
-// whatever the mode; which of them ranks is the mode's business, and Sprint
-// is the one raced against the clock.
-OmaGames::ScoreTable scoreTable() {
-    std::vector<OmaGames::ScoreTable::Category> categories;
-    for (int i = 0; i < kModeCount; ++i) {
-        const Mode mode = Mode(i);
-        const bool byTime = Rules::params(mode).rankByTime;
-        categories.push_back({modeId(mode),
-                              byTime ? OmaGames::ScoreTable::LowerIsBetter
-                                     : OmaGames::ScoreTable::HigherIsBetter,
-                              byTime ? QStringLiteral("millis") : QString()});
-    }
-    return OmaGames::ScoreTable({QStringLiteral("score"), QStringLiteral("lines"),
-                                 QStringLiteral("level"), QStringLiteral("millis")},
-                                10, std::move(categories));
-}
-
-QVector<ModeInfo> modeInfos() {
-    return {
-        {Mode::Marathon, OmatrisGame::tr("Marathon"), OmatrisGame::tr("Endless. The levels keep coming and so does gravity.")},
-        {Mode::Sprint, OmatrisGame::tr("Sprint"), OmatrisGame::tr("Forty lines at the first level's pace. The clock is the score.")},
-        {Mode::Zen, OmatrisGame::tr("Zen"), OmatrisGame::tr("Endless and never faster. Stack for as long as you like.")},
-    };
-}
-
-// What a clear is called on the popup, or nothing when it is not worth saying.
-QString clearName(const ClearInfo &clear) {
-    static const QString kLineNames[5] = {{}, OmatrisGame::tr("Single"), OmatrisGame::tr("Double"),
-                                          OmatrisGame::tr("Triple"), OmatrisGame::tr("Tetris")};
-    if (clear.spin == Spin::None)
-        return clear.lines == 4 ? kLineNames[4] : QString();
-    const QString spin = clear.spin == Spin::Mini ? OmatrisGame::tr("T-Spin Mini") : OmatrisGame::tr("T-Spin");
-    return clear.lines == 0 ? spin : spin + QLatin1Char(' ') + kLineNames[clear.lines];
-}
-
 }  // namespace
 
 OmatrisGame::OmatrisGame(QObject *parent)
-    : QObject(parent), m_scores(scoreTable()),
+    : QObject(parent), m_scores(Modes::scoreTable()),
       m_pacer(OmaGames::Pacer::Repeating, [this]() { step(); }, this) {
     m_pacer.setTimerType(Qt::PreciseTimer);
     m_pacer.setInterval(kDefaultStepIntervalMs);
     loadSettings();
 }
 
-QString OmatrisGame::mode() const {
-    return modeId(m_mode);
-}
-
 void OmatrisGame::loadSettings() {
     QSettings settings;
-    modeFromId(settings.value(kModeKey).toString(), &m_mode);
+    Modes::fromId(settings.value(kModeKey).toString(), &m_mode);
     m_ghostEnabled = settings.value(kGhostKey, true).toBool();
     m_scores.load();
 }
@@ -121,35 +49,6 @@ QString OmatrisGame::phase() const {
     return kPlayingId;
 }
 
-bool OmatrisGame::playing() const {
-    return m_game && m_game->phase() == Phase::Playing && !m_game->paused();
-}
-
-QString OmatrisGame::modeLabel() const {
-    for (const ModeInfo &info : modeInfos()) {
-        if (info.mode == m_mode)
-            return info.label;
-    }
-    return {};
-}
-
-QVariantList OmatrisGame::modes() {
-    QVariantList list;
-    for (const ModeInfo &info : modeInfos()) {
-        list.append(QVariantMap {
-            {QStringLiteral("id"), modeId(info.mode)},
-            {QStringLiteral("label"), info.label},
-            {QStringLiteral("description"), info.description},
-            {QStringLiteral("goal"), Rules::params(info.mode).lineGoal},
-        });
-    }
-    return list;
-}
-
-int OmatrisGame::holdPiece() const {
-    return m_game ? int(m_game->heldPiece()) : int(PieceType::None);
-}
-
 QVariantList OmatrisGame::nextQueue() const {
     QVariantList list;
     if (!m_game)
@@ -159,45 +58,16 @@ QVariantList OmatrisGame::nextQueue() const {
     return list;
 }
 
-QVariantList OmatrisGame::highScores() const {
-    QVariantList list;
-    for (const ModeInfo &info : modeInfos()) {
-        const QString id = modeId(info.mode);
-        for (const QVariant &entry : m_scores.toVariantList(id)) {
-            QVariantMap row = entry.toMap();
-            row.insert(QStringLiteral("mode"), id);
-            row.insert(QStringLiteral("label"), info.label);
-            list.append(row);
-        }
-    }
-    return list;
-}
-
-QVariantMap OmatrisGame::bests() const {
-    QVariantMap map;
-    for (int i = 0; i < kModeCount; ++i)
-        map.insert(modeId(Mode(i)), m_scores.best(modeId(Mode(i))));
-    return map;
-}
-
 QVariantMap OmatrisGame::pieceShape(int piece) const {
     QVariantList cells;
     if (piece < 0 || piece >= kPieceCount)
         return {{QStringLiteral("cells"), cells}, {QStringLiteral("width"), 0}, {QStringLiteral("height"), 0}};
-    const PieceCells shape = Piece::cells(PieceType(piece), 0);
-    QPoint origin = shape.front();
-    QPoint far = shape.front();
-    for (QPoint cell : shape) {
-        origin = {std::min(origin.x(), cell.x()), std::min(origin.y(), cell.y())};
-        far = {std::max(far.x(), cell.x()), std::max(far.y(), cell.y())};
-    }
-    for (QPoint cell : shape) {
-        cells.append(QVariantMap {{QStringLiteral("x"), cell.x() - origin.x()},
-                                  {QStringLiteral("y"), cell.y() - origin.y()}});
-    }
+    const Piece::SpawnBox box = Piece::spawnBox(PieceType(piece));
+    for (QPoint cell : box.cells)
+        cells.append(QVariantMap {{QStringLiteral("x"), cell.x()}, {QStringLiteral("y"), cell.y()}});
     return {{QStringLiteral("cells"), cells},
-            {QStringLiteral("width"), far.x() - origin.x() + 1},
-            {QStringLiteral("height"), far.y() - origin.y() + 1}};
+            {QStringLiteral("width"), box.width},
+            {QStringLiteral("height"), box.height}};
 }
 
 void OmatrisGame::setStepInterval(int interval) {
@@ -207,17 +77,12 @@ void OmatrisGame::setStepInterval(int interval) {
     emit stepIntervalChanged();
 }
 
-void OmatrisGame::syncTimer() {
-    m_pacer.setRunning(playing());
-}
-
 void OmatrisGame::startGame(Mode mode, quint32 seed) {
     m_mode = mode;
-    QSettings().setValue(kModeKey, modeId(mode));
+    QSettings().setValue(kModeKey, Modes::id(mode));
     m_game = std::make_unique<Game>(mode, seed);
     m_newHighScoreRank = -1;
-    m_shift = 0;
-    m_shiftTicks = 0;
+    m_shift.clear();
     emit modeChanged();
     emit scoreChanged();
     emit levelChanged();
@@ -234,7 +99,7 @@ void OmatrisGame::startGame(Mode mode, quint32 seed) {
 
 void OmatrisGame::newGame(const QString &mode) {
     Mode chosen = m_mode;
-    modeFromId(mode, &chosen);
+    Modes::fromId(mode, &chosen);
     startGame(chosen, QRandomGenerator::global()->generate());
 }
 
@@ -256,8 +121,7 @@ void OmatrisGame::backToStart() {
 void OmatrisGame::press(int direction) {
     if (!playing())
         return;
-    m_shift = direction;
-    m_shiftTicks = 0;
+    m_shift.press(direction);
     const Snapshot before = snapshot();
     if (direction < 0)
         m_game->moveLeft();
@@ -268,20 +132,7 @@ void OmatrisGame::press(int direction) {
 }
 
 void OmatrisGame::release(int direction) {
-    if (m_shift == direction)
-        m_shift = 0;
-}
-
-void OmatrisGame::autoShift() {
-    if (m_shift == 0)
-        return;
-    ++m_shiftTicks;
-    if (m_shiftTicks < kDasTicks || (m_shiftTicks - kDasTicks) % kArrTicks != 0)
-        return;
-    if (m_shift < 0)
-        m_game->moveLeft();
-    else
-        m_game->moveRight();
+    m_shift.release(direction);
 }
 
 void OmatrisGame::turn(int quarters) {
@@ -318,7 +169,7 @@ void OmatrisGame::pause() {
     if (!playing())
         return;
     m_game->setPaused(true);
-    m_shift = 0;
+    m_shift.clear();
     m_game->setSoftDrop(false);
     syncTimer();
     emit pausedChanged();
@@ -350,7 +201,10 @@ void OmatrisGame::step() {
     if (!playing())
         return;
     const Snapshot before = snapshot();
-    autoShift();
+    if (const int shift = m_shift.tick(); shift < 0)
+        m_game->moveLeft();
+    else if (shift > 0)
+        m_game->moveRight();
     apply(m_game->tick());
     publish(before);
     emit frameChanged();
@@ -385,13 +239,8 @@ void OmatrisGame::handle(const Event &event) {
 // Popups are placed in visible board cells, which is all QML knows about.
 void OmatrisGame::announce(const ClearInfo &clear, QPoint where) {
     const QPoint at(where.x(), std::max(0, where.y() - Board::kHiddenRows));
-    const QString name = clearName(clear);
-    if (!name.isEmpty())
-        emit bonusEarned(name, at.x(), at.y());
-    if (clear.backToBack)
-        emit bonusEarned(tr("Back-to-Back"), at.x(), at.y());
-    if (clear.combo >= 1)
-        emit bonusEarned(tr("Combo x%1").arg(clear.combo), at.x(), at.y());
+    for (const QString &text : Bonuses::texts(clear))
+        emit bonusEarned(text, at.x(), at.y());
 }
 
 OmatrisGame::Snapshot OmatrisGame::snapshot() const {
@@ -424,7 +273,7 @@ void OmatrisGame::finishGame() {
     // A Sprint that tops out never crossed the line, so it has no time to keep.
     const bool ranked = m_game->phase() == Phase::Finished || !rankByTime();
     m_newHighScoreRank =
-        ranked ? m_scores.insert(modeId(m_mode),
+        ranked ? m_scores.insert(Modes::id(m_mode),
                                  {rankByTime() ? m_game->elapsedMs() : m_game->score(),
                                   QDate::currentDate(),
                                   {{QStringLiteral("score"), m_game->score()},
@@ -436,7 +285,7 @@ void OmatrisGame::finishGame() {
         m_scores.save();
         emit highScoresChanged();
     }
-    m_shift = 0;
+    m_shift.clear();
     emit phaseChanged();
     syncTimer();
 }

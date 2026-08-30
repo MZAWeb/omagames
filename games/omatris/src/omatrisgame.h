@@ -6,7 +6,9 @@
 #include <QVector>
 #include <memory>
 
+#include "autoshift.h"
 #include "game.h"
+#include "modes.h"
 #include "pacer.h"
 #include "scoretable.h"
 
@@ -14,9 +16,9 @@
 // invokables, persistence and pacing. Modes cross to QML as lowercase id
 // strings, pieces as their PieceType number, like the other games.
 //
-// Delayed auto shift lives here rather than in the engine, because it is the
-// one rule that is about keys being held down: the engine only ever moves a
-// piece one cell at a time.
+// Delayed auto shift lives beside it in AutoShift rather than in the engine,
+// because it is the one rule that is about keys being held down: the engine
+// only ever moves a piece one cell at a time.
 class OmatrisGame : public QObject {
     Q_OBJECT
     // "start" | "playing" | "gameover" | "finished"
@@ -48,10 +50,6 @@ class OmatrisGame : public QObject {
 public:
     // One simulation tick per timer shot: 60 ticks a second.
     static constexpr int kDefaultStepIntervalMs = 16;
-    // Delayed auto shift: how long a held key waits before it starts
-    // repeating, and how often it repeats after that.
-    static constexpr int kDasTicks = 10;  // ~167 ms
-    static constexpr int kArrTicks = 2;   // ~33 ms
 
     explicit OmatrisGame(QObject *parent = nullptr);
 
@@ -60,11 +58,11 @@ public:
     // Whether the well outlines where the falling piece would land.
     bool ghostEnabled() const { return m_ghostEnabled; }
     // "marathon" | "sprint" | "zen": the one being played, or the last chosen.
-    QString mode() const;
-    QString modeLabel() const;
+    QString mode() const { return Modes::id(m_mode); }
+    QString modeLabel() const { return Modes::label(m_mode); }
     bool rankByTime() const { return Rules::params(m_mode).rankByTime; }
     // {id, label, description, goal} for the start screen, in play order.
-    static QVariantList modes();
+    static QVariantList modes() { return Modes::list(); }
     int score() const { return m_game ? m_game->score() : 0; }
     int level() const { return m_game ? m_game->level() : 0; }
     int lines() const { return m_game ? m_game->lines() : 0; }
@@ -74,15 +72,15 @@ public:
     int combo() const { return m_game ? m_game->combo() : -1; }
     bool backToBack() const { return m_game && m_game->backToBack(); }
     // PieceType as a number, kPieceCount for an empty hold box.
-    int holdPiece() const;
+    int holdPiece() const { return m_game ? int(m_game->heldPiece()) : int(PieceType::None); }
     bool holdAvailable() const { return m_game && m_game->holdAvailable(); }
     QVariantList nextQueue() const;
     static int boardWidth() { return Board::kWidth; }
     static int boardHeight() { return Board::kVisibleHeight; }
     // {mode, label, score, lines, level, millis, date} for every table, best
     // first, and mode id -> the number that mode is judged on.
-    QVariantList highScores() const;
-    QVariantMap bests() const;
+    QVariantList highScores() const { return Modes::scoreRows(m_scores); }
+    QVariantMap bests() const { return Modes::bests(m_scores); }
     int newHighScoreRank() const { return m_newHighScoreRank; }
     int stepInterval() const { return m_pacer.interval(); }
     void setStepInterval(int interval);
@@ -153,27 +151,25 @@ private:
         QVariantList queue;
     };
 
-    bool playing() const;
+    bool playing() const { return m_game && m_game->phase() == Phase::Playing && !m_game->paused(); }
     void press(int direction);
     void release(int direction);
     void turn(int quarters);
-    void autoShift();
     void apply(const std::vector<Event> &events);
     void handle(const Event &event);
     void announce(const ClearInfo &clear, QPoint where);
     Snapshot snapshot() const;
     void publish(const Snapshot &before);
     void finishGame();
-    void syncTimer();
+    // The pacer runs while, and only while, a piece can fall.
+    void syncTimer() { m_pacer.setRunning(playing()); }
     void loadSettings();
 
     std::unique_ptr<Game> m_game;
     OmaGames::ScoreTable m_scores;
     OmaGames::Pacer m_pacer;
     Mode m_mode = Mode::Marathon;
+    AutoShift m_shift;
     int m_newHighScoreRank = -1;
     bool m_ghostEnabled = true;
-    // -1 left, +1 right, 0 nothing held; and how long it has been held.
-    int m_shift = 0;
-    int m_shiftTicks = 0;
 };
