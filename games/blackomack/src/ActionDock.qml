@@ -23,14 +23,24 @@ OmaPanel {
         RowLayout {
             width: parent.width
             spacing: 10 * theme.textScale
-            // Round, shoe depth and your session net read as one sentence, so
-            // they sit in their own tight row rather than spread across the dock.
+            // Round, shoe depth, your wallet and your session net read as one
+            // sentence, so they sit in their own tight row rather than spread
+            // across the dock.
             Row {
                 spacing: 5 * theme.textScale
                 Text {
                     text: "Round " + (game.handsPlayed + 1) + " · Shoe " + game.shoePercent + "%"
                     color: theme.foreground
                     opacity: 0.78
+                    font.pixelSize: 11 * theme.textScale
+                    font.bold: true
+                }
+                // The wallet is the number you check between hands, so it sits
+                // here at full strength even though the seat repeats it.
+                Text {
+                    text: "· Ø " + Number(game.bankroll).toLocaleString(Qt.locale(), "f", 0)
+                    color: theme.foreground
+                    opacity: 0.9
                     font.pixelSize: 11 * theme.textScale
                     font.bold: true
                 }
@@ -81,7 +91,9 @@ OmaPanel {
             readonly property real buttonWidth: fourAcross ? (width - 3 * spacing) / 4
                                                            : (width - spacing) / 2
 
-            OmaHintButton { width: Math.max(implicitWidth, actionFlow.buttonWidth); text: "Hit"; hint: "H"; primary: true; enabled: game.canHit; onClicked: game.hit() }
+            // None of the four is primary: an accent fill is the promise that
+            // Enter or Space presses this button, and no key but H hits.
+            OmaHintButton { width: Math.max(implicitWidth, actionFlow.buttonWidth); text: "Hit"; hint: "H"; enabled: game.canHit; onClicked: game.hit() }
             OmaHintButton { width: Math.max(implicitWidth, actionFlow.buttonWidth); text: "Stand"; hint: "S"; enabled: game.canStand; onClicked: game.stand() }
             OmaHintButton { width: Math.max(implicitWidth, actionFlow.buttonWidth); text: "Double"; hint: "D"; enabled: game.canDouble; onClicked: game.doubleDown() }
             OmaHintButton { width: Math.max(implicitWidth, actionFlow.buttonWidth); text: "Split"; hint: "P"; enabled: game.canSplit; onClicked: game.split() }
@@ -106,7 +118,6 @@ OmaPanel {
                 width: Math.max(implicitWidth, insuranceFlow.buttonWidth)
                 text: "No insurance"
                 hint: "N"
-                primary: true
                 onClicked: game.declineInsurance()
             }
         }
