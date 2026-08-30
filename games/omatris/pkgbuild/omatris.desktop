@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Omatris
+Comment=Tetris for Omarchy
+Exec=omatris
+Icon=omatris
+Terminal=false
+Categories=Game;BlocksGame;
+StartupWMClass=omatris

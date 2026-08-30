@@ -4,4 +4,5 @@ SUBDIRS += \
     games/blackomack \
     games/omanix \
     games/omasnake \
+    games/omatris \
     games/omasweeper

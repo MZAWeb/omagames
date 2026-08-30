@@ -14,6 +14,7 @@ size.
 | **Omanix** | `games/omanix` | Xonix: cut the sea, dodge the balls, claim 75% of the field; three difficulties and high scores |
 | **Omasweeper** | `games/omasweeper` | Minesweeper with Beginner, Intermediate and Expert boards and best times |
 | **Omasnake** | `games/omasnake` | Snake: eat the dots, grow longer and faster, and never touch the wall or your own tail; Classic or Wrap edges, three speeds and high scores |
+| **Omatris** | `games/omatris` | Tetris: stack the falling blocks, clear lines, chase the level; marathon, a 40-line sprint and an endless calm mode |
 
 Each game has its own README with rules and keyboard shortcuts.
 

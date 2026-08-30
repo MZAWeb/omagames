@@ -1,0 +1,17 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="Main.qml">Main.qml</file>
+        <file alias="StartScreen.qml">StartScreen.qml</file>
+        <file alias="HighScoresPanel.qml">HighScoresPanel.qml</file>
+        <file alias="PlayScreen.qml">PlayScreen.qml</file>
+        <file alias="PlayHeader.qml">PlayHeader.qml</file>
+        <file alias="PieceBox.qml">PieceBox.qml</file>
+        <file alias="KeyLegend.qml">KeyLegend.qml</file>
+        <file alias="TimeFormat.qml">TimeFormat.qml</file>
+        <file alias="BonusPopup.qml">BonusPopup.qml</file>
+        <file alias="OverlayPanel.qml">OverlayPanel.qml</file>
+        <file alias="PauseOverlay.qml">PauseOverlay.qml</file>
+        <file alias="ResultOverlay.qml">ResultOverlay.qml</file>
+        <file alias="ConfirmDialog.qml">ConfirmDialog.qml</file>
+    </qresource>
+</RCC>

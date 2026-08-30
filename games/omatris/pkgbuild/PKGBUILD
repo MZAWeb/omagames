@@ -1,0 +1,29 @@
+# Maintainer: Daniel Dvorkin <daniel@mzaweb.com>
+
+pkgname=omatris
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Tetris for Omarchy'
+arch=('x86_64' 'aarch64')
+url='https://github.com/MZAWeb/omagames'
+license=('MIT' 'OFL-1.1')
+install='omatris.install'
+options=('!debug')
+depends=('hicolor-icon-theme' 'qt6-base' 'qt6-declarative' 'xdg-desktop-portal')
+makedepends=('gcc' 'make' 'qt6-base' 'qt6-declarative')
+source=()
+sha256sums=()
+
+build() {
+  cd "$startdir/../../.."
+  ./bin/build omatris
+}
+
+package() {
+  cd "$startdir/../../.."
+  /usr/bin/install -Dm755 build/games/omatris/omatris "$pkgdir/usr/bin/omatris"
+  /usr/bin/install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  /usr/bin/install -Dm644 common/fonts/OFL.txt "$pkgdir/usr/share/licenses/$pkgname/OFL.txt"
+  /usr/bin/install -Dm644 "$startdir/omatris.svg" "$pkgdir/usr/share/icons/hicolor/scalable/apps/omatris.svg"
+  /usr/bin/install -Dm644 "$startdir/omatris.desktop" "$pkgdir/usr/share/applications/omatris.desktop"
+}
