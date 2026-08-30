@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Omanix
+Comment=Xonix for Omarchy
+Exec=omanix
+Icon=omanix
+Terminal=false
+Categories=Game;ArcadeGame;
+StartupWMClass=omanix

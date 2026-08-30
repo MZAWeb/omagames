@@ -1,4 +1,5 @@
 TEMPLATE = subdirs
 SUBDIRS += \
     games/omadoku \
-    games/blackomack
+    games/blackomack \
+    games/omanix

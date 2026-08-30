@@ -11,6 +11,7 @@ size.
 |---|---|---|
 | **Omadoku** | `games/omadoku` | Sudoku with four technique-graded levels, notes, digit highlighting and validate-as-you-go |
 | **Black Omack** | `games/blackomack` | Casino blackjack with a persistent Omabucks bankroll and AI table mates |
+| **Omanix** | `games/omanix` | Xonix: cut the sea, dodge the balls, claim 75% of the field; three difficulties and high scores |
 
 Each game has its own README with rules and keyboard shortcuts.
 
@@ -29,6 +30,7 @@ One line per game, on Omarchy (or any Arch):
 ```sh
 curl -fsSL https://raw.githubusercontent.com/MZAWeb/omagames/main/install.sh | bash -s omadoku
 curl -fsSL https://raw.githubusercontent.com/MZAWeb/omagames/main/install.sh | bash -s blackomack
+curl -fsSL https://raw.githubusercontent.com/MZAWeb/omagames/main/install.sh | bash -s omanix
 ```
 
 It builds a real Arch package with `makepkg` and installs it with `pacman`, so
