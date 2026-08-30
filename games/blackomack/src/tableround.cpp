@@ -95,6 +95,7 @@ QVector<TableEvent> Table::settleInsurance() {
         if (seat.insuranceBet <= 0)
             continue;
         seat.insuranceReturned = insuranceReturn(seat.insuranceBet, m_dealer);
+        seat.insuranceSettled = true;
         seat.bankroll += seat.insuranceReturned;
         const QString whose = seat.isHuman ? QStringLiteral("Insurance")
                                            : QStringLiteral("%1's insurance").arg(seat.name());
@@ -158,7 +159,7 @@ QVector<TableEvent> Table::nextRound(QRandomGenerator &rng) {
         return events;
     for (int i = 0; i < m_seats.size(); ++i) {
         Seat &seat = m_seats[i];
-        seat.hands.clear();
+        seat.clearRound();
         if (seat.isHuman || !seat.broke())
             continue;
         events.append({TableEvent::BotLeft, QStringLiteral("%1 is broke and leaves the table").arg(seat.name()), i});

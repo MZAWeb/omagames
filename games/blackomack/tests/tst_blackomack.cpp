@@ -199,6 +199,34 @@ private slots:
         QCOMPARE(clampBet(500, 125), 120);
         QCOMPARE(clampBet(10, 5), 0);
     }
+    // The one-tap stakes follow the bankroll: a tenth, a quarter and a half of
+    // it, snapped to the {1, 2, 5} x 10^n ladder and kept inside the table's
+    // limits. A bankroll too small to keep them apart offers fewer.
+    void betPresetsFollowTheBankroll() {
+        using BlackjackRules::betPresets;
+        struct Case { int bankroll; QVector<int> presets; };
+        const QVector<Case> cases = {
+            {1000, {100, 200, 500}},
+            {1270, {100, 200, 500}},   // 127 / 318 / 635 snap down the ladder
+            {950,  {100, 200, 500}},   // 95 rounds up, 475 rounds up too
+            {10000, {1000, 2000, 5000}},
+            {123456, {10000, 20000, 50000}},
+            {60,   {10, 20, 50}},      // 30 would repeat Ø 20, so it steps up
+            {100,  {10, 20, 50}},
+            {30,   {10, 20, 30}},      // the top preset can only reach the cap
+            {20,   {10, 20}},
+            {10,   {10}},              // nothing left to separate them with
+            {19,   {10}},              // the cap is the largest legal bet, Ø 10
+            {9,    {}},                // cannot even cover the table minimum
+            {0,    {}},
+        };
+        for (const Case &test : cases) {
+            QCOMPARE(betPresets(test.bankroll), test.presets);
+            for (int preset : betPresets(test.bankroll))
+                QVERIFY2(BlackjackRules::validBet(preset, test.bankroll),
+                         qPrintable(QStringLiteral("Ø %1 of %2").arg(preset).arg(test.bankroll)));
+        }
+    }
     // --- Basic strategy ---
     void basicStrategySpotChecks() {
         using BlackjackRules::Action;
@@ -1021,32 +1049,33 @@ private slots:
         QCOMPARE(reloaded.botCount(), 5);   // a new game reseats the same table
     }
     // --- Bet presets ---
-    // 1, 2 and 3 stake the presets, which clamp to the bankroll like any bet
-    // and are only live while betting.
+    // 1, 2 and 3 stake the presets, which follow the bankroll, are only live
+    // while betting, and re-price themselves as the stack moves.
     void bridgeBetPresets() {
         BlackjackGame g;
         g.setStepInterval(0);
         g.setBotCount(0);
-        QCOMPARE(g.betPresets(), QVariantList({10, 50, 100}));
+        QCOMPARE(g.betPresets(), QVariantList({100, 200, 500}));
         g.setBetPreset(2);
-        QCOMPARE(g.bet(), 100);
+        QCOMPARE(g.bet(), 500);
         g.setBetPreset(0);
-        QCOMPARE(g.bet(), 10);
+        QCOMPARE(g.bet(), 100);
         g.setBetPreset(1);
-        QCOMPARE(g.bet(), 50);
+        QCOMPARE(g.bet(), 200);
         g.setBetPreset(3);
-        QCOMPARE(g.bet(), 50);   // there is no fourth preset
+        QCOMPARE(g.bet(), 200);   // there is no fourth preset
         g.setBetPreset(-1);
-        QCOMPARE(g.bet(), 50);
+        QCOMPARE(g.bet(), 200);
 
-        // a preset above the bankroll stakes what is there instead
+        // losing most of the stack re-prices the menu around what is left
         g.setBet(940);
         g.stackDeck(cards({10, 10, 6, 10}));   // 16 against 20
         playRound(g);
         g.nextRound();
         QCOMPARE(g.bankroll(), 60);
+        QCOMPARE(g.betPresets(), QVariantList({10, 20, 50}));
         g.setBetPreset(2);
-        QCOMPARE(g.bet(), 60);
+        QCOMPARE(g.bet(), 50);
 
         // and the stake is locked once the cards are out
         g.setBetPreset(0);
@@ -1054,6 +1083,21 @@ private slots:
         const int staked = g.bet();
         g.setBetPreset(2);
         QCOMPARE(g.bet(), staked);
+    }
+    // A bankroll down to the table minimum has one preset left, and the keys
+    // past the end of that list do nothing at all.
+    void bridgeBetPresetsCollapseOnAThinBankroll() {
+        BlackjackGame g;
+        g.setStepInterval(0);
+        g.setBotCount(0);
+        g.setBet(990);
+        g.stackDeck(cards({10, 10, 6, 10}));   // 16 against 20
+        playRound(g);
+        g.nextRound();
+        QCOMPARE(g.bankroll(), 10);
+        QCOMPARE(g.betPresets(), QVariantList({10}));
+        g.setBetPreset(1);
+        QCOMPARE(g.bet(), 10);   // clamped to the only legal bet, not to Ø 20
     }
 
     // --- Re-splits ---
@@ -1224,6 +1268,8 @@ private slots:
         QCOMPARE(events.first().text, expected ? QStringLiteral("Nina takes insurance") : QString());
         QCOMPARE(t.phase(), Table::Phase::PlayerTurns);
     }
+    // The dock picks its tray from exactly these five flags, so pinning them
+    // here pins what the player is offered: the insurance pair and nothing else.
     void bridgeOffersInsuranceAgainstAnAce() {
         QSettings().clear();
         BlackjackGame g;
@@ -1234,8 +1280,10 @@ private slots:
         g.stackDeck(cards({10, 1, 9, 13}));
         g.dealRound();
         QCOMPARE(g.phase(), QStringLiteral("insurance"));
-        QVERIFY(g.canInsure());
-        QVERIFY(!g.waitingForHuman());
+        QVERIFY(g.canInsure());          // the Insurance / No insurance pair shows
+        QVERIFY(!g.waitingForHuman());   // and the Hit / Stand / Double / Split row does not
+        QVERIFY(!g.roundOver());         // nor Next round
+        QVERIFY(!g.canDeal());           // nor the bet controls
         QCOMPARE(g.insuranceCost(), 50);
         QCOMPARE(g.coachAction(), QStringLiteral("No insurance"));
         QCOMPARE(g.coachSituation(), QStringLiteral("Dealer shows an ace"));
@@ -1246,6 +1294,44 @@ private slots:
         QVERIFY(g.log().contains(QStringLiteral("Insurance pays Ø 100")));
         QCOMPARE(g.bankroll(), 1000);      // the side bet exactly covered the lost hand
         QCOMPARE(g.netResult(), 0);
+    }
+    // The seats model carries the side bet so the table can draw it as a chip:
+    // down and unsettled from the moment it is placed, then won or lost at the
+    // peek, and gone again the next round.
+    void seatsModelCarriesTheInsuranceSideBet() {
+        QSettings().clear();
+        BlackjackGame g;
+        g.setStepInterval(0);
+        g.setBotCount(0);
+        g.setBet(100);
+        g.stackDeck(cards({10, 1, 9, 13}));   // dealer shows an ace, holds a natural
+        g.dealRound();
+        auto humanSeat = [&g] { return g.seats()[g.humanSeat()].toMap(); };
+        QCOMPARE(humanSeat()[QStringLiteral("insuranceBet")].toInt(), 0);
+        QCOMPARE(humanSeat()[QStringLiteral("insuranceSettled")].toBool(), false);
+
+        g.insurance();
+        QCOMPARE(humanSeat()[QStringLiteral("insuranceBet")].toInt(), 50);
+        QCOMPARE(humanSeat()[QStringLiteral("insuranceSettled")].toBool(), true);
+        QCOMPARE(humanSeat()[QStringLiteral("insuranceNet")].toInt(), 100);   // pays 2 to 1
+
+        g.nextRound();
+        QCOMPARE(humanSeat()[QStringLiteral("insuranceBet")].toInt(), 0);
+        QCOMPARE(humanSeat()[QStringLiteral("insuranceSettled")].toBool(), false);
+        QCOMPARE(humanSeat()[QStringLiteral("insuranceNet")].toInt(), 0);
+
+        // and a side bet the dealer's hole card kills reads as a loss
+        BlackjackGame lost;
+        lost.setStepInterval(0);
+        lost.setBotCount(0);
+        lost.setBet(100);
+        lost.stackDeck(cards({10, 1, 9, 7}));
+        lost.dealRound();
+        lost.insurance();
+        const QVariantMap seat = lost.seats()[lost.humanSeat()].toMap();
+        QCOMPARE(seat[QStringLiteral("insuranceBet")].toInt(), 50);
+        QCOMPARE(seat[QStringLiteral("insuranceSettled")].toBool(), true);
+        QCOMPARE(seat[QStringLiteral("insuranceNet")].toInt(), -50);
     }
     void bridgeDeclinedInsuranceCostsNothing() {
         QSettings().clear();

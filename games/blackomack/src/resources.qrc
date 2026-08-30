@@ -14,5 +14,6 @@
         <file alias="RosterSeat.qml">RosterSeat.qml</file>
         <file alias="RosterHand.qml">RosterHand.qml</file>
         <file alias="HumanStage.qml">HumanStage.qml</file>
+        <file alias="InsuranceChip.qml">InsuranceChip.qml</file>
     </qresource>
 </RCC>

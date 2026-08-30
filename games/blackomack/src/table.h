@@ -17,9 +17,17 @@ struct Seat {
     QVector<Hand> hands;    // empty while betting or when sitting out
     int insuranceBet = 0;       // side bet against a dealer ace, 0 when declined
     int insuranceReturned = 0;  // stake + winnings paid back on a dealer natural
+    bool insuranceSettled = false;  // true once the peek has decided the side bet
 
     QString name() const;
     bool broke() const { return bankroll < BlackjackRules::kMinBet; }
+    // Everything a seat carries for one round only; the bankroll survives it.
+    void clearRound() {
+        hands.clear();
+        insuranceBet = 0;
+        insuranceReturned = 0;
+        insuranceSettled = false;
+    }
 };
 
 // Something that happened at the table; the UI logs the text and can animate
