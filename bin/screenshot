@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Capture a game window on the live Hyprland session:
+#
+#   bin/screenshot <game> <out.png> [key ...]
+#
+# Builds the game, launches it floating at 1280x800 against a throwaway
+# XDG_CONFIG_HOME (the real settings are untouched), sends the given keys
+# with wtype ("k:Return", "s:1.5" sleeps), grabs the window with grim, and
+# kills it. Keys land in the game only after focus is verified. Used to
+# refresh screenshots/ for the README now and then.
+#
+# Hyprland's hyprctl dispatch speaks the Lua API: hl.dsp.focus({ window =
+# "class:x" }), hl.dsp.window.float({ action = "on" }), hl.dsp.window.resize({
+# x, y, exact = true }) — the old "dispatch focuswindow class:x" form fails
+# silently.
+set -eu
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+GAME="${1:?usage: bin/screenshot <game> <out.png> [k:Key|s:seconds ...]}"; OUT="${2:?output png}"; shift 2
+"$ROOT/bin/build" "$GAME" >/dev/null
+BIN="$ROOT/build/games/$GAME/$GAME"
+CFG="$(mktemp -d)"; trap 'rm -rf "$CFG"' EXIT
+(XDG_CONFIG_HOME="$CFG" setsid "$BIN" >/dev/null 2>&1 &)
+for _ in $(seq 1 20); do sleep 0.3; hyprctl clients -j | grep -q "\"class\": \"$GAME\"" && break; done
+sleep 1.2
+focus() { hyprctl dispatch "hl.dsp.focus({ window = \"class:$GAME\" })" >/dev/null; sleep 0.5; }
+focus
+hyprctl dispatch 'hl.dsp.window.float({ action = "on" })' >/dev/null
+hyprctl dispatch 'hl.dsp.window.resize({ x = 1280, y = 800, exact = true })' >/dev/null
+hyprctl dispatch 'hl.dsp.window.center()' >/dev/null
+sleep 1; focus
+hyprctl activewindow -j | grep -q "\"class\": \"$GAME\"" || { echo "could not focus $GAME" >&2; pkill -x "$GAME" || true; exit 1; }
+for step in "$@"; do
+  case "$step" in
+    k:*) wtype -k "${step#k:}" ;;
+    s:*) sleep "${step#s:}" ;;
+  esac
+  sleep 0.2
+done
+GEO="$(hyprctl clients -j | python3 -c "
+import json,sys
+for c in json.load(sys.stdin):
+    if c['class']=='$GAME':
+        x,y=c['at']; w,h=c['size']; print(f'{x},{y} {w}x{h}'); break")"
+grim -g "$GEO" "$OUT"
+pkill -x "$GAME" || true
+echo "saved $OUT"
