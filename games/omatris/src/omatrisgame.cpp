@@ -331,7 +331,9 @@ void OmatrisGame::handle(const Event &event) {
     }
 }
 
-void OmatrisGame::announce(const ClearInfo &clear, QPoint at) {
+// Popups are placed in visible board cells, which is all QML knows about.
+void OmatrisGame::announce(const ClearInfo &clear, QPoint where) {
+    const QPoint at(where.x(), std::max(0, where.y() - Board::kHiddenRows));
     const QString name = clearName(clear);
     if (!name.isEmpty())
         emit bonusEarned(name, at.x(), at.y());

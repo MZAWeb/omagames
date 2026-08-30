@@ -1,0 +1,26 @@
+include(../../common/common.pri)
+
+CONFIG += c++17 release
+TARGET = omatris
+TEMPLATE = app
+
+HEADERS += \
+    src/piece.h \
+    src/board.h \
+    src/bag.h \
+    src/rules.h \
+    src/game.h \
+    src/highscores.h \
+    src/omatrisgame.h \
+    src/fieldview.h
+SOURCES += \
+    src/main.cpp \
+    src/piece.cpp \
+    src/board.cpp \
+    src/bag.cpp \
+    src/rules.cpp \
+    src/game.cpp \
+    src/highscores.cpp \
+    src/omatrisgame.cpp \
+    src/fieldview.cpp
+RESOURCES += src/resources.qrc

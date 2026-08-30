@@ -155,7 +155,7 @@ private:
     void autoShift();
     void apply(const std::vector<Event> &events);
     void handle(const Event &event);
-    void announce(const ClearInfo &clear, QPoint at);
+    void announce(const ClearInfo &clear, QPoint where);
     Snapshot snapshot() const;
     void publish(const Snapshot &before);
     void finishGame();
