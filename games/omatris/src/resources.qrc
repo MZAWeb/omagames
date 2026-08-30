@@ -8,10 +8,7 @@
         <file alias="PieceBox.qml">PieceBox.qml</file>
         <file alias="KeyLegend.qml">KeyLegend.qml</file>
         <file alias="TimeFormat.qml">TimeFormat.qml</file>
-        <file alias="BonusPopup.qml">BonusPopup.qml</file>
-        <file alias="OverlayPanel.qml">OverlayPanel.qml</file>
         <file alias="PauseOverlay.qml">PauseOverlay.qml</file>
         <file alias="ResultOverlay.qml">ResultOverlay.qml</file>
-        <file alias="ConfirmDialog.qml">ConfirmDialog.qml</file>
     </qresource>
 </RCC>
