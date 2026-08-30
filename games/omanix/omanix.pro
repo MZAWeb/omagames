@@ -20,5 +20,6 @@ SOURCES += \
     src/difficulties.cpp \
     src/game.cpp \
     src/omanixgame.cpp \
+    src/omanixgamemodel.cpp \
     src/fieldview.cpp
 RESOURCES += src/resources.qrc

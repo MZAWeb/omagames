@@ -60,57 +60,6 @@ QString OmanixGame::phase() const {
     return kPlayingId;
 }
 
-QString OmanixGame::difficultyLabel() const {
-    for (const DifficultyInfo &info : Difficulties::all()) {
-        if (info.difficulty == m_difficulty)
-            return info.label;
-    }
-    return {};
-}
-
-QVariantList OmanixGame::difficulties() {
-    QVariantList list;
-    for (const DifficultyInfo &info : Difficulties::all()) {
-        list.append(QVariantMap {
-            {QStringLiteral("id"), info.id},
-            {QStringLiteral("label"), info.label},
-            {QStringLiteral("description"), info.description},
-        });
-    }
-    return list;
-}
-
-QVariantList OmanixGame::highScores() const {
-    QVariantList list;
-    for (const DifficultyInfo &info : Difficulties::all()) {
-        for (const QVariant &entry : m_scores.toVariantList(info.id)) {
-            QVariantMap row = entry.toMap();
-            row.insert(QStringLiteral("difficulty"), info.id);
-            row.insert(QStringLiteral("label"), info.label);
-            list.append(row);
-        }
-    }
-    return list;
-}
-
-QVariantMap OmanixGame::bests() const {
-    QVariantMap map;
-    for (int i = 0; i < kDifficultyCount; ++i)
-        map.insert(Difficulties::id(Difficulty(i)), m_scores.best(Difficulties::id(Difficulty(i))));
-    return map;
-}
-
-QVariantMap OmanixGame::levelStats() const {
-    if (!m_game)
-        return {};
-    const LevelStats &stats = m_game->lastLevel();
-    return {
-        {QStringLiteral("percent"), stats.percent},
-        {QStringLiteral("bonus"), stats.livesBonus},
-        {QStringLiteral("seconds"), stats.ticks / Level::kTicksPerSecond},
-    };
-}
-
 void OmanixGame::setStepInterval(int interval) {
     if (!m_pacer.setInterval(interval))
         return;
