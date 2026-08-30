@@ -59,7 +59,7 @@ current Omarchy theme.
 | `N` | cycle what a keypad click does: Highlight → Note → Fill |
 | `Backspace`, `Delete`, `0` | erase the cell |
 | `Ctrl+Z` | undo |
-| `R` | restart the puzzle |
+| `R` | restart the puzzle: clears every entry and note (confirms once you have any) |
 | `V` | toggle *Validate as I go* |
 | `Escape` | collapse the selection, else clear the highlight, else back to the start screen (confirms mid-puzzle) |
 | `Ctrl+Q` | quit |

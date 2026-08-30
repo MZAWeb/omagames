@@ -48,7 +48,7 @@ ApplicationWindow {
     Shortcut {
         sequences: ["Escape"]
         context: Qt.ApplicationShortcut
-        enabled: game.state !== "start" && !confirmLoader.active
+        enabled: game.state !== "start" && !confirmLoader.active && !game.restartPending
         onActivated: win.backOut()
     }
 
@@ -92,6 +92,26 @@ ApplicationWindow {
             }
             onRejected: {
                 confirmLoader.active = false;
+                (screen.item as Item).forceActiveFocus();
+            }
+        }
+        onLoaded: (item as Item).forceActiveFocus()
+    }
+
+    // Restarting really is destructive — every entry and note goes — so the
+    // bridge holds the question open and this only draws it.
+    Loader {
+        anchors.fill: parent
+        active: game.restartPending
+        sourceComponent: ConfirmDialog {
+            message: qsTr("Restart this puzzle? Every entry and note is cleared.")
+            acceptText: qsTr("Restart")
+            onAccepted: {
+                game.confirmRestart();
+                (screen.item as Item).forceActiveFocus();
+            }
+            onRejected: {
+                game.cancelRestart();
                 (screen.item as Item).forceActiveFocus();
             }
         }

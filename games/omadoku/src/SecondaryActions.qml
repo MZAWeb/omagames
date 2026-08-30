@@ -31,7 +31,7 @@ GridLayout {
         Layout.fillWidth: true
         text: qsTr("Restart")
         hint: qsTr("R")
-        onClicked: game.restart()
+        onClicked: game.requestRestart()
     }
     OmaHintButton {
         Layout.fillWidth: true

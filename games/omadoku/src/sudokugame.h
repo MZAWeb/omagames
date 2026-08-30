@@ -38,6 +38,7 @@ class SudokuGame : public QObject {
     Q_PROPERTY(bool canUndo READ canUndo NOTIFY boardChanged)
     Q_PROPERTY(int filledCount READ filledCount NOTIFY boardChanged)
     Q_PROPERTY(bool inProgress READ inProgress NOTIFY boardChanged)
+    Q_PROPERTY(bool restartPending READ restartPending NOTIFY restartPendingChanged)
     Q_PROPERTY(QVariantList digitCounts READ digitCounts NOTIFY boardChanged)
     Q_PROPERTY(int elapsedSeconds READ elapsedSeconds NOTIFY elapsedSecondsChanged)
     Q_PROPERTY(bool hasSavedGame READ hasSavedGame NOTIFY hasSavedGameChanged)
@@ -77,6 +78,9 @@ public:
     bool canUndo() const { return m_board.canUndo(); }
     int filledCount() const { return m_board.filledCount(); }
     bool inProgress() const;
+    // True while the restart dialog is up: QML shows it, and nothing wipes
+    // the board until confirmRestart() answers it.
+    bool restartPending() const { return m_restartPending; }
     QVariantList digitCounts() const;
     // Digit the player asked to see everywhere on the board (-1 = none).
     int highlightDigit() const { return m_highlightDigit; }
@@ -125,7 +129,15 @@ public:
     Q_INVOKABLE void cycleClickMode();
     Q_INVOKABLE void erase();
     Q_INVOKABLE void undo();
-    Q_INVOKABLE void restart();
+    // Restarting throws away every entry and note, so QML cannot ask for it
+    // outright: requestRestart() puts the question (or restarts an untouched
+    // puzzle, where there is nothing to ask about) and only the dialog's
+    // answer, confirmRestart(), goes through with it. restart() itself is
+    // deliberately not invokable.
+    Q_INVOKABLE void requestRestart();
+    Q_INVOKABLE void confirmRestart();
+    Q_INVOKABLE void cancelRestart();
+    void restart();
     Q_INVOKABLE void backToStart();
 
     Q_INVOKABLE QVariantMap windowGeometry() const;
@@ -141,6 +153,7 @@ signals:
     void highlightDigitChanged();
     void elapsedSecondsChanged();
     void hasSavedGameChanged();
+    void restartPendingChanged();
     void bestTimesChanged();
 
 private:
@@ -158,6 +171,7 @@ private:
     void setScreen(Screen screen);
     void setHighlightDigit(int digit);
     void setHasSavedGame(bool hasSavedGame);
+    void setRestartPending(bool pending);
     void selectFirstEmptyCell();
     void recordWin();
     void loadSettings();
@@ -178,4 +192,5 @@ private:
     int m_newBestRank = -1;
     ClickMode m_clickMode = ClickMode::Fill;
     bool m_hasSavedGame = false;
+    bool m_restartPending = false;
 };
