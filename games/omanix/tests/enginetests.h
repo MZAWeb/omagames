@@ -15,7 +15,10 @@ private slots:
     void ballReflectsOffWalls();
     void ballReflectsOffCorner();
     void ballNeverSqueezesBetweenDiagonalBlockers();
-    void chaserPatrolsTheFrame();
+    void chaserCrawlsTheFrameClockwise();
+    void chaserFollowsNewlyClaimedGround();
+    void chaserReversesAtADeadEnd();
+    void chaserBuriedByAClaimWalksBackToTheEdge();
     void tapMovesOneCellAndHoldKeepsMoving();
     void marchingIntoOpenSeaCutsATrailUntilGround();
     void cannotReverseOntoTheTrail();
@@ -29,7 +32,9 @@ private slots:
     void gameOverAfterLastLife();
     void restartLevelKeepsScoreAndLives();
     void difficultyParametersRamp();
+    void theThreeDifficultiesFormALadder();
     void sameSeedSameEvents();
     void levelStartsWithAnIntroFreeze();
+    void respawnLandsWhereChasersMustCrawlFurthest();
     void trailThreatenedWhileABallIsNear();
 };

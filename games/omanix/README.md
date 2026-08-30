@@ -3,13 +3,14 @@
 Xonix for Omarchy. Drive a marker along the claimed frame of a 64×40 field,
 cut into the open sea and close the cut back on solid ground to claim
 everything you fenced off. Balls bounce around the sea and pop your trail;
-chasers patrol the ground you own. Claim three quarters of the field to
-clear the level.
+chasers crawl the edge of the ground you own. Claim three quarters of the
+field to clear the level.
 
 ## Rules
 
-- The field starts as a two-cell frame of claimed ground around open sea.
-  The marker lives on claimed ground.
+- The field starts as a one-cell frame of claimed ground around open sea —
+  the same thickness as the marker and the trail it cuts. The marker lives
+  on claimed ground.
 - Leaving the ground cuts a **trail** through the sea. The marker never stops
   on the sea: it keeps going in the last direction until it reaches ground
   again. Then the trail becomes ground, and so does every open region that
@@ -18,8 +19,10 @@ clear the level.
   rules included (the axis that hit is the one that flips). The trail is not
   a wall to them: a ball touching your trail costs a life and wipes the
   trail. So does running into your own trail.
-- **Chasers** drift the same way through the claimed ground and kill on
-  contact wherever you are. Level 1 has one; more join every few levels.
+- **Chasers** crawl along the edge of the claimed ground, keeping the sea on
+  their right — clockwise around the opening frame. They follow every edge a
+  claim adds, turn around at a dead end, and kill on contact wherever you
+  are. More join every few levels.
 - Every level opens with a short banner ("Level 3 · 5 balls · 2 chasers")
   while everything holds still for 1.2 s; a key pressed during it takes
   effect the moment play starts.
@@ -30,8 +33,8 @@ clear the level.
 - Level goal: **75%** of the interior claimed. Each level adds a ball, the
   balls get a little faster, and chasers pile up every few levels.
 - Three lives, an extra one every 10,000 points. After a lost life everything
-  holds still for a second and the marker returns to the bottom edge, as far
-  from the chasers as the frame allows.
+  holds still for a second and the marker returns to the bottom edge, onto
+  the cell the nearest chaser has the longest crawl to reach.
 
 ## Scoring
 
@@ -49,16 +52,25 @@ Every constant is named in `src/game.h`.
 
 ## Difficulties
 
-| | Balls at start | Ball speed | Chasers | Ramp |
-|---|---|---|---|---|
-| **Easy** | 2 | slow | one more every 5 levels | speeds up every 3 levels |
-| **Normal** | 3 | classic | one more every 3 levels | speeds up every 2 levels |
-| **Hard** | 4 | fast | one more every 2 levels | speeds up every 2 levels |
+Speeds are ticks per move at 60 ticks a second, so a smaller number is a
+faster mover; the marker itself moves every 4 ticks.
 
-The last difficulty played is preselected. The top ten scores per difficulty
-(with level and date) are kept in `~/.config/Omacom/omanix.conf`; the header
-shows the best for the difficulty in play and tints the score once you pass
-it, and the game-over overlay names your rank when you made the table.
+| | Balls at start | Ball speed | Chasers at start | Chaser speed | Ramp |
+|---|---|---|---|---|---|
+| **Easy** | 2 | 9 | 1, one more every 5 levels | 12 | a tick faster every 4 levels, down to 6 |
+| **Normal** | 3 | 8 | 2, one more every 4 levels | 11 | a tick faster every 3 levels, down to 5 |
+| **Hard** | 4 | 4 | 3, one more every 2 levels | 7 | a tick faster every 2 levels, down to 3 |
+
+Normal is a short step off Easy — one more ball and one more chaser, a single
+tick quicker — not a halfway house to Hard, where the balls move at better
+than twice Easy's pace from the first level.
+
+Each difficulty has its own key and none of them is a default, so no button
+on the start screen is drawn as the primary one; the difficulty played last
+is merely marked. The top ten scores per difficulty (with level and date) are
+kept in `~/.config/Omacom/omanix.conf`; the header shows the best for the
+difficulty in play and tints the score once you pass it, and the game-over
+overlay names your rank when you made the table.
 
 ## Keyboard
 

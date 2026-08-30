@@ -10,6 +10,7 @@
 namespace {
 
 constexpr quint32 kSeed = 20260830u;
+constexpr int kInteriorHeight = Field::kDefaultHeight - 2 * Field::kBorder;
 
 // A game with no chasers and the ball walled off on the right, like the
 // engine suite's quiet scenario, but reached through the bridge.
@@ -134,7 +135,7 @@ void BridgeTests::levelIntroAndThreatAreExposed() {
     game.newGame(QStringLiteral("hard"));
     QVERIFY(game.levelIntro());
     QCOMPARE(game.ballCount(), 4);
-    QCOMPARE(game.chaserCount(), 1);
+    QCOMPARE(game.chaserCount(), 3);
     QCOMPARE(intros.count(), 1);
     for (int i = 0; i < Game::kLevelIntroTicks; ++i)
         game.step();
@@ -159,7 +160,7 @@ void BridgeTests::levelIntroAndThreatAreExposed() {
     QVERIFY(quiet.trailThreatened());
     QCOMPARE(threats.count(), 1);
     hold(quiet, QStringLiteral("left"), 1);
-    hold(quiet, QStringLiteral("down"), 2);
+    hold(quiet, QStringLiteral("down"), 3);
     QVERIFY(!quiet.trailThreatened());
     QCOMPARE(threats.count(), 2);
 }
@@ -176,7 +177,7 @@ void BridgeTests::scriptedLevelCompletesAndContinues() {
     QCOMPARE(game.phase(), QStringLiteral("levelcomplete"));
     QVERIFY(game.claimedPercent() >= Game::kGoalPercent);
     QCOMPARE(claims.count(), 1);
-    QCOMPARE(claims.first().at(0).value<QVector<int>>().size(), 54 * 36);
+    QCOMPARE(claims.first().at(0).value<QVector<int>>().size(), 55 * kInteriorHeight);
     QCOMPARE(bonuses.count(), 1);
     QVERIFY(bonuses.first().at(0).toString().startsWith(QStringLiteral("Big cut")));
     QCOMPARE(scores.count(), 1);
@@ -185,7 +186,7 @@ void BridgeTests::scriptedLevelCompletesAndContinues() {
     QCOMPARE(stats.value(QStringLiteral("bonus")).toInt(), Game::kStartLives * Game::kLifeBonus);
     QVERIFY(stats.value(QStringLiteral("percent")).toDouble() >= Game::kGoalPercent);
     QCOMPARE(stats.value(QStringLiteral("seconds")).toInt(), game.levelSeconds());
-    QCOMPARE(game.score(), 54 * 36 * Game::kHugeCutMultiplier + Game::kStartLives * Game::kLifeBonus);
+    QCOMPARE(game.score(), 55 * kInteriorHeight * Game::kHugeCutMultiplier + Game::kStartLives * Game::kLifeBonus);
 
     game.nextLevel();
     QCOMPARE(game.phase(), QStringLiteral("playing"));

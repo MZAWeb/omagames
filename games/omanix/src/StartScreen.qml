@@ -59,10 +59,11 @@ FocusScope {
                 Layout.fillWidth: true
                 spacing: 3 * theme.textScale
 
+                // Plain, every one of them: no key starts "the" difficulty, so
+                // nothing here may look like what Enter would press.
                 OmaHintButton {
                     Layout.fillWidth: true
                     text: entry.modelData.label
-                    primary: entry.modelData.id === game.difficulty
                     hint: (entry.index + 1).toString()
                     onClicked: game.newGame(entry.modelData.id)
                 }
@@ -77,6 +78,13 @@ FocusScope {
                         color: theme.mix(theme.background, theme.foreground, 0.55)
                         font.pixelSize: 11 * theme.textScale
                         wrapMode: Text.WordWrap
+                    }
+                    Text {
+                        visible: entry.modelData.id === game.difficulty
+                        text: qsTr("Last played")
+                        color: theme.mix(theme.background, theme.foreground, 0.45)
+                        font.pixelSize: 11 * theme.textScale
+                        font.italic: true
                     }
                     Text {
                         text: entry.best > 0 ? qsTr("Best %1").arg(entry.best.toLocaleString(Qt.locale(), "f", 0)) : ""
