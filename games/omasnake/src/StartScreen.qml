@@ -2,8 +2,9 @@ import QtQuick
 import QtQuick.Layouts
 import OmaGames
 
-// Mode switch, difficulty picker with the best score of each, the high-score
-// table and a legend of the keys that matter once the field is up.
+// Two settings kept apart: the edges switch, then the speed buttons that each
+// start a game with the best score of that speed beside them. Below them the
+// high-score table and a legend of the keys that matter once the field is up.
 FocusScope {
     id: root
 
@@ -48,22 +49,16 @@ FocusScope {
             font.pixelSize: 15 * theme.textScale
         }
 
-        OmaHintButton {
+        EdgesSelector {
             Layout.fillWidth: true
-            Layout.topMargin: 8 * theme.textScale
-            text: qsTr("%1 mode").arg(game.modeLabel)
-            hint: qsTr("M")
-            onClicked: game.toggleMode()
+            Layout.topMargin: 12 * theme.textScale
         }
-        Text {
+
+        SectionHeading {
             Layout.fillWidth: true
-            Layout.leftMargin: 12 * theme.textScale
-            Layout.rightMargin: 12 * theme.textScale
-            Layout.bottomMargin: 6 * theme.textScale
-            text: game.modes.filter(function(entry) { return entry.id === game.mode; })[0].description
-            color: theme.mix(theme.background, theme.foreground, 0.55)
-            font.pixelSize: 11 * theme.textScale
-            wrapMode: Text.WordWrap
+            Layout.topMargin: 12 * theme.textScale
+            Layout.bottomMargin: 2 * theme.textScale
+            text: qsTr("Speed")
         }
 
         Repeater {
@@ -78,7 +73,7 @@ FocusScope {
                 Layout.fillWidth: true
                 spacing: 3 * theme.textScale
 
-                // Plain, every one of them: no key starts "the" difficulty, so
+                // Plain, every one of them: no key starts "the" speed, so
                 // nothing here may look like what Enter would press.
                 OmaHintButton {
                     Layout.fillWidth: true

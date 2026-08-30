@@ -68,7 +68,13 @@ void BridgeTests::startsOnTheStartScreenWithModesAndDifficulties() {
     QCOMPARE(game.modes().size(), 2);
     QCOMPARE(game.modes().at(0).toMap().value(QStringLiteral("id")).toString(), QStringLiteral("classic"));
     QCOMPARE(game.modes().at(1).toMap().value(QStringLiteral("label")).toString(), QStringLiteral("Wrap"));
-    QVERIFY(!game.modes().at(1).toMap().value(QStringLiteral("description")).toString().isEmpty());
+    // The edges switch shows one line under it, taken from the chosen mode, so
+    // the two lines have to exist and have to say different things.
+    const QString classicText = game.modes().at(0).toMap().value(QStringLiteral("description")).toString();
+    const QString wrapText = game.modes().at(1).toMap().value(QStringLiteral("description")).toString();
+    QVERIFY(!classicText.isEmpty());
+    QVERIFY(!wrapText.isEmpty());
+    QVERIFY(classicText != wrapText);
     QCOMPARE(game.mode(), QStringLiteral("classic"));
     QCOMPARE(game.modeLabel(), QStringLiteral("Classic"));
 
