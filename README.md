@@ -13,6 +13,7 @@ size.
 | **Black Omack** | `games/blackomack` | Casino blackjack with a persistent Omabucks bankroll and AI table mates |
 | **Omanix** | `games/omanix` | Xonix: cut the sea, dodge the balls, claim 75% of the field; three difficulties and high scores |
 | **Omasweeper** | `games/omasweeper` | Minesweeper with Beginner, Intermediate and Expert boards and best times |
+| **Omasnake** | `games/omasnake` | Snake: eat the dots, grow longer and faster, and never touch the wall or your own tail; Classic or Wrap edges, three speeds and high scores |
 
 Each game has its own README with rules and keyboard shortcuts.
 
@@ -36,6 +37,7 @@ One line per game, on Omarchy (or any Arch):
 curl -fsSL https://raw.githubusercontent.com/MZAWeb/omagames/main/install.sh | bash -s omadoku
 curl -fsSL https://raw.githubusercontent.com/MZAWeb/omagames/main/install.sh | bash -s blackomack
 curl -fsSL https://raw.githubusercontent.com/MZAWeb/omagames/main/install.sh | bash -s omanix
+curl -fsSL https://raw.githubusercontent.com/MZAWeb/omagames/main/install.sh | bash -s omasnake
 curl -fsSL https://raw.githubusercontent.com/MZAWeb/omagames/main/install.sh | bash -s omasweeper
 ```
 
