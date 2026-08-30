@@ -107,10 +107,10 @@ QVariantList SudokuGame::difficulties() {
         QString description;
     };
     const QVector<Level> levels {
-        {Difficulty::Easy, tr("Easy"), tr("Plenty of clues; some cell always has one digit left.")},
-        {Difficulty::Medium, tr("Medium"), tr("Fewer clues; scan each unit for where a digit must go.")},
-        {Difficulty::Hard, tr("Hard"), tr("Needs pencil marks: a naked pair, hidden pair or naked triple.")},
-        {Difficulty::ExtraHard, tr("Extra hard"), tr("Needs an X-wing, XY-wing or swordfish somewhere.")},
+        {Difficulty::Easy, tr("Easy"), tr("Plenty of clues; a box scan or a lone digit always moves you on.")},
+        {Difficulty::Medium, tr("Medium"), tr("Fewer clues; scan rows and columns too, or spot a naked pair.")},
+        {Difficulty::Hard, tr("Hard"), tr("Needs pencil marks: a hidden pair, naked triple or hidden triple.")},
+        {Difficulty::ExtraHard, tr("Extra hard"), tr("Needs an X-wing, swordfish or XY-wing somewhere.")},
     };
     QVariantList list;
     for (const Level &level : levels) {
