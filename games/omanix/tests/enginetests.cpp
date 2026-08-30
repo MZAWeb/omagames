@@ -713,3 +713,32 @@ void EngineTests::trailThreatenedWhileABallIsNear() {
     QVERIFY(!game.player().onTrail);
     QVERIFY(!game.trailThreatened());
 }
+
+// The renderer caches the painted ground against this counter, so it has to
+// move for every claim and stand still for everything else.
+void EngineTests::groundRevisionOnlyMovesWhenGroundDoes() {
+    Game game = quietGame();
+    const Field &field = game.field();
+    const int atStart = field.groundRevision();
+    const int revisionAtStart = field.revision();
+
+    walk(game, Direction::Up, 3);
+    QVERIFY(game.player().onTrail);
+    // Three cells of trail: cells changed, but no ground was won.
+    QCOMPARE(field.groundRevision(), atStart);
+    QVERIFY(field.revision() > revisionAtStart);
+
+    const int beforeClaim = field.revision();
+    cutColumn(game);
+    QVERIFY(!game.player().onTrail);
+    QVERIFY(field.groundRevision() > atStart);
+    QVERIFY(field.revision() > beforeClaim);
+
+    // Standing still changes nothing at all.
+    const int settled = field.revision();
+    const int settledGround = field.groundRevision();
+    for (int i = 0; i < 100; ++i)
+        game.tick();
+    QCOMPARE(field.revision(), settled);
+    QCOMPARE(field.groundRevision(), settledGround);
+}

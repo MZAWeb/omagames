@@ -33,7 +33,13 @@ public:
 
     Cell at(QPoint p) const { return m_cells[size_t(index(p))]; }
     Cell at(int index) const { return m_cells[size_t(index)]; }
-    void set(QPoint p, Cell cell) { m_cells[size_t(index(p))] = cell; }
+    void set(QPoint p, Cell cell) { setCell(index(p), cell); }
+
+    // Counters a renderer caches against instead of comparing every cell:
+    // `revision` moves on any change, `groundRevision` only when claimed
+    // ground is won or lost — which is what the painted backdrop is made of.
+    int revision() const { return m_revision; }
+    int groundRevision() const { return m_groundRevision; }
 
     // Claimed frame, open interior.
     void reset();
@@ -51,7 +57,11 @@ public:
     std::vector<int> claim(const std::vector<QPoint> &balls);
 
 private:
+    void setCell(int index, Cell cell);
+
     int m_width;
     int m_height;
     std::vector<Cell> m_cells;
+    int m_revision = 0;
+    int m_groundRevision = 0;
 };

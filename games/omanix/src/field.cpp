@@ -29,8 +29,20 @@ bool Field::isEdge(QPoint p) const {
     return false;
 }
 
+void Field::setCell(int index, Cell cell) {
+    Cell &slot = m_cells[size_t(index)];
+    if (slot == cell)
+        return;
+    if (slot == Cell::Claimed || cell == Cell::Claimed)
+        ++m_groundRevision;
+    slot = cell;
+    ++m_revision;
+}
+
 void Field::reset() {
     m_cells.assign(size_t(cellCount()), Cell::Open);
+    ++m_revision;
+    ++m_groundRevision;
     for (int y = 0; y < m_height; ++y) {
         for (int x = 0; x < m_width; ++x) {
             if (isBorder({x, y}))
@@ -70,14 +82,14 @@ std::vector<int> Field::trailCells() const {
 std::vector<int> Field::clearTrail() {
     std::vector<int> wiped = trailCells();
     for (int i : wiped)
-        m_cells[size_t(i)] = Cell::Open;
+        setCell(i, Cell::Open);
     return wiped;
 }
 
 std::vector<int> Field::claim(const std::vector<QPoint> &balls) {
     std::vector<int> claimed = trailCells();
     for (int i : claimed)
-        m_cells[size_t(i)] = Cell::Claimed;
+        setCell(i, Cell::Claimed);
 
     // Everything a ball can reach (four-connected, since balls never squeeze
     // between two diagonal blockers) stays open; the rest is ours.
@@ -109,7 +121,7 @@ std::vector<int> Field::claim(const std::vector<QPoint> &balls) {
     }
     for (int i = 0; i < cellCount(); ++i) {
         if (m_cells[size_t(i)] == Cell::Open && !reachable[size_t(i)]) {
-            m_cells[size_t(i)] = Cell::Claimed;
+            setCell(i, Cell::Claimed);
             claimed.push_back(i);
         }
     }
