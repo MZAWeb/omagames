@@ -5,6 +5,7 @@
 #include "basicstrategy.h"
 #include "gamestate.h"
 #include "seatlayout.h"
+#include "windowgeometry.h"
 
 using namespace BlackjackRules;
 
@@ -49,9 +50,9 @@ QString handText(const Hand &hand, bool pairAvailable) {
 }
 
 BlackjackGame::BlackjackGame(QObject *parent)
-    : QObject(parent), m_rng(QRandomGenerator::global()->generate()), m_stepMs(kDefaultStepMs) {
-    m_timer.setSingleShot(true);
-    connect(&m_timer, &QTimer::timeout, this, &BlackjackGame::step);
+    : QObject(parent), m_rng(QRandomGenerator::global()->generate()),
+      m_pacer(OmaGames::Pacer::SingleShot, [this]() { step(); }, this) {
+    m_pacer.setInterval(kDefaultStepMs);
     connect(this, &BlackjackGame::stateChanged, this, &BlackjackGame::coachChanged);
     m_coachEnabled = QSettings().value(QString::fromLatin1(kCoachEnabledKey), false).toBool();
     if (!load())
@@ -127,17 +128,16 @@ bool BlackjackGame::canDeal() const {
 }
 
 void BlackjackGame::setStepInterval(int ms) {
-    ms = qMax(0, ms);
-    if (ms == m_stepMs)
+    if (!m_pacer.setInterval(qMax(0, ms)))
         return;
-    m_stepMs = ms;
     emit stepIntervalChanged();
 }
 
 int BlackjackGame::pace() const {
-    if (m_stepMs == 0)
+    const int ms = m_pacer.interval();
+    if (ms == 0)
         return 0;
-    return m_table.phase() == Table::Phase::Dealing ? qMin(kDealStepMs, m_stepMs) : m_stepMs;
+    return m_table.phase() == Table::Phase::Dealing ? qMin(kDealStepMs, ms) : ms;
 }
 
 void BlackjackGame::setBet(int amount) {
@@ -224,7 +224,7 @@ void BlackjackGame::skipPacing() {
     if (m_table.waitingForHuman() || canInsure() || m_table.roundOver()
         || m_table.phase() == Table::Phase::Betting)
         return;
-    m_timer.stop();
+    m_pacer.stop();
     while (!m_table.waitingForHuman() && !canInsure() && !m_table.roundOver())
         if (!advanceOnce())
             break;
@@ -287,17 +287,13 @@ void BlackjackGame::schedule() {
     if (m_table.waitingForHuman() || canInsure() || m_table.roundOver()
         || m_table.phase() == Table::Phase::Betting)
         return;
-    const int ms = pace();
-    if (ms == 0)
-        step();
-    else
-        m_timer.start(ms);
+    m_pacer.runIn(pace());
 }
 
 void BlackjackGame::step() {
     while (advanceOnce()) {
         emit stateChanged();
-        if (m_stepMs > 0) {
+        if (m_pacer.interval() > 0) {
             schedule();
             return;
         }
@@ -342,13 +338,13 @@ QRectF BlackjackGame::seatRect(int count, int index, const QSizeF &table, const 
 }
 
 QRect BlackjackGame::windowGeometry() const {
-    QSettings settings;
-    return settings.value(QStringLiteral("window/geometry")).toRect();
+    return OmaGames::WindowGeometry::rect();
 }
 
+// Black Omack has never restored a maximized window, only the rect, so the
+// flag it stores is always false.
 void BlackjackGame::saveWindowGeometry(const QRect &geometry) {
-    QSettings settings;
-    settings.setValue(QStringLiteral("window/geometry"), geometry);
+    OmaGames::WindowGeometry::save(geometry, false);
 }
 
 // False when there is nothing saved yet, so the caller can set a table up.

@@ -1,16 +1,19 @@
 import QtQuick
 
-// A short label that rises and fades from the spot a claim closed at, then
+// A short label that rises and fades from the spot that earned it, then
 // removes itself. `anchorX`/`anchorY` are the spot in the parent's pixels;
-// the label centres on it and stays inside the parent. One claim can earn
-// two bonuses at once: `stackIndex` lifts each later label above the one
-// before it, or below it when the spot is at the top edge.
+// the label centres on it and stays inside the parent. One move can earn
+// several at once: `stackIndex` lifts each later label above the one before
+// it, or below it when the spot is at the top edge.
 Text {
     id: popup
 
     property real anchorX: 0
     property real anchorY: 0
     property int stackIndex: 0
+    property int riseDuration: 1100
+    property int holdDuration: 650
+    property int fadeDuration: 450
     signal finished()
 
     readonly property real stackStep: 22 * theme.textScale
@@ -31,10 +34,10 @@ Text {
 
     ParallelAnimation {
         running: true
-        NumberAnimation { target: rise; property: "y"; from: 0; to: -34 * theme.textScale; duration: 1100; easing.type: Easing.OutCubic }
+        NumberAnimation { target: rise; property: "y"; from: 0; to: -34 * theme.textScale; duration: popup.riseDuration; easing.type: Easing.OutCubic }
         SequentialAnimation {
-            PauseAnimation { duration: 650 }
-            NumberAnimation { target: popup; property: "opacity"; to: 0; duration: 450 }
+            PauseAnimation { duration: popup.holdDuration }
+            NumberAnimation { target: popup; property: "opacity"; to: 0; duration: popup.fadeDuration }
         }
         onFinished: popup.finished()
     }

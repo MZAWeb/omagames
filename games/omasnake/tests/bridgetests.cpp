@@ -282,68 +282,39 @@ void BridgeTests::modeOnlyChangesBetweenGames() {
     QCOMPARE(game.mode(), QStringLiteral("classic"));
 }
 
-void BridgeTests::highScoresOrderAndCap() {
-    HighScores scores;
-    const QDate day(2026, 8, 30);
-    QCOMPARE(scores.insert(Mode::Classic, Difficulty::Slow, {100, 5, day}), 0);
-    QCOMPARE(scores.insert(Mode::Classic, Difficulty::Slow, {300, 9, day}), 0);
-    QCOMPARE(scores.insert(Mode::Classic, Difficulty::Slow, {200, 7, day}), 1);
-    // A tie ranks below the older score.
-    QCOMPARE(scores.insert(Mode::Classic, Difficulty::Slow, {200, 8, day}), 2);
-    QCOMPARE(scores.entries(Mode::Classic, Difficulty::Slow).at(2).length, 8);
-    QCOMPARE(scores.best(Mode::Classic, Difficulty::Slow), 300);
-    QCOMPARE(scores.best(Mode::Wrap, Difficulty::Slow), 0);
-
-    for (int i = 0; i < 20; ++i)
-        scores.insert(Mode::Wrap, Difficulty::Fast, {i * 10, 4, day});
-    QCOMPARE(int(scores.entries(Mode::Wrap, Difficulty::Fast).size()), HighScores::kMaxEntries);
-    QCOMPARE(scores.entries(Mode::Wrap, Difficulty::Fast).front().score, 190);
-    QCOMPARE(scores.entries(Mode::Wrap, Difficulty::Fast).back().score, 100);
-    QCOMPARE(scores.insert(Mode::Wrap, Difficulty::Fast, {50, 4, day}), -1);
-    QCOMPARE(scores.insert(Mode::Wrap, Difficulty::Fast, {150, 4, day}), 5);
-    QCOMPARE(scores.entries(Mode::Wrap, Difficulty::Fast).back().score, 110);
-}
-
-void BridgeTests::highScoresAreSeparatePerModeAndDifficulty() {
-    HighScores scores;
-    const QDate day(2026, 8, 30);
-    for (int m = 0; m < kModeCount; ++m) {
-        for (int d = 0; d < kDifficultyCount; ++d)
-            scores.insert(Mode(m), Difficulty(d), {100 * (m + 1) + d, 4, day});
-    }
-    for (int m = 0; m < kModeCount; ++m) {
-        for (int d = 0; d < kDifficultyCount; ++d) {
-            QCOMPARE(int(scores.entries(Mode(m), Difficulty(d)).size()), 1);
-            QCOMPARE(scores.best(Mode(m), Difficulty(d)), 100 * (m + 1) + d);
-        }
-    }
-    QCOMPARE(HighScores::idFor(Mode::Wrap, Difficulty::Fast), QStringLiteral("wrap-fast"));
-}
-
-void BridgeTests::highScoresRoundTripThroughSettings() {
-    {
-        HighScores scores;
-        scores.insert(Mode::Classic, Difficulty::Normal, {4200, 30, QDate(2026, 8, 30)});
-        scores.insert(Mode::Classic, Difficulty::Normal, {900, 12, QDate(2026, 8, 29)});
-        scores.insert(Mode::Wrap, Difficulty::Fast, {7000, 44, QDate(2026, 8, 28)});
-        scores.save();
-    }
-    HighScores loaded;
-    loaded.load();
-    QCOMPARE(int(loaded.entries(Mode::Classic, Difficulty::Normal).size()), 2);
-    QCOMPARE(loaded.entries(Mode::Classic, Difficulty::Normal).front().score, 4200);
-    QCOMPARE(loaded.entries(Mode::Classic, Difficulty::Normal).front().length, 30);
-    QCOMPARE(loaded.entries(Mode::Classic, Difficulty::Normal).front().date, QDate(2026, 8, 30));
-    QCOMPARE(loaded.entries(Mode::Classic, Difficulty::Normal).back().date, QDate(2026, 8, 29));
-    QCOMPARE(loaded.best(Mode::Wrap, Difficulty::Fast), 7000);
-    QVERIFY(loaded.entries(Mode::Wrap, Difficulty::Slow).empty());
+// Ordering, the cap and the ranks are ScoreTable's own tests now. What is
+// Omasnake's is that a table is keyed by the walls rule and the speed
+// together, and that the JSON it wrote before the move still reads back: the
+// string below is the literal output of the old HighScores::toJson().
+void BridgeTests::savedHighScoresReachQml() {
+    QSettings settings;
+    settings.setValue(
+        QStringLiteral("scores/v1"),
+        QStringLiteral(R"({"classic-fast":[],"classic-normal":[{"date":"2026-08-30","length":24,"score":310},)"
+                       R"({"date":"2026-08-28","length":11,"score":90}],"classic-slow":[],)"
+                       R"("wrap-fast":[{"date":"2026-06-15","length":40,"score":770}],)"
+                       R"("wrap-normal":[],"wrap-slow":[]})"));
+    settings.sync();
 
     OmasnakeGame game;
-    QCOMPARE(game.highScores().size(), 3);
-    QCOMPARE(game.highScores().first().toMap().value(QStringLiteral("label")).toString(), QStringLiteral("Normal"));
-    QCOMPARE(game.bests().value(QStringLiteral("classic-normal")).toInt(), 4200);
-    QCOMPARE(game.bests().value(QStringLiteral("wrap-fast")).toInt(), 7000);
-    QCOMPARE(game.best(), 4200);
+    const QVariantList rows = game.highScores();
+    QCOMPARE(rows.size(), 3);
+    const QVariantMap first = rows.first().toMap();
+    QCOMPARE(first.value(QStringLiteral("table")).toString(), QStringLiteral("classic-normal"));
+    QCOMPARE(first.value(QStringLiteral("mode")).toString(), QStringLiteral("classic"));
+    QCOMPARE(first.value(QStringLiteral("difficulty")).toString(), QStringLiteral("normal"));
+    QCOMPARE(first.value(QStringLiteral("label")).toString(), QStringLiteral("Normal"));
+    QCOMPARE(first.value(QStringLiteral("score")).toInt(), 310);
+    QCOMPARE(first.value(QStringLiteral("length")).toInt(), 24);
+    QCOMPARE(first.value(QStringLiteral("date")).toString(), QStringLiteral("2026-08-30"));
+    QCOMPARE(rows.at(1).toMap().value(QStringLiteral("score")).toInt(), 90);
+    QCOMPARE(rows.at(2).toMap().value(QStringLiteral("table")).toString(), QStringLiteral("wrap-fast"));
+
+    QCOMPARE(game.bests().value(QStringLiteral("classic-normal")).toInt(), 310);
+    QCOMPARE(game.bests().value(QStringLiteral("wrap-fast")).toInt(), 770);
+    QCOMPARE(game.bests().value(QStringLiteral("wrap-slow")).toInt(), 0);
+    // `best` follows the walls rule and speed the start screen is showing.
+    QCOMPARE(game.best(), 310);
 }
 
 void BridgeTests::lastModeAndDifficultyAreRemembered() {

@@ -7,9 +7,9 @@
 #include <QVariantList>
 #include <QVariantMap>
 
-#include "besttimes.h"
 #include "cellmodel.h"
 #include "sudokuboard.h"
+#include "scoretable.h"
 #include "sudokustore.h"
 
 // The only bridge between the engine and QML: state as properties, actions as
@@ -188,7 +188,7 @@ private:
     int m_cursorIndex = -1;
     int m_highlightDigit = -1;
     int m_elapsedSeconds = 0;
-    BestTimes m_times;
+    OmaGames::ScoreTable m_times;
     int m_newBestRank = -1;
     ClickMode m_clickMode = ClickMode::Fill;
     bool m_hasSavedGame = false;

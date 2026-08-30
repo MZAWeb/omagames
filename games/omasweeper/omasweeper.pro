@@ -10,7 +10,6 @@ HEADERS += \
     src/frontier.h \
     src/solver.h \
     src/generator.h \
-    src/besttimes.h \
     src/omasweepergame.h \
     src/fieldview.h
 SOURCES += \
@@ -19,7 +18,6 @@ SOURCES += \
     src/frontier.cpp \
     src/solver.cpp \
     src/generator.cpp \
-    src/besttimes.cpp \
     src/omasweepergame.cpp \
     src/fieldview.cpp
 RESOURCES += src/resources.qrc

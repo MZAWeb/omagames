@@ -171,7 +171,12 @@ FocusScope {
 
             Component {
                 id: popupComponent
-                BonusPopup { onFinished: destroy() }
+                OmaBonusPopup {
+                    riseDuration: 1000
+                    holdDuration: 600
+                    fadeDuration: 400
+                    onFinished: destroy()
+                }
             }
 
             Connections {

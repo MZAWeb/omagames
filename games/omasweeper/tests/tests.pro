@@ -12,7 +12,6 @@ HEADERS += \
     ../src/frontier.h \
     ../src/solver.h \
     ../src/generator.h \
-    ../src/besttimes.h \
     ../src/omasweepergame.h \
     boardtests.h \
     solvertests.h \
@@ -24,7 +23,6 @@ SOURCES += \
     ../src/frontier.cpp \
     ../src/solver.cpp \
     ../src/generator.cpp \
-    ../src/besttimes.cpp \
     ../src/omasweepergame.cpp \
     boardtests.cpp \
     solvertests.cpp \

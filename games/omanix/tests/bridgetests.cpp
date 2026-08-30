@@ -242,52 +242,35 @@ void BridgeTests::scriptedGameOverRecordsAHighScore() {
     QCOMPARE(game.phase(), QStringLiteral("gameover"));
 }
 
-void BridgeTests::highScoresOrderAndCap() {
-    HighScores scores;
-    const QDate day(2026, 8, 30);
-    QCOMPARE(scores.insert(Difficulty::Easy, {100, 1, day}), 0);
-    QCOMPARE(scores.insert(Difficulty::Easy, {300, 2, day}), 0);
-    QCOMPARE(scores.insert(Difficulty::Easy, {200, 1, day}), 1);
-    // A tie ranks below the older score.
-    QCOMPARE(scores.insert(Difficulty::Easy, {200, 3, day}), 2);
-    QCOMPARE(scores.entries(Difficulty::Easy).at(2).level, 3);
-    QCOMPARE(scores.best(Difficulty::Easy), 300);
-    QCOMPARE(scores.best(Difficulty::Hard), 0);
-    QVERIFY(scores.entries(Difficulty::Normal).empty());
-
-    for (int i = 0; i < 20; ++i)
-        scores.insert(Difficulty::Hard, {i * 10, 1, day});
-    QCOMPARE(int(scores.entries(Difficulty::Hard).size()), HighScores::kMaxEntries);
-    QCOMPARE(scores.entries(Difficulty::Hard).front().score, 190);
-    QCOMPARE(scores.entries(Difficulty::Hard).back().score, 100);
-    QCOMPARE(scores.insert(Difficulty::Hard, {50, 1, day}), -1);
-    QCOMPARE(scores.insert(Difficulty::Hard, {150, 1, day}), 5);
-    QCOMPARE(scores.entries(Difficulty::Hard).back().score, 110);
-}
-
-void BridgeTests::highScoresRoundTripThroughSettings() {
-    {
-        HighScores scores;
-        scores.insert(Difficulty::Normal, {4200, 3, QDate(2026, 8, 30)});
-        scores.insert(Difficulty::Normal, {900, 1, QDate(2026, 8, 29)});
-        scores.insert(Difficulty::Hard, {7000, 5, QDate(2026, 8, 28)});
-        scores.save();
-    }
-    HighScores loaded;
-    loaded.load();
-    QCOMPARE(int(loaded.entries(Difficulty::Normal).size()), 2);
-    QCOMPARE(loaded.entries(Difficulty::Normal).front().score, 4200);
-    QCOMPARE(loaded.entries(Difficulty::Normal).front().level, 3);
-    QCOMPARE(loaded.entries(Difficulty::Normal).front().date, QDate(2026, 8, 30));
-    QCOMPARE(loaded.entries(Difficulty::Normal).back().date, QDate(2026, 8, 29));
-    QCOMPARE(loaded.best(Difficulty::Hard), 7000);
-    QVERIFY(loaded.entries(Difficulty::Easy).empty());
+// Ordering, the cap and the ranks are ScoreTable's own tests now. What is
+// Omanix's is that the table it wrote before the move still reads back: the
+// JSON below is the literal output of the old HighScores::toJson(), which is
+// what is sitting in ~/.config/Omacom/omanix.conf on a machine that has been
+// playing.
+void BridgeTests::savedHighScoresReachQml() {
+    QSettings settings;
+    settings.setValue(QStringLiteral("scores/v1"),
+                      QStringLiteral(R"({"easy":[{"date":"2026-08-29","level":7,"score":4500},)"
+                                     R"({"date":"2026-08-30","level":3,"score":1200}],"hard":[],)"
+                                     R"("normal":[{"date":"2026-07-01","level":2,"score":800}]})"));
+    settings.sync();
 
     OmanixGame game;
-    QCOMPARE(game.highScores().size(), 3);
-    QCOMPARE(game.highScores().first().toMap().value(QStringLiteral("label")).toString(), QStringLiteral("Normal"));
-    QCOMPARE(game.bests().value(QStringLiteral("normal")).toInt(), 4200);
-    QCOMPARE(game.bests().value(QStringLiteral("hard")).toInt(), 7000);
+    const QVariantList rows = game.highScores();
+    QCOMPARE(rows.size(), 3);
+    const QVariantMap first = rows.first().toMap();
+    QCOMPARE(first.value(QStringLiteral("difficulty")).toString(), QStringLiteral("easy"));
+    QCOMPARE(first.value(QStringLiteral("label")).toString(), QStringLiteral("Easy"));
+    QCOMPARE(first.value(QStringLiteral("score")).toInt(), 4500);
+    QCOMPARE(first.value(QStringLiteral("level")).toInt(), 7);
+    QCOMPARE(first.value(QStringLiteral("date")).toString(), QStringLiteral("2026-08-29"));
+    QCOMPARE(rows.at(1).toMap().value(QStringLiteral("score")).toInt(), 1200);
+    // The tables come out in the order the start screen shows them.
+    QCOMPARE(rows.at(2).toMap().value(QStringLiteral("difficulty")).toString(), QStringLiteral("normal"));
+
+    QCOMPARE(game.bests().value(QStringLiteral("easy")).toInt(), 4500);
+    QCOMPARE(game.bests().value(QStringLiteral("normal")).toInt(), 800);
+    QCOMPARE(game.bests().value(QStringLiteral("hard")).toInt(), 0);
 }
 
 void BridgeTests::lastDifficultyIsRemembered() {

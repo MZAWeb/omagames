@@ -6,9 +6,7 @@
         <file alias="PlayScreen.qml">PlayScreen.qml</file>
         <file alias="PlayHeader.qml">PlayHeader.qml</file>
         <file alias="KeyLegend.qml">KeyLegend.qml</file>
-        <file alias="OverlayPanel.qml">OverlayPanel.qml</file>
         <file alias="WinOverlay.qml">WinOverlay.qml</file>
         <file alias="LossOverlay.qml">LossOverlay.qml</file>
-        <file alias="ConfirmDialog.qml">ConfirmDialog.qml</file>
     </qresource>
 </RCC>

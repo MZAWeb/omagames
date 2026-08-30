@@ -55,12 +55,47 @@ shortcuts, install line. Decide the rules before writing code.
    AI. Deterministic with explicit seeds. Step-wise API for anything that needs
    pacing. Write the tests alongside — every rule in the README gets a test.
 2. **Bridge** (`src/<game>game.h/.cpp`, one QObject): `Q_PROPERTY` state,
-   models, `Q_INVOKABLE` actions, `QTimer` pacing with an interval property,
-   QSettings persistence (`state/v1` JSON + `window/geometry`).
+   models, `Q_INVOKABLE` actions, and the shared pieces rather than your own:
+
+   - pacing with `OmaGames::Pacer` (`Repeating`, or `SingleShot` when the step
+     decides whether to schedule the next one), its `interval` a property so
+     tests can set it to 0;
+   - kept results with `OmaGames::ScoreTable` — name the integers an entry
+     carries, the category ids, the cap and whether higher or lower is better,
+     and it does the ordering, the ranks and the JSON under `scores/v1`;
+   - the window's place with `OmaGames::WindowGeometry`;
+   - anything else as JSON under a versioned QSettings key (`state/v1`).
+
+   ```cpp
+   // In the .cpp, where the ids and the shape of a result live:
+   OmaGames::ScoreTable scoreTable() {   // the top ten per difficulty,
+       return OmaGames::ScoreTable(      // ranked on the score, level alongside
+           {QStringLiteral("score"), QStringLiteral("level")}, 10,
+           OmaGames::ScoreTable::sameOrder({kEasyId, kNormalId, kHardId},
+                                           OmaGames::ScoreTable::HigherIsBetter));
+   }
+
+   MyGame::MyGame(QObject *parent)
+       : QObject(parent), m_scores(scoreTable()),
+         m_pacer(OmaGames::Pacer::Repeating, [this]() { step(); }, this) {
+       m_pacer.setInterval(kDefaultStepIntervalMs);
+       m_scores.load();
+   }
+
+   // -1 when the run did not make the table.
+   const int rank = m_scores.insert(
+       difficultyId(m_difficulty),
+       {score, QDate::currentDate(), {{QStringLiteral("level"), level}}});
+   ```
 3. **UI** (`src/*.qml`, small components): renders the bridge's state, no rules,
-   colors and sizes only from `theme`. Reuse `import OmaGames` controls; if you
-   build something generic (a card, a dialog frame), put it in
-   `common/qml/OmaGames/` and register it in `qmldir` and `common/common.qrc`.
+   colors and sizes only from `theme`. Reuse `import OmaGames` controls before
+   writing your own: `OmaOverlayPanel` is the shell of every overlay,
+   `OmaConfirmDialog` the yes/no prompt, `OmaPauseOverlay` the paused screen,
+   `OmaKeyLegend` the row of keycaps, `OmaScoresPanel` the kept tables,
+   `OmaBonusPopup` a label that rises and fades. A game's own `KeyLegend.qml`
+   should be `OmaKeyLegend { model: [...] }` and nothing else. If you build
+   something generic, put it in `common/qml/OmaGames/` and register it in
+   `qmldir` and `common/common.qrc`.
    Every action gets a key and shows it: use `OmaHintButton` (an `OmaButton`
    with an `OmaKeyHint` badge) for buttons and `OmaKeyHint` on custom controls.
 

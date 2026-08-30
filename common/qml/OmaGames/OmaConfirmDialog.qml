@@ -2,15 +2,21 @@ import QtQuick
 import QtQuick.Layouts
 import OmaGames
 
-// Minimal themed yes/no prompt (Escape with a game in progress).
-OverlayPanel {
+// Minimal themed yes/no prompt: Enter or Y confirms, Escape or N backs out.
+// The hints name the keys the game wants shown — Omasweeper puts Y and N on
+// the buttons, everyone else Enter and Esc.
+OmaOverlayPanel {
     id: root
 
     property string message: ""
     property string acceptText: qsTr("Yes")
     property string rejectText: qsTr("Cancel")
+    property string acceptHint: qsTr("Enter")
+    property string rejectHint: qsTr("Esc")
     signal accepted()
     signal rejected()
+
+    onDismissed: root.rejected()
 
     Keys.onPressed: function(event) {
         if (event.key === Qt.Key_Escape || event.key === Qt.Key_N)
@@ -34,14 +40,14 @@ OverlayPanel {
         OmaHintButton {
             Layout.fillWidth: true
             text: root.rejectText
-            hint: qsTr("Esc")
+            hint: root.rejectHint
             onClicked: root.rejected()
         }
         OmaHintButton {
             Layout.fillWidth: true
             text: root.acceptText
             primary: true
-            hint: qsTr("Enter")
+            hint: root.acceptHint
             onClicked: root.accepted()
         }
     }

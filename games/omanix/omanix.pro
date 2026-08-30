@@ -9,7 +9,6 @@ HEADERS += \
     src/entities.h \
     src/level.h \
     src/game.h \
-    src/highscores.h \
     src/omanixgame.h \
     src/fieldview.h
 SOURCES += \
@@ -18,7 +17,6 @@ SOURCES += \
     src/entities.cpp \
     src/level.cpp \
     src/game.cpp \
-    src/highscores.cpp \
     src/omanixgame.cpp \
     src/fieldview.cpp
 RESOURCES += src/resources.qrc

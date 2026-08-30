@@ -4,11 +4,15 @@
 #include <QRect>
 #include <QSettings>
 
+#include "windowgeometry.h"
+
 namespace {
 
 const auto kDifficultyKey = QStringLiteral("play/difficulty");
-const auto kGeometryKey = QStringLiteral("window/geometry");
-const auto kMaximizedKey = QStringLiteral("window/maximized");
+
+const auto kEasyId = QStringLiteral("easy");
+const auto kNormalId = QStringLiteral("normal");
+const auto kHardId = QStringLiteral("hard");
 
 const auto kStartId = QStringLiteral("start");
 const auto kPlayingId = QStringLiteral("playing");
@@ -21,6 +25,38 @@ struct DifficultyInfo {
     QString description;
 };
 
+// Difficulties cross to QML, and reach the score table, as these ids.
+QString difficultyId(Difficulty difficulty) {
+    switch (difficulty) {
+    case Difficulty::Easy:
+        return kEasyId;
+    case Difficulty::Hard:
+        return kHardId;
+    case Difficulty::Normal:
+        break;
+    }
+    return kNormalId;
+}
+
+bool difficultyFromId(const QString &id, Difficulty *difficulty) {
+    for (int i = 0; i < kDifficultyCount; ++i) {
+        if (difficultyId(Difficulty(i)) == id) {
+            *difficulty = Difficulty(i);
+            return true;
+        }
+    }
+    return false;
+}
+
+// The top ten per difficulty, ranked on the score, with the level reached
+// riding along.
+OmaGames::ScoreTable scoreTable() {
+    return OmaGames::ScoreTable(
+        {QStringLiteral("score"), QStringLiteral("level")}, 10,
+        OmaGames::ScoreTable::sameOrder({kEasyId, kNormalId, kHardId},
+                                        OmaGames::ScoreTable::HigherIsBetter));
+}
+
 QVector<DifficultyInfo> difficultyInfos() {
     return {
         {Difficulty::Easy, OmanixGame::tr("Easy"), OmanixGame::tr("Two slow balls, one chaser, a gentle ramp.")},
@@ -31,15 +67,21 @@ QVector<DifficultyInfo> difficultyInfos() {
 
 }  // namespace
 
-OmanixGame::OmanixGame(QObject *parent) : QObject(parent) {
-    m_timer.setTimerType(Qt::PreciseTimer);
-    connect(&m_timer, &QTimer::timeout, this, &OmanixGame::step);
+OmanixGame::OmanixGame(QObject *parent)
+    : QObject(parent), m_scores(scoreTable()),
+      m_pacer(OmaGames::Pacer::Repeating, [this]() { step(); }, this) {
+    m_pacer.setTimerType(Qt::PreciseTimer);
+    m_pacer.setInterval(kDefaultStepIntervalMs);
     loadSettings();
+}
+
+QString OmanixGame::difficulty() const {
+    return difficultyId(m_difficulty);
 }
 
 void OmanixGame::loadSettings() {
     QSettings settings;
-    HighScores::difficultyFromId(settings.value(kDifficultyKey).toString(), &m_difficulty);
+    difficultyFromId(settings.value(kDifficultyKey).toString(), &m_difficulty);
     m_scores.load();
 }
 
@@ -69,7 +111,7 @@ QVariantList OmanixGame::difficulties() {
     QVariantList list;
     for (const DifficultyInfo &info : difficultyInfos()) {
         list.append(QVariantMap {
-            {QStringLiteral("id"), HighScores::idFor(info.difficulty)},
+            {QStringLiteral("id"), difficultyId(info.difficulty)},
             {QStringLiteral("label"), info.label},
             {QStringLiteral("description"), info.description},
         });
@@ -80,14 +122,12 @@ QVariantList OmanixGame::difficulties() {
 QVariantList OmanixGame::highScores() const {
     QVariantList list;
     for (const DifficultyInfo &info : difficultyInfos()) {
-        for (const ScoreEntry &e : m_scores.entries(info.difficulty)) {
-            list.append(QVariantMap {
-                {QStringLiteral("difficulty"), HighScores::idFor(info.difficulty)},
-                {QStringLiteral("label"), info.label},
-                {QStringLiteral("score"), e.score},
-                {QStringLiteral("level"), e.level},
-                {QStringLiteral("date"), e.date.toString(Qt::ISODate)},
-            });
+        const QString id = difficultyId(info.difficulty);
+        for (const QVariant &entry : m_scores.toVariantList(id)) {
+            QVariantMap row = entry.toMap();
+            row.insert(QStringLiteral("difficulty"), id);
+            row.insert(QStringLiteral("label"), info.label);
+            list.append(row);
         }
     }
     return list;
@@ -96,7 +136,7 @@ QVariantList OmanixGame::highScores() const {
 QVariantMap OmanixGame::bests() const {
     QVariantMap map;
     for (int i = 0; i < kDifficultyCount; ++i)
-        map.insert(HighScores::idFor(Difficulty(i)), m_scores.best(Difficulty(i)));
+        map.insert(difficultyId(Difficulty(i)), m_scores.best(difficultyId(Difficulty(i))));
     return map;
 }
 
@@ -112,25 +152,19 @@ QVariantMap OmanixGame::levelStats() const {
 }
 
 void OmanixGame::setStepInterval(int interval) {
-    if (m_stepInterval == interval)
+    if (!m_pacer.setInterval(interval))
         return;
-    m_stepInterval = interval;
     syncTimer();
     emit stepIntervalChanged();
 }
 
 void OmanixGame::syncTimer() {
-    const bool running = m_game && m_game->phase() == Phase::Playing && !m_game->paused() && m_stepInterval > 0;
-    if (running) {
-        m_timer.start(m_stepInterval);
-    } else {
-        m_timer.stop();
-    }
+    m_pacer.setRunning(m_game && m_game->phase() == Phase::Playing && !m_game->paused());
 }
 
 void OmanixGame::startGame(Difficulty difficulty, quint32 seed) {
     m_difficulty = difficulty;
-    QSettings().setValue(kDifficultyKey, HighScores::idFor(difficulty));
+    QSettings().setValue(kDifficultyKey, difficultyId(difficulty));
     m_game = std::make_unique<Game>(difficulty, seed);
     m_newHighScoreRank = -1;
     emit difficultyChanged();
@@ -149,7 +183,7 @@ void OmanixGame::startGame(Difficulty difficulty, quint32 seed) {
 
 void OmanixGame::newGame(const QString &difficulty) {
     Difficulty level = m_difficulty;
-    HighScores::difficultyFromId(difficulty, &level);
+    difficultyFromId(difficulty, &level);
     startGame(level, QRandomGenerator::global()->generate());
 }
 
@@ -230,7 +264,7 @@ void OmanixGame::backToStart() {
     if (!m_game)
         return;
     m_game.reset();
-    m_timer.stop();
+    m_pacer.stop();
     emit phaseChanged();
     emit pausedChanged();
     emit levelIntroChanged();
@@ -303,7 +337,9 @@ void OmanixGame::handle(const Event &event) {
 }
 
 void OmanixGame::finishGame() {
-    m_newHighScoreRank = m_scores.insert(m_difficulty, {m_game->score(), m_game->level(), QDate::currentDate()});
+    m_newHighScoreRank = m_scores.insert(
+        difficultyId(m_difficulty),
+        {m_game->score(), QDate::currentDate(), {{QStringLiteral("level"), m_game->level()}}});
     if (m_newHighScoreRank >= 0) {
         m_scores.save();
         emit highScoresChanged();
@@ -313,20 +349,9 @@ void OmanixGame::finishGame() {
 }
 
 QVariantMap OmanixGame::windowGeometry() const {
-    QSettings settings;
-    const QRect rect = settings.value(kGeometryKey).toRect();
-    return {
-        {QStringLiteral("valid"), rect.isValid()},
-        {QStringLiteral("x"), rect.x()},
-        {QStringLiteral("y"), rect.y()},
-        {QStringLiteral("width"), rect.width()},
-        {QStringLiteral("height"), rect.height()},
-        {QStringLiteral("maximized"), settings.value(kMaximizedKey, false).toBool()},
-    };
+    return OmaGames::WindowGeometry::toVariantMap();
 }
 
 void OmanixGame::saveWindowGeometry(int x, int y, int width, int height, bool maximized) {
-    QSettings settings;
-    settings.setValue(kGeometryKey, QRect(x, y, width, height));
-    settings.setValue(kMaximizedKey, maximized);
+    OmaGames::WindowGeometry::save(QRect(x, y, width, height), maximized);
 }
