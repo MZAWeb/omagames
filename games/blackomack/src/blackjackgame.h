@@ -10,6 +10,7 @@
 #include <QVariantMap>
 
 #include "pacer.h"
+#include "sessionstats.h"
 #include "table.h"
 #include "tablelog.h"
 
@@ -82,12 +83,10 @@ public:
     bool isBroke() const { return m_table.human().broke() && m_table.phase() == Table::Phase::Betting; }
     QString message() const { return m_log.message(); }
     QStringList log() const { return m_log.lines(); }
-    int handsPlayed() const { return m_handsPlayed; }
-    int netResult() const { return m_netResult; }
-    // The best bankroll ever held: kept across newGame(), so only clearing the
-    // settings wipes it. True for the round that set it, so the dock can celebrate.
-    int bestBankroll() const { return m_bestBankroll; }
-    bool newBest() const { return m_newBest; }
+    int handsPlayed() const { return m_stats.handsPlayed(); }
+    int netResult() const { return m_stats.netResult(); }
+    int bestBankroll() const { return m_stats.bestBankroll(); }
+    bool newBest() const { return m_stats.newBest(); }
     int stepInterval() const { return m_pacer.interval(); }
     void setStepInterval(int ms);
     QVariantList seats() const;
@@ -167,12 +166,8 @@ private:
     QRandomGenerator m_rng;
     OmaGames::Pacer m_pacer;
     TableLog m_log;
+    SessionStats m_stats;
     int m_bet = 50;
-    int m_handsPlayed = 0;
-    int m_netResult = 0;
-    int m_bestBankroll = BlackjackRules::kStartingBankroll;
-    bool m_newBest = false;
-    int m_roundStake = 0;
     bool m_coachEnabled = false;
     bool m_compactLayout = false;
 };

@@ -14,6 +14,7 @@ HEADERS += \
     ../src/table.h \
     ../src/tablelog.h \
     ../src/gamestate.h \
+    ../src/sessionstats.h \
     ../src/seatlayout.h \
     ../src/blackjackgame.h
 SOURCES += tst_blackomack.cpp \
@@ -26,6 +27,7 @@ SOURCES += tst_blackomack.cpp \
     ../src/tableround.cpp \
     ../src/tablelog.cpp \
     ../src/gamestate.cpp \
+    ../src/sessionstats.cpp \
     ../src/seatlayout.cpp \
     ../src/blackjackgame.cpp \
     ../src/blackjackgamemodel.cpp

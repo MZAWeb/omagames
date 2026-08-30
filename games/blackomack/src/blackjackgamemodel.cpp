@@ -60,7 +60,7 @@ QVariantList BlackjackGame::seats() const {
             {QStringLiteral("human"), seat.isHuman},
             {QStringLiteral("personality"), seat.isHuman ? QString() : seat.bot.personality().label()},
             {QStringLiteral("bankroll"), seat.bankroll},
-            {QStringLiteral("net"), seat.isHuman ? m_netResult : seat.bankroll - kStartingBankroll},
+            {QStringLiteral("net"), seat.isHuman ? m_stats.netResult() : seat.bankroll - kStartingBankroll},
             {QStringLiteral("hands"), hands},
             {QStringLiteral("active"), s == m_table.currentSeat()},
             // The insurance side bet rides beside the seat's stake rather than

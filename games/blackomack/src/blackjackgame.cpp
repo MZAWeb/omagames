@@ -168,7 +168,7 @@ void BlackjackGame::betMax() {
 void BlackjackGame::dealRound() {
     if (!canDeal())
         return;
-    m_roundStake = m_bet;
+    m_stats.stake(m_bet);
     record(m_table.placeBets(m_bet));
     emit stateChanged();
     schedule();
@@ -179,7 +179,7 @@ void BlackjackGame::humanAct(Table::Action action) {
     if (events.isEmpty())
         return;
     if (action == Table::Action::Double || action == Table::Action::Split)
-        m_roundStake += m_bet;
+        m_stats.addStake(m_bet);
     record(events);
     emit stateChanged();
     schedule();
@@ -195,7 +195,7 @@ void BlackjackGame::insurance() {
     const auto events = m_table.takeInsurance();
     if (events.isEmpty())
         return;
-    m_roundStake += cost;
+    m_stats.addStake(cost);
     record(events);
     emit stateChanged();
     schedule();
@@ -213,7 +213,7 @@ void BlackjackGame::declineInsurance() {
 void BlackjackGame::nextRound() {
     if (!roundOver())
         return;
-    m_newBest = false;   // the celebration lasts exactly one round
+    m_stats.clearCelebration();
     record(m_table.nextRound(m_rng));
     setBet(m_bet);   // re-clamp to what is left
     emit stateChanged();
@@ -255,9 +255,7 @@ void BlackjackGame::newGame() {
         return;
     const int bots = m_table.botCount();
     m_table = Table();
-    m_handsPlayed = 0;
-    m_netResult = 0;
-    m_newBest = false;   // m_bestBankroll deliberately survives: it is a high score
+    m_stats.reset();   // the best bankroll deliberately survives: it is a high score
     m_log.clear();
     seatBots(bots);   // a new game reseats the table it replaces, cap or no cap
     setBet(50);
@@ -305,12 +303,7 @@ void BlackjackGame::finishRound() {
     int returned = m_table.human().insuranceReturned;
     for (const Hand &h : m_table.human().hands)
         returned += h.returned;
-    ++m_handsPlayed;
-    m_netResult += returned - m_roundStake;
-    if (bankroll() > m_bestBankroll) {
-        m_bestBankroll = bankroll();
-        m_newBest = true;
-    }
+    m_stats.settle(returned, bankroll());
     save();
 }
 
@@ -350,9 +343,7 @@ bool BlackjackGame::load() {
         const GameState::Bot &b = state.bots[i];
         m_table.addBot(b.personality, b.bankroll, m_rng.generate());
     }
-    m_handsPlayed = state.handsPlayed;
-    m_netResult = state.netResult;
-    m_bestBankroll = qMax(state.bestBankroll, bankroll());
+    m_stats.restore(state.handsPlayed, state.netResult, qMax(state.bestBankroll, bankroll()));
     if (state.bots.size() > kMaxBots)
         save();   // permanently trim state written by a newer or invalid configuration
     return true;
@@ -361,12 +352,12 @@ bool BlackjackGame::load() {
 void BlackjackGame::save() const {
     GameState state;
     state.bankroll = bankroll();
-    state.bestBankroll = m_bestBankroll;
+    state.bestBankroll = m_stats.bestBankroll();
     for (const Seat &s : m_table.seats())
         if (!s.isHuman)
             state.bots.append({s.bot.personality(), s.bankroll});
-    state.handsPlayed = m_handsPlayed;
-    state.netResult = m_netResult;
+    state.handsPlayed = m_stats.handsPlayed();
+    state.netResult = m_stats.netResult();
     QSettings settings;
     settings.setValue(QString::fromLatin1(GameState::kKey), state.toString());
 }
