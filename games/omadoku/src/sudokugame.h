@@ -10,6 +10,8 @@
 #include "cellmodel.h"
 #include "sudokuboard.h"
 #include "scoretable.h"
+#include "sudokuinput.h"
+#include "sudokuselection.h"
 #include "sudokustore.h"
 
 // The only bridge between the engine and QML: state as properties, actions as
@@ -71,10 +73,10 @@ public:
     // The cell the keyboard acts on (-1 = none). It is always one of
     // `selectedIndices`, which holds the whole multi-cell selection in the
     // order the cells joined it — a single cell most of the time.
-    int cursorIndex() const { return m_cursorIndex; }
+    int cursorIndex() const { return m_selection.cursor(); }
     QVariantList selectedIndices() const;
     // Digit under the cursor (0 when empty), so the UI can highlight twins.
-    int cursorValue() const { return m_board.value(m_cursorIndex); }
+    int cursorValue() const { return m_board.value(m_selection.cursor()); }
     bool canUndo() const { return m_board.canUndo(); }
     int filledCount() const { return m_board.filledCount(); }
     bool inProgress() const;
@@ -82,13 +84,9 @@ public:
     // the board until confirmRestart() answers it.
     bool restartPending() const { return m_restartPending; }
     QVariantList digitCounts() const;
-    // Digit the player asked to see everywhere on the board (-1 = none).
-    int highlightDigit() const { return m_highlightDigit; }
-    // The single sanctioned exception to the theming rule (see CLAUDE.md): a
-    // digit highlight is a highlighter pen, and a pen that changed color with
-    // the desktop would stop reading as one. Fixed marker yellow, with the
-    // dark ink that keeps a digit on top of it legible. Both live here rather
-    // than in QML so no literal color is written into a .qml file.
+    // Digit the player asked to see everywhere on the board (-1 = none), and
+    // the fixed pair it is drawn in (see SudokuInput).
+    int highlightDigit() const { return m_input.highlightDigit(); }
     static QColor highlightColor();
     static QColor highlightInk();
     int elapsedSeconds() const { return m_elapsedSeconds; }
@@ -159,17 +157,13 @@ signals:
 private:
     enum class Screen { Start, Playing, Won };
 
-    // What a click on the digit pad does. Fill by default: writing digits is
-    // what a player does most, and every other action has its own chord.
-    enum class ClickMode { Highlight, Note, Fill };
-
-    static ClickMode modeFromId(const QString &id, ClickMode fallback);
-    // The cell `deltaRow`/`deltaColumn` away, clamped to the grid: movement
-    // stops at the edges because wrapping makes arrow keys feel lost.
-    static int stepped(int index, int deltaRow, int deltaColumn);
+    // The one place a digit turns into an act on the board.
+    void applyDigit(SudokuInput::Action action, int digit);
+    // Every way of picking cells lands here: where the cursor is and what the
+    // digit keys will act on both moved, so both are announced together.
+    void emitSelectionChanged();
     void applyChange(const std::vector<int> &changed);
     void setScreen(Screen screen);
-    void setHighlightDigit(int digit);
     void setHasSavedGame(bool hasSavedGame);
     void setRestartPending(bool pending);
     void selectFirstEmptyCell();
@@ -184,13 +178,11 @@ private:
     QTimer m_clock {this};
     QTimer m_saveTimer {this};
     Screen m_screen = Screen::Start;
-    std::vector<int> m_selection;
-    int m_cursorIndex = -1;
-    int m_highlightDigit = -1;
+    SudokuSelection m_selection;
+    SudokuInput m_input;
     int m_elapsedSeconds = 0;
     OmaGames::ScoreTable m_times;
     int m_newBestRank = -1;
-    ClickMode m_clickMode = ClickMode::Fill;
     bool m_hasSavedGame = false;
     bool m_restartPending = false;
 };

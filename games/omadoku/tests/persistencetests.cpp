@@ -38,7 +38,7 @@ void PersistenceTests::init() {
 
 void PersistenceTests::winningSwitchesStateAndClearsTheSave() {
     const SudokuBoard expected = TestSupport::installSavedGame(1, kSeed);
-    const int last = TestSupport::firstEmptyCell(expected);
+    const int last = expected.firstEmptyIndex();
 
     SudokuGame game;
     QVERIFY(game.hasSavedGame());

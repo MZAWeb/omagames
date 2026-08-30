@@ -15,7 +15,7 @@ constexpr quint32 kSeed = 20260829u;
 // Solves the saved puzzle from `installSavedGame(1, kSeed)`, which leaves one
 // cell open, and returns the game so the win can be inspected.
 void solveTheLastCell(SudokuGame *game, const SudokuBoard &expected) {
-    const int last = TestSupport::firstEmptyCell(expected);
+    const int last = expected.firstEmptyIndex();
     game->select(last);
     game->enterValue(expected.puzzle().solution[size_t(last)]);
 }

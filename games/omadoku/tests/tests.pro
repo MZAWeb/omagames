@@ -9,6 +9,9 @@ INCLUDEPATH += ../src
 HEADERS += \
     ../src/cellmodel.h \
     ../src/sudokukeys.h \
+    ../src/sudokulevels.h \
+    ../src/sudokuselection.h \
+    ../src/sudokuinput.h \
     ../src/sudokustore.h \
     ../src/sudokugame.h \
     testgrids.h \
@@ -17,10 +20,14 @@ HEADERS += \
     techniquetests.h \
     gradertests.h \
     boardtests.h \
+    leveltests.h \
     gametests.h \
+    selectiontests.h \
+    keytests.h \
     inputtests.h \
     besttimestests.h \
     persistencetests.h \
+    gameprobe.h \
     savedgame.h
 
 SOURCES += \
@@ -31,6 +38,9 @@ SOURCES += \
     ../src/sudokufish.cpp \
     ../src/sudokugrader.cpp \
     ../src/sudokuboard.cpp \
+    ../src/sudokulevels.cpp \
+    ../src/sudokuselection.cpp \
+    ../src/sudokuinput.cpp \
     ../src/sudokustore.cpp \
     ../src/sudokukeys.cpp \
     ../src/cellmodel.cpp \
@@ -40,7 +50,10 @@ SOURCES += \
     techniquetests.cpp \
     gradertests.cpp \
     boardtests.cpp \
+    leveltests.cpp \
     gametests.cpp \
+    selectiontests.cpp \
+    keytests.cpp \
     inputtests.cpp \
     besttimestests.cpp \
     persistencetests.cpp \
