@@ -29,6 +29,34 @@ bool Field::isEdge(QPoint p) const {
     return false;
 }
 
+std::vector<int> Field::openRegions() const {
+    std::vector<int> region(size_t(cellCount()), kNoRegion);
+    std::vector<int> stack;
+    int next = 0;
+    for (int i = 0; i < cellCount(); ++i) {
+        if (m_cells[size_t(i)] == Cell::Claimed || region[size_t(i)] != kNoRegion)
+            continue;
+        const int id = next++;
+        region[size_t(i)] = id;
+        stack.push_back(i);
+        while (!stack.empty()) {
+            const QPoint p = point(stack.back());
+            stack.pop_back();
+            const QPoint neighbours[] = {{p.x() + 1, p.y()}, {p.x() - 1, p.y()}, {p.x(), p.y() + 1}, {p.x(), p.y() - 1}};
+            for (QPoint n : neighbours) {
+                if (!contains(n) || at(n) == Cell::Claimed)
+                    continue;
+                const int ni = index(n);
+                if (region[size_t(ni)] != kNoRegion)
+                    continue;
+                region[size_t(ni)] = id;
+                stack.push_back(ni);
+            }
+        }
+    }
+    return region;
+}
+
 void Field::reset() {
     m_cells.assign(size_t(cellCount()), Cell::Open);
     for (int y = 0; y < m_height; ++y) {

@@ -236,6 +236,10 @@ void Game::closeTrail(std::vector<Event> &events) {
     for (const Ball &b : m_balls)
         ballPositions.push_back(b.pos);
     const std::vector<int> cells = m_field.claim(ballPositions);
+    // The claim moved the boundary, so what the chasers remember of the old
+    // one would have them abandon a stretch they have never crawled.
+    for (Chaser &c : m_chasers)
+        c.forgetTrack();
 
     const double share = 100.0 * double(cells.size()) / m_field.interiorCells();
     int multiplier = 1;

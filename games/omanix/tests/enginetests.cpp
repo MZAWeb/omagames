@@ -292,6 +292,8 @@ void EngineTests::chaserReversesAtADeadEnd() {
     chaser.step(field, rng);
     QCOMPARE(chaser.pos, QPoint(7, 6));
     QCOMPARE(chaser.dir, QPoint(-1, 0));
+    // Pacing it soon counts as a circuit, but the bar is all the ground there
+    // is, so the chaser has nowhere else to be.
     for (int i = 0; i < 40; ++i) {
         chaser.step(field, rng);
         QCOMPARE(chaser.pos.y(), 6);
@@ -338,6 +340,59 @@ void EngineTests::chaserPicksJunctionsFromTheSeed() {
     };
     QCOMPARE(crawl(kSeed), crawl(kSeed));
     QVERIFY(crawl(kSeed) != crawl(kSeed + 1));
+}
+
+void EngineTests::chaserLeavesAClosedPocketForAnotherRegion() {
+    Field field(20, 12);
+    // Rows 1..8 claimed but for a 3×3 pocket of sea, far enough inside the
+    // ground that the ring around it touches nothing else: a chaser on that
+    // ring used to orbit it for the rest of the level.
+    for (int y = 1; y <= 8; ++y) {
+        for (int x = 1; x <= 18; ++x)
+            field.set({x, y}, Cell::Claimed);
+    }
+    for (int y = 3; y <= 5; ++y) {
+        for (int x = 8; x <= 10; ++x)
+            field.set({x, y}, Cell::Open);
+    }
+    const auto onTheRing = [](QPoint p) {
+        return p.x() >= 7 && p.x() <= 11 && p.y() >= 2 && p.y() <= 6;
+    };
+    QVERIFY(field.isEdge({7, 2}));
+    QVERIFY(!field.isEdge({7, 7}));
+
+    QRandomGenerator rng(kSeed);
+    Chaser chaser {{8, 2}, {1, 0}};
+    const int ring = 5 * 5 - 3 * 3;
+    // One lap of the ring is a circuit, and that is that: it gives the pocket
+    // up rather than orbiting it for the rest of the level.
+    int steps = 0;
+    while (onTheRing(chaser.pos) && steps < 2 * ring) {
+        chaser.step(field, rng);
+        ++steps;
+    }
+    QVERIFY(!onTheRing(chaser.pos));
+    // Then it walks over the ground to the boundary of the sea below, which
+    // is a region of its own: the pocket's ring touches nothing but the
+    // pocket, so no amount of crawling would ever have taken it there.
+    while (!field.isEdge(chaser.pos) && steps < 4 * ring) {
+        chaser.step(field, rng);
+        QCOMPARE(field.at(chaser.pos), Cell::Claimed);
+        ++steps;
+    }
+    QVERIFY(field.isEdge(chaser.pos));
+    QVERIFY(chaser.pos.y() >= 8);
+}
+
+void EngineTests::chaserForgetsItsTrackWhenAClaimMovesTheBoundary() {
+    Game game = quietGame();
+    game.placeChasers({{{5, 0}, {1, 0}}});
+    for (int i = 0; i < 4 * game.params().chaserPeriod; ++i)
+        game.tick();
+    QVERIFY(!game.chasers().front().track.empty());
+    const std::vector<Event> events = cutColumn(game);
+    QVERIFY(find(events, Event::Claimed));
+    QVERIFY(game.chasers().front().track.empty());
 }
 
 void EngineTests::tapMovesOneCellAndHoldKeepsMoving() {
