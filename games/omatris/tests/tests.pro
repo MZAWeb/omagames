@@ -13,7 +13,9 @@ HEADERS += \
     ../src/rules.h \
     ../src/game.h \
     ../src/highscores.h \
-    enginetests.h
+    ../src/omatrisgame.h \
+    enginetests.h \
+    bridgetests.h
 
 SOURCES += \
     ../src/piece.cpp \
@@ -22,5 +24,7 @@ SOURCES += \
     ../src/rules.cpp \
     ../src/game.cpp \
     ../src/highscores.cpp \
+    ../src/omatrisgame.cpp \
     enginetests.cpp \
+    bridgetests.cpp \
     tst_omatris.cpp
