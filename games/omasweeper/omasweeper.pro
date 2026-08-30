@@ -5,7 +5,9 @@ TARGET = omasweeper
 TEMPLATE = app
 
 HEADERS += \
-    src/presets.h
+    src/presets.h \
+    src/board.h
 SOURCES += \
-    src/main.cpp
+    src/main.cpp \
+    src/board.cpp
 RESOURCES += src/resources.qrc
