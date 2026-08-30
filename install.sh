@@ -17,7 +17,7 @@ main() {
   local ref="${OMAGAMES_REF:-main}"
 
   if [[ $# -eq 0 ]]; then
-    echo "usage: install.sh <game> [game...]   (games: omadoku, blackomack)" >&2
+    echo "usage: install.sh <game> [game...]   (any directory under games/ in the repo, e.g. omadoku)" >&2
     exit 1
   fi
   for tool in git makepkg pacman; do
