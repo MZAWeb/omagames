@@ -8,6 +8,7 @@
 - [ ] Extra hard almost always lands on Y-wing (swordfish 1/80); add XY-chain / uniqueness to widen the top band
 
 ## Omanix
+- [ ] Redo the slowdown fix (reverted in #32): the close-call scan and repaint caching from #29 broke rendering/movement on the real desktop while headless tests stayed green — redo incrementally on a clean base, verifying each commit visually on screen, and add a rendering test that catches misplaced geometry (e.g. compare a FieldView grab against the engine state)
 - [ ] Optional: reduced-motion setting for the sweep-fill/pulse animations
 
 ## Omasweeper
