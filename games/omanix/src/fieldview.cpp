@@ -1,7 +1,6 @@
 #include "fieldview.h"
 
 #include <QPainter>
-#include <QtMath>
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -35,18 +34,7 @@ FieldView::FieldView(QQuickItem *parent) : QQuickPaintedItem(parent) {
     m_clock.start();
     m_animation.setInterval(kFrameMs);
     connect(&m_animation, &QTimer::timeout, this, &FieldView::animate);
-    connect(this, &FieldView::colorsChanged, this, &FieldView::invalidateGround);
-}
-
-void FieldView::invalidateGround() {
-    m_groundDirty = true;
-    update();
-}
-
-void FieldView::geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry) {
-    QQuickPaintedItem::geometryChange(newGeometry, oldGeometry);
-    if (newGeometry.size() != oldGeometry.size())
-        invalidateGround();
+    connect(this, &FieldView::colorsChanged, this, &QQuickItem::update);
 }
 
 QObject *FieldView::source() const {
@@ -66,9 +54,8 @@ void FieldView::setSource(QObject *source) {
         connect(m_source, &OmanixGame::trailLost, this, &FieldView::onTrailLost);
     }
     m_history.clear();
-    m_lastChasers.clear();
     emit sourceChanged();
-    invalidateGround();
+    update();
 }
 
 void FieldView::setTrailThreatened(bool threatened) {
@@ -86,66 +73,30 @@ void FieldView::setCellSize(int cellSize) {
         return;
     m_cellSize = cellSize;
     emit cellSizeChanged();
-    invalidateGround();
+    update();
 }
 
 const Game *FieldView::engine() const {
     return m_source ? m_source->engine() : nullptr;
 }
 
-// The engine ticks sixty times a second but each mover steps every few
-// ticks, so most ticks leave the picture exactly as it was: those cost no
-// repaint, and with them no re-upload of the whole field.
 void FieldView::onFrame() {
     const Game *game = engine();
-    if (!game) {
-        m_history.clear();
-        m_lastChasers.clear();
-        update();
-        return;
-    }
-    bool moved = false;
-
-    const std::vector<Ball> &balls = game->balls();
-    if (m_history.size() != int(balls.size())) {
+    if (game) {
+        const std::vector<Ball> &balls = game->balls();
         m_history.resize(int(balls.size()));
-        moved = true;
-    }
-    for (int i = 0; i < int(balls.size()); ++i) {
-        QVector<QPoint> &trail = m_history[i];
-        if (trail.isEmpty() || trail.first() != balls[size_t(i)].pos) {
-            trail.prepend(balls[size_t(i)].pos);
-            if (trail.size() > kGhosts + 1)
-                trail.resize(kGhosts + 1);
-            moved = true;
+        for (int i = 0; i < int(balls.size()); ++i) {
+            QVector<QPoint> &trail = m_history[i];
+            if (trail.isEmpty() || trail.first() != balls[size_t(i)].pos) {
+                trail.prepend(balls[size_t(i)].pos);
+                if (trail.size() > kGhosts + 1)
+                    trail.resize(kGhosts + 1);
+            }
         }
+    } else {
+        m_history.clear();
     }
-
-    const std::vector<Chaser> &chasers = game->chasers();
-    if (m_lastChasers.size() != int(chasers.size())) {
-        m_lastChasers.resize(int(chasers.size()));
-        moved = true;
-    }
-    for (int i = 0; i < int(chasers.size()); ++i) {
-        if (m_lastChasers[i] != chasers[size_t(i)].pos) {
-            m_lastChasers[i] = chasers[size_t(i)].pos;
-            moved = true;
-        }
-    }
-
-    const Player &player = game->player();
-    if (player.pos != m_lastPlayer || player.onTrail != m_lastOnTrail) {
-        m_lastPlayer = player.pos;
-        m_lastOnTrail = player.onTrail;
-        moved = true;
-    }
-    if (game->field().revision() != m_fieldRevision) {
-        m_fieldRevision = game->field().revision();
-        moved = true;
-    }
-
-    if (moved)
-        update();
+    update();
 }
 
 void FieldView::onClaimed(const QVector<int> &cells, int x, int y) {
@@ -197,84 +148,38 @@ QColor FieldView::trailColorNow(qint64 now) const {
 }
 
 void FieldView::paint(QPainter *painter) {
+    painter->fillRect(boundingRect(), m_openColor);
     const Game *game = engine();
-    if (!game) {
-        painter->fillRect(boundingRect(), m_openColor);
+    if (!game)
         return;
-    }
     const qint64 now = m_clock.elapsed();
     paintCells(painter, *game, now);
     paintMovers(painter, *game, now);
 }
 
-void FieldView::refreshGround(const Field &field, qreal scale) {
-    const qreal dpr = scale > 0 ? scale : 1.0;
-    const QSize pixels(qMax(1, qCeil(width() * dpr)), qMax(1, qCeil(height() * dpr)));
-    if (!m_groundDirty && m_groundRevision == field.groundRevision() && m_ground.size() == pixels)
-        return;
-    if (m_ground.size() != pixels)
-        m_ground = QImage(pixels, QImage::Format_ARGB32_Premultiplied);
-    m_ground.setDevicePixelRatio(dpr);
-    m_groundRevision = field.groundRevision();
-    m_groundDirty = false;
-
-    const int c = m_cellSize;
-    QPainter painter(&m_ground);
-    painter.scale(dpr, dpr);
-    painter.fillRect(QRectF(0, 0, width(), height()), m_openColor);
-    painter.setPen(Qt::NoPen);
-    for (int y = 0; y < field.height(); ++y) {
-        for (int x = 0; x < field.width(); ++x) {
-            if (field.at({x, y}) == Cell::Claimed)
-                painter.fillRect(x * c, y * c, c, c, m_claimedColor);
-        }
-    }
-    if (c >= kMinGridCell) {
-        painter.setPen(QPen(m_gridColor, 1));
-        for (int x = 1; x < field.width(); ++x)
-            painter.drawLine(QPointF(x * c + 0.5, 0), QPointF(x * c + 0.5, height()));
-        for (int y = 1; y < field.height(); ++y)
-            painter.drawLine(QPointF(0, y * c + 0.5), QPointF(width(), y * c + 0.5));
-    }
-}
-
-void FieldView::paintGridEdges(QPainter *painter, QPoint cell) const {
-    if (m_cellSize < kMinGridCell)
-        return;
-    const int c = m_cellSize;
-    if (cell.x() >= 1)
-        painter->fillRect(cell.x() * c, cell.y() * c, 1, c, m_gridColor);
-    if (cell.y() >= 1)
-        painter->fillRect(cell.x() * c, cell.y() * c, c, 1, m_gridColor);
-}
-
 void FieldView::paintCells(QPainter *painter, const Game &game, qint64 now) {
     const Field &field = game.field();
     const int c = m_cellSize;
-    refreshGround(field, painter->combinedTransform().m11());
-    painter->drawImage(QPointF(0, 0), m_ground);
-
     const QColor trail = trailColorNow(now);
     painter->setPen(Qt::NoPen);
     for (int y = 0; y < field.height(); ++y) {
         for (int x = 0; x < field.width(); ++x) {
-            if (field.at({x, y}) != Cell::Trail)
-                continue;
-            painter->fillRect(x * c, y * c, c, c, trail);
-            paintGridEdges(painter, {x, y});
+            const Cell cell = field.at({x, y});
+            if (cell == Cell::Claimed)
+                painter->fillRect(x * c, y * c, c, c, m_claimedColor);
+            else if (cell == Cell::Trail)
+                painter->fillRect(x * c, y * c, c, c, trail);
         }
     }
-    // The ground already shows the claim; the sea fades off it instead of
-    // the claim fading in, which is the same blend from the other side.
     for (const SweepCell &sweep : m_sweep) {
         const double t = progress(now - m_sweepStart - sweep.delayMs, kFadeMs);
         if (t >= 1.0)
             continue;
         const QPoint p = field.point(sweep.index);
-        QColor sea = m_openColor;
-        sea.setAlphaF(sea.alphaF() * (1.0 - t));
-        painter->fillRect(p.x() * c, p.y() * c, c, c, sea);
-        paintGridEdges(painter, p);
+        painter->fillRect(p.x() * c, p.y() * c, c, c, m_openColor);
+        QColor tint = m_claimedColor;
+        tint.setAlphaF(tint.alphaF() * t);
+        painter->fillRect(p.x() * c, p.y() * c, c, c, tint);
     }
     if (m_flashStart >= 0) {
         const double t = progress(now - m_flashStart, kFlashMs);
@@ -283,8 +188,14 @@ void FieldView::paintCells(QPainter *painter, const Game &game, qint64 now) {
         for (int index : m_flash) {
             const QPoint p = field.point(index);
             painter->fillRect(p.x() * c, p.y() * c, c, c, tint);
-            paintGridEdges(painter, p);
         }
+    }
+    if (c >= kMinGridCell) {
+        painter->setPen(QPen(m_gridColor, 1));
+        for (int x = 1; x < field.width(); ++x)
+            painter->drawLine(QPointF(x * c + 0.5, 0), QPointF(x * c + 0.5, height()));
+        for (int y = 1; y < field.height(); ++y)
+            painter->drawLine(QPointF(0, y * c + 0.5), QPointF(width(), y * c + 0.5));
     }
 }
 

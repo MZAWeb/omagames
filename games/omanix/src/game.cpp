@@ -1,6 +1,7 @@
 #include "game.h"
 
 #include <algorithm>
+#include <cstdlib>
 
 namespace {
 
@@ -228,7 +229,8 @@ void Game::movePlayer(std::vector<Event> &events) {
 }
 
 void Game::closeTrail(std::vector<Event> &events) {
-    const bool closeCall = ballNearTrail();
+    const std::vector<int> trail = m_field.trailCells();
+    const bool closeCall = ballNearTrail(trail);
 
     std::vector<QPoint> ballPositions;
     for (const Ball &b : m_balls)
@@ -261,20 +263,15 @@ void Game::closeTrail(std::vector<Event> &events) {
 }
 
 bool Game::trailThreatened() const {
-    return m_player.onTrail && ballNearTrail();
+    return m_player.onTrail && ballNearTrail(m_field.trailCells());
 }
 
-// Looked at from the balls outward rather than along the trail: a fixed
-// handful of cells around each ball, however long the cut has grown.
-// Walking the trail instead is O(trail x balls) on every tick of a cut.
-bool Game::ballNearTrail() const {
+bool Game::ballNearTrail(const std::vector<int> &trail) const {
     for (const Ball &b : m_balls) {
-        for (int dy = -kCloseCallDistance; dy <= kCloseCallDistance; ++dy) {
-            for (int dx = -kCloseCallDistance; dx <= kCloseCallDistance; ++dx) {
-                const QPoint p {b.pos.x() + dx, b.pos.y() + dy};
-                if (m_field.contains(p) && m_field.at(p) == Cell::Trail)
-                    return true;
-            }
+        for (int i : trail) {
+            const QPoint p = m_field.point(i);
+            if (std::max(std::abs(p.x() - b.pos.x()), std::abs(p.y() - b.pos.y())) <= kCloseCallDistance)
+                return true;
         }
     }
     return false;
