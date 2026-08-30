@@ -2,6 +2,7 @@
 #include <QtTest>
 
 #include "boardtests.h"
+#include "bridgetests.h"
 #include "generatortests.h"
 #include "solvertests.h"
 
@@ -18,5 +19,7 @@ int main(int argc, char *argv[]) {
     status |= QTest::qExec(&solver, argc, argv);
     GeneratorTests generator;
     status |= QTest::qExec(&generator, argc, argv);
+    BridgeTests bridge;
+    status |= QTest::qExec(&bridge, argc, argv);
     return status;
 }
