@@ -5,6 +5,10 @@
 - [ ] Hints (next single), timer/stats per difficulty, best times
 - [ ] Extra hard almost always lands on Y-wing (swordfish 1/80); add XY-chain / uniqueness to widen the top band
 
+## Omanix
+- [ ] Play-test the difficulty ramp (ball speed per level, chaser count) and tune the constants in `level.cpp`
+- [ ] Optional: reduced-motion setting for the sweep-fill/pulse animations
+
 ## Black Omack
 - [ ] **Speed setting.** The bridge already has `stepInterval` (500 ms between bot/dealer actions, 180 ms per dealt card); expose it as Slow / Normal / Fast / Instant in the header with a key, persisted. Small.
 - [ ] **Session stats screen.** A panel with hands played, net, best/worst streak, blackjacks, busts, biggest win — the bridge already tracks hands and net; the rest needs counting in `finishRound()` and persisting. Moderate.
@@ -17,7 +21,6 @@
 - [ ] Cut v0.1.0 with `bin/release` and submit `packaging/opr/*` to omarchy-pkgs (see docs/RELEASING.md) — when the games are ready
 
 ## Future games
-- [ ] **Omanix** — Xonix clone
 - [ ] **Tetris** clone
 - [ ] **Solitaire** (Klondike) — reuses `PlayingCard`
 - [ ] **Minesweeper** clone
