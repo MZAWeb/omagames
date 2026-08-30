@@ -14,4 +14,5 @@ private slots:
     void tSpinMiniIsToldFromAFullOne();
     void levelRisesEveryTenLines();
     void sprintFinishesAtFortyLinesAndSprintZenNeverRamp();
+    void popupsNameTheClearAndTheStreaks();
 };

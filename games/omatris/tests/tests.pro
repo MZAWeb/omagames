@@ -12,6 +12,7 @@ HEADERS += \
     ../src/bag.h \
     ../src/rules.h \
     ../src/modes.h \
+    ../src/bonuses.h \
     ../src/game.h \
     ../src/autoshift.h \
     ../src/omatrisgame.h \
@@ -30,6 +31,7 @@ SOURCES += \
     ../src/bag.cpp \
     ../src/rules.cpp \
     ../src/modes.cpp \
+    ../src/bonuses.cpp \
     ../src/game.cpp \
     ../src/autoshift.cpp \
     ../src/omatrisgame.cpp \

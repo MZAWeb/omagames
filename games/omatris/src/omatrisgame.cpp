@@ -5,6 +5,7 @@
 #include <QSettings>
 #include <algorithm>
 
+#include "bonuses.h"
 #include "windowgeometry.h"
 
 namespace {
@@ -16,16 +17,6 @@ const auto kStartId = QStringLiteral("start");
 const auto kPlayingId = QStringLiteral("playing");
 const auto kGameOverId = QStringLiteral("gameover");
 const auto kFinishedId = QStringLiteral("finished");
-
-// What a clear is called on the popup, or nothing when it is not worth saying.
-QString clearName(const ClearInfo &clear) {
-    static const QString kLineNames[5] = {{}, OmatrisGame::tr("Single"), OmatrisGame::tr("Double"),
-                                          OmatrisGame::tr("Triple"), OmatrisGame::tr("Tetris")};
-    if (clear.spin == Spin::None)
-        return clear.lines == 4 ? kLineNames[4] : QString();
-    const QString spin = clear.spin == Spin::Mini ? OmatrisGame::tr("T-Spin Mini") : OmatrisGame::tr("T-Spin");
-    return clear.lines == 0 ? spin : spin + QLatin1Char(' ') + kLineNames[clear.lines];
-}
 
 }  // namespace
 
@@ -268,13 +259,8 @@ void OmatrisGame::handle(const Event &event) {
 // Popups are placed in visible board cells, which is all QML knows about.
 void OmatrisGame::announce(const ClearInfo &clear, QPoint where) {
     const QPoint at(where.x(), std::max(0, where.y() - Board::kHiddenRows));
-    const QString name = clearName(clear);
-    if (!name.isEmpty())
-        emit bonusEarned(name, at.x(), at.y());
-    if (clear.backToBack)
-        emit bonusEarned(tr("Back-to-Back"), at.x(), at.y());
-    if (clear.combo >= 1)
-        emit bonusEarned(tr("Combo x%1").arg(clear.combo), at.x(), at.y());
+    for (const QString &text : Bonuses::texts(clear))
+        emit bonusEarned(text, at.x(), at.y());
 }
 
 OmatrisGame::Snapshot OmatrisGame::snapshot() const {

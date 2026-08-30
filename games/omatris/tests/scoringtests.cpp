@@ -2,6 +2,7 @@
 
 #include <QtTest>
 
+#include "bonuses.h"
 #include "enginefixture.h"
 
 using namespace EngineFixture;
@@ -188,4 +189,22 @@ void ScoringTests::sprintFinishesAtFortyLinesAndSprintZenNeverRamp() {
     QCOMPARE(zen.level(), Rules::kFirstLevel + 1);
     QCOMPARE(zen.gravityLevel(), Rules::kFirstLevel);
     QCOMPARE(zen.phase(), Phase::Playing);
+}
+
+// The popups a clear earns are what the player is told about it, and a mini
+// T-spin has to read differently from a full one.
+void ScoringTests::popupsNameTheClearAndTheStreaks() {
+    QVERIFY(Bonuses::texts({1, Spin::None, false, -1, 0}).isEmpty());
+    QVERIFY(Bonuses::texts({3, Spin::None, false, -1, 0}).isEmpty());
+    QCOMPARE(Bonuses::texts({4, Spin::None, false, -1, 0}), QStringList {QStringLiteral("Tetris")});
+    QCOMPARE(Bonuses::texts({0, Spin::Mini, false, -1, 0}), QStringList {QStringLiteral("T-Spin Mini")});
+    QCOMPARE(Bonuses::texts({2, Spin::Mini, false, -1, 0}),
+             QStringList {QStringLiteral("T-Spin Mini Double")});
+    QCOMPARE(Bonuses::texts({3, Spin::Full, false, -1, 0}), QStringList {QStringLiteral("T-Spin Triple")});
+    // The streaks rise after the name, in the order they are earned.
+    QCOMPARE(Bonuses::texts({4, Spin::None, true, 2, 0}),
+             QStringList({QStringLiteral("Tetris"), QStringLiteral("Back-to-Back"),
+                          QStringLiteral("Combo x2")}));
+    // The first clear of a chain is no combo at all.
+    QCOMPARE(Bonuses::texts({1, Spin::None, false, 0, 0}), QStringList {});
 }
