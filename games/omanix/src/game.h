@@ -106,7 +106,7 @@ private:
     void closeTrail(std::vector<Event> &events);
     void loseLife(LifeLostReason reason, std::vector<Event> &events);
     bool chaserAt(QPoint p) const;
-    bool ballNearTrail(const std::vector<int> &trail) const;
+    bool anyBallNearTrail() const;
 
     Difficulty m_difficulty;
     QRandomGenerator m_rng;

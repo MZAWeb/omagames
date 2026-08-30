@@ -50,6 +50,10 @@ public:
     double claimedPercent() const;
 
     std::vector<int> trailCells() const;
+    // A trail cell within `radius` (Chebyshev) of `p`. Constant-time-ish: it
+    // scans the (2r+1)^2 box instead of walking the whole trail, which is what
+    // lets the bridge ask every tick.
+    bool trailNear(QPoint p, int radius) const;
     // Trail back to open sea; returns the cells that were wiped.
     std::vector<int> clearTrail();
     // Closes the trail: it becomes claimed, and so does every open region no

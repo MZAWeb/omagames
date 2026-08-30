@@ -147,8 +147,7 @@ void Game::movePlayer(std::vector<Event> &events) {
 }
 
 void Game::closeTrail(std::vector<Event> &events) {
-    const std::vector<int> trail = m_field.trailCells();
-    const bool closeCall = ballNearTrail(trail);
+    const bool closeCall = anyBallNearTrail();
 
     std::vector<QPoint> ballPositions;
     for (const Ball &b : m_balls)
@@ -181,16 +180,15 @@ void Game::closeTrail(std::vector<Event> &events) {
 }
 
 bool Game::trailThreatened() const {
-    return m_player.onTrail && ballNearTrail(m_field.trailCells());
+    return m_player.onTrail && anyBallNearTrail();
 }
 
-bool Game::ballNearTrail(const std::vector<int> &trail) const {
+// The same predicate as scanning the trail for each ball, from the other
+// end: the box around a ball is at most 49 cells whatever the trail's length.
+bool Game::anyBallNearTrail() const {
     for (const Ball &b : m_balls) {
-        for (int i : trail) {
-            const QPoint p = m_field.point(i);
-            if (std::max(std::abs(p.x() - b.pos.x()), std::abs(p.y() - b.pos.y())) <= kCloseCallDistance)
-                return true;
-        }
+        if (m_field.trailNear(b.pos, kCloseCallDistance))
+            return true;
     }
     return false;
 }

@@ -82,3 +82,26 @@ void FieldTests::claimMergesWithExistingGround() {
     QCOMPARE(pocket.at({6, 5}), Cell::Claimed);
     QCOMPARE(pocket.claimedInterior(), 9);
 }
+
+// trailNear(p, r) must agree exactly with "some trail cell within Chebyshev r
+// of p" — it is what the per-tick threat check leans on.
+void FieldTests::trailNearMatchesTheChebyshevBall() {
+    Field field(16, 12);
+    field.set({8, 6}, Cell::Trail);
+    QVERIFY(field.trailNear({8, 6}, 0));
+    QVERIFY(field.trailNear({11, 6}, 3));   // exactly on the ring
+    QVERIFY(field.trailNear({11, 9}, 3));   // corner of the box
+    QVERIFY(!field.trailNear({12, 6}, 3));  // one past it
+    QVERIFY(!field.trailNear({12, 10}, 3));
+    // Near the frame the box leaves the field without reading out of bounds.
+    QVERIFY(!field.trailNear({0, 0}, 3));
+    field.set({1, 1}, Cell::Trail);
+    QVERIFY(field.trailNear({0, 0}, 3));
+    // The old scan walked every trail cell; the box must not miss a far one
+    // just because a near cell is not trail.
+    Field longTrail(16, 12);
+    for (int x = 2; x < 14; ++x)
+        longTrail.set({x, 5}, Cell::Trail);
+    QVERIFY(longTrail.trailNear({2, 8}, 3));
+    QVERIFY(!longTrail.trailNear({2, 9}, 3));
+}
