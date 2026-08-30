@@ -8,6 +8,7 @@
 namespace {
 
 const auto kModeKey = QStringLiteral("play/mode");
+const auto kGhostKey = QStringLiteral("play/ghost");
 const auto kGeometryKey = QStringLiteral("window/geometry");
 const auto kMaximizedKey = QStringLiteral("window/maximized");
 
@@ -51,6 +52,7 @@ OmatrisGame::OmatrisGame(QObject *parent) : QObject(parent) {
 void OmatrisGame::loadSettings() {
     QSettings settings;
     HighScores::modeFromId(settings.value(kModeKey).toString(), &m_mode);
+    m_ghostEnabled = settings.value(kGhostKey, true).toBool();
     m_scores.load();
 }
 
@@ -293,6 +295,13 @@ void OmatrisGame::togglePause() {
         resume();
     else
         pause();
+}
+
+// The ghost is a preference, not a rule: it outlives the run and the window.
+void OmatrisGame::toggleGhost() {
+    m_ghostEnabled = !m_ghostEnabled;
+    QSettings().setValue(kGhostKey, m_ghostEnabled);
+    emit ghostEnabledChanged();
 }
 
 void OmatrisGame::step() {

@@ -37,6 +37,7 @@ Item {
                 { key: qsTr("↑"), action: qsTr("or X to rotate") },
                 { key: qsTr("Z"), action: qsTr("rotate back") },
                 { key: qsTr("C"), action: qsTr("hold") },
+                { key: qsTr("G"), action: game.ghostEnabled ? qsTr("ghost on") : qsTr("ghost off") },
                 { key: qsTr("P"), action: qsTr("pause") },
                 { key: qsTr("R"), action: qsTr("restart") },
                 { key: qsTr("Esc"), action: qsTr("leave") },

@@ -10,14 +10,17 @@
 class Game;
 class OmatrisGame;
 
-// Paints the well straight from the engine state: the stack, the ghost, the
-// falling piece and the two flashes a lock and a line clear deserve. Every
+// Paints the well straight from the engine state: the stack, the ghost when
+// it is wanted, the falling piece and the two flashes a lock and a line clear
+// deserve. Every
 // colour arrives from QML so the palette stays the theme's; this class holds
 // no rules.
 class FieldView : public QQuickPaintedItem {
     Q_OBJECT
     Q_PROPERTY(QObject *source READ source WRITE setSource NOTIFY sourceChanged)
     Q_PROPERTY(int cellSize READ cellSize WRITE setCellSize NOTIFY cellSizeChanged)
+    // Whether to outline where the falling piece would land.
+    Q_PROPERTY(bool showGhost READ showGhost WRITE setShowGhost NOTIFY showGhostChanged)
     // One colour per tetromino, in the order I, J, L, O, S, T, Z.
     Q_PROPERTY(QVariantList pieceColors READ pieceColors WRITE setPieceColors NOTIFY colorsChanged)
     Q_PROPERTY(QColor emptyColor MEMBER m_emptyColor NOTIFY colorsChanged)
@@ -35,6 +38,8 @@ public:
     void setSource(QObject *source);
     int cellSize() const { return m_cellSize; }
     void setCellSize(int cellSize);
+    bool showGhost() const { return m_showGhost; }
+    void setShowGhost(bool show);
     QVariantList pieceColors() const { return m_pieceColors; }
     void setPieceColors(const QVariantList &colors);
 
@@ -43,6 +48,7 @@ public:
 signals:
     void sourceChanged();
     void cellSizeChanged();
+    void showGhostChanged();
     void colorsChanged();
 
 private:
@@ -59,6 +65,7 @@ private:
 
     OmatrisGame *m_source = nullptr;
     int m_cellSize = 20;
+    bool m_showGhost = true;
     QVariantList m_pieceColors;
     QVector<QColor> m_colors;
     QColor m_emptyColor;

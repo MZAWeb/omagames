@@ -18,7 +18,8 @@ guideline scoring with back-to-back, combos and T-spins.
   in order until one fits. The O piece never moves when it turns.
 - **Hold** parks the falling piece and brings back whatever was parked, in its
   spawn orientation. Once per piece: it comes back when the next piece locks.
-- The **ghost** outlines where the piece would land.
+- The **ghost** outlines where the piece would land. `G` turns it off and on;
+  the choice is remembered.
 - Gravity follows the guideline curve: one row per second at level 1, and one
   row per `(0.8 − 0.007 × (level − 1)) ^ (level − 1)` seconds after that. It
   stops getting faster at level 20.
@@ -91,6 +92,7 @@ There is nothing to click during play.
 | `↑` or `X` | Rotate clockwise |
 | `Z` | Rotate counter-clockwise |
 | `C` | Hold |
+| `G` | Ghost piece on / off (remembered between runs) |
 | `P` | Pause / resume |
 | `R` | Restart the run at once (no prompt — it is the retry key) |
 | `1` `2` `3` | Start Marathon / Sprint / Zen (start screen) |
