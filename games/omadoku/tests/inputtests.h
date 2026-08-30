@@ -16,6 +16,13 @@ private slots:
     void modifiersAndOtherKeysResolveToNothing();
     void theBridgeAnswersTheSameAsTheHelper();
 
+    void ctrlClickTogglesCellsInAndOutOfTheSelection();
+    void shiftArrowsSweepTheCellsTheCursorCrosses();
+    void plainMovesAndClicksCollapseTheSelection();
+    void notesGoToEverySelectedEmptyCellAsOneStep();
+    void aValueGoesToTheCursorAndFoldsTheSelection();
+    void escapeUnwindsSelectionThenHighlight();
+
 private:
     QString m_settingsDir;
 };

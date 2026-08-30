@@ -27,8 +27,9 @@ class SudokuGame : public QObject {
     Q_PROPERTY(QVariantList difficulties READ difficulties CONSTANT)
     Q_PROPERTY(QString clickMode READ clickMode WRITE setClickMode NOTIFY clickModeChanged)
     Q_PROPERTY(bool validateAsYouGo READ validateAsYouGo WRITE setValidateAsYouGo NOTIFY validateAsYouGoChanged)
-    Q_PROPERTY(int selectedIndex READ selectedIndex WRITE select NOTIFY selectedIndexChanged)
-    Q_PROPERTY(int selectedValue READ selectedValue NOTIFY selectedValueChanged)
+    Q_PROPERTY(int cursorIndex READ cursorIndex NOTIFY selectionChanged)
+    Q_PROPERTY(QVariantList selectedIndices READ selectedIndices NOTIFY selectionChanged)
+    Q_PROPERTY(int cursorValue READ cursorValue NOTIFY cursorValueChanged)
     Q_PROPERTY(int highlightDigit READ highlightDigit NOTIFY highlightDigitChanged)
     Q_PROPERTY(QColor highlightColor READ highlightColor CONSTANT)
     Q_PROPERTY(QColor highlightInk READ highlightInk CONSTANT)
@@ -61,9 +62,13 @@ public:
     void setClickMode(const QString &clickMode);
     bool validateAsYouGo() const { return m_board.validateAsYouGo(); }
     void setValidateAsYouGo(bool validateAsYouGo);
-    int selectedIndex() const { return m_selectedIndex; }
-    // Digit under the selection (0 when empty), so the UI can highlight twins.
-    int selectedValue() const { return m_board.value(m_selectedIndex); }
+    // The cell the keyboard acts on (-1 = none). It is always one of
+    // `selectedIndices`, which holds the whole multi-cell selection in the
+    // order the cells joined it — a single cell most of the time.
+    int cursorIndex() const { return m_cursorIndex; }
+    QVariantList selectedIndices() const;
+    // Digit under the cursor (0 when empty), so the UI can highlight twins.
+    int cursorValue() const { return m_board.value(m_cursorIndex); }
     bool canUndo() const { return m_board.canUndo(); }
     int filledCount() const { return m_board.filledCount(); }
     bool inProgress() const;
@@ -86,8 +91,17 @@ public:
 
     Q_INVOKABLE void newGame(const QString &difficulty);
     Q_INVOKABLE void resumeSavedGame();
+    // Collapse the selection onto one cell: a plain click, a plain arrow.
     Q_INVOKABLE void select(int index);
-    Q_INVOKABLE void moveSelection(int deltaRow, int deltaColumn);
+    // Ctrl+click: add the cell to the selection, or drop it out again.
+    Q_INVOKABLE void toggleSelection(int index);
+    Q_INVOKABLE void moveCursor(int deltaRow, int deltaColumn);
+    // Shift+arrows: move the cursor and take every cell it passes over along.
+    Q_INVOKABLE void extendSelection(int deltaRow, int deltaColumn);
+    Q_INVOKABLE void collapseSelection();
+    // Escape, one step at a time: a multi-cell selection, then the highlight.
+    // False means nothing was left to undo and the caller may leave the puzzle.
+    Q_INVOKABLE bool backOut();
     // A digit from the number row. The mapping is fixed and owes nothing to
     // the click mode: plain fills, Shift notes, Ctrl (or Alt) highlights.
     Q_INVOKABLE void pressDigitKey(int digit, int modifiers);
@@ -111,8 +125,8 @@ signals:
     void boardChanged();
     void clickModeChanged();
     void validateAsYouGoChanged();
-    void selectedIndexChanged();
-    void selectedValueChanged();
+    void selectionChanged();
+    void cursorValueChanged();
     void highlightDigitChanged();
     void elapsedSecondsChanged();
     void hasSavedGameChanged();
@@ -125,6 +139,9 @@ private:
     enum class ClickMode { Highlight, Note, Fill };
 
     static ClickMode modeFromId(const QString &id, ClickMode fallback);
+    // The cell `deltaRow`/`deltaColumn` away, clamped to the grid: movement
+    // stops at the edges because wrapping makes arrow keys feel lost.
+    static int stepped(int index, int deltaRow, int deltaColumn);
     void applyChange(const std::vector<int> &changed);
     void setScreen(Screen screen);
     void setHighlightDigit(int digit);
@@ -139,7 +156,8 @@ private:
     QTimer m_clock {this};
     QTimer m_saveTimer {this};
     Screen m_screen = Screen::Start;
-    int m_selectedIndex = -1;
+    std::vector<int> m_selection;
+    int m_cursorIndex = -1;
     int m_highlightDigit = -1;
     int m_elapsedSeconds = 0;
     ClickMode m_clickMode = ClickMode::Fill;

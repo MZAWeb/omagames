@@ -37,7 +37,10 @@ public:
     // Mutations return the cells they touched so the QML model can refresh
     // exactly those rows. Givens and out-of-range indices are ignored.
     std::vector<int> setValue(int index, int value);
-    std::vector<int> toggleNote(int index, int digit);
+    // Pencilling one digit across several cells is one act and one undo step.
+    // Cells that already hold a value are skipped, not emptied.
+    std::vector<int> toggleNotes(const std::vector<int> &indices, int digit);
+    std::vector<int> toggleNote(int index, int digit) { return toggleNotes({index}, digit); }
     std::vector<int> erase(int index);
     std::vector<int> undo();
     std::vector<int> restart();  // clears every non-given cell and the history

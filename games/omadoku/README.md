@@ -24,6 +24,13 @@ current Omarchy theme.
   *Highlight* / *Note* / *Fill* selector decides: what clicking a key on the
   keypad does. It changes nothing about the keyboard. `N` cycles it and it is
   remembered between sessions; Fill is the default.
+- **Selecting several cells** is for pencilling: `Ctrl+click` picks cells out
+  one at a time, `Shift`+arrows (or `Shift+h` `j` `k` `l`) sweeps a run, taking
+  every cell the cursor crosses. `Shift`+a digit then pencils it into all of
+  them at once — cells that already hold a value are skipped — and one `Ctrl+Z`
+  takes the whole lot back. A plain digit still fills the cursor cell only, and
+  folds the selection back onto it; so does a plain arrow or a plain click. The
+  cursor is outlined more strongly than the rest of the selection.
 - **Highlighting** lights up every cell holding that digit, givens included,
   and the key on the keypad with it. The same digit again (or `Escape`) clears
   it, another digit switches it. It is the one thing in the game that does not
@@ -36,16 +43,18 @@ current Omarchy theme.
 
 | Key | Action |
 | --- | --- |
-| Arrows or `h` `j` `k` `l` | move the selection |
-| `1`–`9` | fill the digit into the selected cell |
-| `Shift+1`–`Shift+9` | toggle the digit as a note in the selected cell |
+| Arrows or `h` `j` `k` `l` | move the cursor, collapsing any multi-cell selection |
+| `Shift`+arrows or `Shift+h` `j` `k` `l` | extend the selection along the way |
+| `Ctrl`+click | add a cell to the selection, or take it out |
+| `1`–`9` | fill the digit into the cursor cell |
+| `Shift+1`–`Shift+9` | toggle the digit as a note in every selected empty cell |
 | `Ctrl+1`–`Ctrl+9` (or `Alt+1`–`Alt+9`) | highlight every cell holding that digit |
 | `N` | cycle what a keypad click does: Highlight → Note → Fill |
 | `Backspace`, `Delete`, `0` | erase the cell |
 | `Ctrl+Z` | undo |
 | `R` | restart the puzzle |
 | `V` | toggle *Validate as I go* |
-| `Escape` | clear the highlight, else back to the start screen (confirms mid-puzzle) |
+| `Escape` | collapse the selection, else clear the highlight, else back to the start screen (confirms mid-puzzle) |
 | `Ctrl+Q` | quit |
 
 On the start screen `1`, `2`, `3`, `4` pick a difficulty and `R` resumes.

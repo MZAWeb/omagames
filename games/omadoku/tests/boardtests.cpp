@@ -112,6 +112,38 @@ void BoardTests::notesToggleOnlyInEmptyCells() {
     QVERIFY(m_board.toggleNote(cell, 0).empty());
 }
 
+void BoardTests::notesAcrossManyCellsAreOneStep() {
+    const int first = emptyCell();
+    const int second = emptyCell(1);
+    const int third = emptyCell(2);
+    const int given = givenCell();
+    m_board.setValue(third, 4);
+
+    // Givens, filled cells, duplicates and nonsense indices all fall out; what
+    // is left is touched once and pushed as a single undo step.
+    const std::vector<int> changed =
+        m_board.toggleNotes({first, second, first, third, given, -1, 500}, 6);
+    QCOMPARE(changed, std::vector<int>({first, second}));
+    QCOMPARE(m_board.notes(first), quint16(1u << 5));
+    QCOMPARE(m_board.notes(second), quint16(1u << 5));
+    QCOMPARE(m_board.notes(third), quint16(0));
+
+    m_board.undo();
+    QCOMPARE(m_board.notes(first), quint16(0));
+    QCOMPARE(m_board.notes(second), quint16(0));
+    QCOMPARE(m_board.value(third), 4);  // the entry is a step of its own
+
+    // Each cell toggles on its own terms, so a mixed selection ends mixed.
+    m_board.toggleNote(first, 6);
+    m_board.toggleNotes({first, second}, 6);
+    QCOMPARE(m_board.notes(first), quint16(0));
+    QCOMPARE(m_board.notes(second), quint16(1u << 5));
+
+    QVERIFY(m_board.toggleNotes({first, second}, 0).empty());
+    QVERIFY(m_board.toggleNotes({}, 6).empty());
+    QVERIFY(m_board.toggleNotes({given}, 6).empty());
+}
+
 void BoardTests::eraseClearsValueAndNotes() {
     const int cell = emptyCell();
     m_board.setValue(cell, 6);

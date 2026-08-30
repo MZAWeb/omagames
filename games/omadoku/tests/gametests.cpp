@@ -65,7 +65,7 @@ void GameTests::startsOnTheStartScreen() {
     QCOMPARE(game.state(), QStringLiteral("start"));
     QVERIFY(!game.hasSavedGame());
     QVERIFY(!game.canUndo());
-    QCOMPARE(game.selectedIndex(), -1);
+    QCOMPARE(game.cursorIndex(), -1);
     QVERIFY(!game.validateAsYouGo());  // default off
 }
 
@@ -77,38 +77,38 @@ void GameTests::newGameSelectsTheFirstEmptyCell() {
     QCOMPARE(game.state(), QStringLiteral("playing"));
     QCOMPARE(stateSpy.count(), 1);
     QCOMPARE(game.difficulty(), QStringLiteral("hard"));
-    QVERIFY(game.selectedIndex() >= 0);
-    QCOMPARE(cellInt(game.cells(), game.selectedIndex(), CellModel::ValueRole), 0);
+    QVERIFY(game.cursorIndex() >= 0);
+    QCOMPARE(cellInt(game.cells(), game.cursorIndex(), CellModel::ValueRole), 0);
 
     QVERIFY(game.filledCount() > 0);
     QCOMPARE(game.digitCounts().size(), 9);
 }
 
-void GameTests::selectionMovesWithinTheGrid() {
+void GameTests::cursorMovesWithinTheGrid() {
     SudokuGame game;
     game.newGame(QStringLiteral("easy"));
 
     game.select(40);
-    game.moveSelection(-1, 0);
-    QCOMPARE(game.selectedIndex(), 31);
-    game.moveSelection(0, 1);
-    QCOMPARE(game.selectedIndex(), 32);
+    game.moveCursor(-1, 0);
+    QCOMPARE(game.cursorIndex(), 31);
+    game.moveCursor(0, 1);
+    QCOMPARE(game.cursorIndex(), 32);
 
     game.select(0);
-    game.moveSelection(-1, -1);  // clamped at the top-left corner
-    QCOMPARE(game.selectedIndex(), 0);
+    game.moveCursor(-1, -1);  // clamped at the top-left corner
+    QCOMPARE(game.cursorIndex(), 0);
     game.select(80);
-    game.moveSelection(1, 1);
-    QCOMPARE(game.selectedIndex(), 80);
+    game.moveCursor(1, 1);
+    QCOMPARE(game.cursorIndex(), 80);
 
     game.select(200);  // out of range is ignored
-    QCOMPARE(game.selectedIndex(), 80);
+    QCOMPARE(game.cursorIndex(), 80);
 }
 
 void GameTests::digitsGoIntoTheSelectedCellOnly() {
     SudokuGame game;
     game.newGame(QStringLiteral("easy"));
-    const int empty = game.selectedIndex();  // the first empty cell
+    const int empty = game.cursorIndex();  // the first empty cell
     const int given = firstGiven(game.cells());
     const int givenValue = cellInt(game.cells(), given, CellModel::ValueRole);
 
@@ -168,7 +168,7 @@ void GameTests::exposesDifficultiesWithLabels() {
 void GameTests::clickModeDecidesWhatAKeypadClickDoes() {
     SudokuGame game;
     game.newGame(QStringLiteral("easy"));
-    const int cell = game.selectedIndex();
+    const int cell = game.cursorIndex();
     QCOMPARE(game.clickMode(), QStringLiteral("fill"));  // the default
 
     game.clickDigit(4);
@@ -195,7 +195,7 @@ void GameTests::clickModeDecidesWhatAKeypadClickDoes() {
 void GameTests::keyboardMappingIgnoresTheClickMode() {
     SudokuGame game;
     game.newGame(QStringLiteral("easy"));
-    const int cell = game.selectedIndex();
+    const int cell = game.cursorIndex();
 
     // Whichever mode the selector is on, the number row means the same thing.
     const QStringList modes {QStringLiteral("highlight"), QStringLiteral("note"),
@@ -295,7 +295,7 @@ void GameTests::highlightWearsAFixedHighlighterYellow() {
 void GameTests::undoRestartAndEraseGoThroughTheBoard() {
     SudokuGame game;
     game.newGame(QStringLiteral("easy"));
-    const int cell = game.selectedIndex();
+    const int cell = game.cursorIndex();
     const int filled = game.filledCount();
 
     game.enterValue(2);
@@ -327,22 +327,22 @@ void GameTests::clockRunsOnlyWhilePlaying() {
     QCOMPARE(game.elapsedSeconds(), stopped);  // paused on the start screen
 }
 
-void GameTests::selectedValueFollowsTheSelection() {
+void GameTests::cursorValueFollowsTheCursor() {
     SudokuGame game;
     game.newGame(QStringLiteral("easy"));
-    const int empty = game.selectedIndex();
-    QCOMPARE(game.selectedValue(), 0);
+    const int empty = game.cursorIndex();
+    QCOMPARE(game.cursorValue(), 0);
 
-    QSignalSpy spy(&game, &SudokuGame::selectedValueChanged);
+    QSignalSpy spy(&game, &SudokuGame::cursorValueChanged);
     game.enterValue(6);
-    QCOMPARE(game.selectedValue(), 6);
+    QCOMPARE(game.cursorValue(), 6);
     QVERIFY(spy.count() > 0);
 
     game.select(firstGiven(game.cells()));
-    QCOMPARE(game.selectedValue(), cellInt(game.cells(), game.selectedIndex(), CellModel::ValueRole));
+    QCOMPARE(game.cursorValue(), cellInt(game.cells(), game.cursorIndex(), CellModel::ValueRole));
 
     game.select(empty);
-    QCOMPARE(game.selectedValue(), 6);
+    QCOMPARE(game.cursorValue(), 6);
 }
 
 void GameTests::validateAsYouGoFlipsMidGame() {
@@ -351,7 +351,7 @@ void GameTests::validateAsYouGoFlipsMidGame() {
     const SudokuBoard expected = TestSupport::installSavedGame(3, 20260829u);
     SudokuGame game;
     game.resumeSavedGame();
-    const int cell = game.selectedIndex();
+    const int cell = game.cursorIndex();
     QVERIFY(!game.validateAsYouGo());
     game.setValidateAsYouGo(true);
 

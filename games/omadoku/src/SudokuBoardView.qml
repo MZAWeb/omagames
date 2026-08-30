@@ -39,17 +39,24 @@ Item {
                 notes: model.notes
                 given: model.given
                 wrong: model.wrong
-                selected: game.selectedIndex === cellIndex
-                peer: game.selectedIndex >= 0 && !selected
-                      && (Math.floor(game.selectedIndex / 9) === cellRow
-                          || game.selectedIndex % 9 === cellColumn
-                          || (Math.floor(Math.floor(game.selectedIndex / 9) / 3) === Math.floor(cellRow / 3)
-                              && Math.floor((game.selectedIndex % 9) / 3) === Math.floor(cellColumn / 3)))
+                selected: game.selectedIndices.indexOf(cellIndex) >= 0
+                cursor: game.cursorIndex === cellIndex
+                peer: game.cursorIndex >= 0 && !selected
+                      && (Math.floor(game.cursorIndex / 9) === cellRow
+                          || game.cursorIndex % 9 === cellColumn
+                          || (Math.floor(Math.floor(game.cursorIndex / 9) / 3) === Math.floor(cellRow / 3)
+                              && Math.floor((game.cursorIndex % 9) / 3) === Math.floor(cellColumn / 3)))
                 highlighted: !selected && model.value > 0 && model.value === game.highlightDigit
                 highlightColor: game.highlightColor
                 highlightInk: game.highlightInk
-                sameDigit: !selected && !highlighted && model.value > 0 && model.value === game.selectedValue
-                onClicked: game.select(cellIndex)
+                sameDigit: !selected && !highlighted && model.value > 0 && model.value === game.cursorValue
+                // Ctrl picks cells out one by one; a plain click starts over.
+                onClicked: function(modifiers) {
+                    if (modifiers & Qt.ControlModifier)
+                        game.toggleSelection(cellIndex);
+                    else
+                        game.select(cellIndex);
+                }
             }
         }
 

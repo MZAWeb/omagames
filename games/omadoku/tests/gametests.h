@@ -13,7 +13,7 @@ private slots:
 
     void startsOnTheStartScreen();
     void newGameSelectsTheFirstEmptyCell();
-    void selectionMovesWithinTheGrid();
+    void cursorMovesWithinTheGrid();
     void digitsGoIntoTheSelectedCellOnly();
     void exposesDifficultiesWithLabels();
     void clickModeDecidesWhatAKeypadClickDoes();
@@ -21,7 +21,7 @@ private slots:
     void clickModeCyclesAndPersists();
     void highlightTogglesAndSwitchesDigits();
     void highlightWearsAFixedHighlighterYellow();
-    void selectedValueFollowsTheSelection();
+    void cursorValueFollowsTheCursor();
     void undoRestartAndEraseGoThroughTheBoard();
     void untouchedPuzzleIsNotInProgress();
     void validateAsYouGoFlipsMidGame();

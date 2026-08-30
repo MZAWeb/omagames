@@ -5,6 +5,8 @@
 #include <QRect>
 #include <QSettings>
 
+#include <algorithm>
+
 #include "sudoku.h"
 #include "sudokugrader.h"
 #include "sudokukeys.h"
@@ -273,37 +275,123 @@ void SudokuGame::resumeSavedGame() {
     emit boardChanged();
 }
 
-void SudokuGame::select(int index) {
-    if (index < -1 || index >= Sudoku::kCells || index == m_selectedIndex)
-        return;
-    m_selectedIndex = index;
-    emit selectedIndexChanged();
-    emit selectedValueChanged();
+QVariantList SudokuGame::selectedIndices() const {
+    QVariantList indices;
+    indices.reserve(int(m_selection.size()));
+    for (int index : m_selection)
+        indices.append(index);
+    return indices;
 }
 
-void SudokuGame::moveSelection(int deltaRow, int deltaColumn) {
+int SudokuGame::stepped(int index, int deltaRow, int deltaColumn) {
+    const int row = qBound(0, Sudoku::rowOf(index) + deltaRow, Sudoku::kSize - 1);
+    const int column = qBound(0, Sudoku::colOf(index) + deltaColumn, Sudoku::kSize - 1);
+    return row * Sudoku::kSize + column;
+}
+
+void SudokuGame::select(int index) {
+    if (index < -1 || index >= Sudoku::kCells)
+        return;
+    if (index == m_cursorIndex && m_selection.size() <= 1)
+        return;
+    m_selection.clear();
+    if (index >= 0)
+        m_selection.push_back(index);
+    m_cursorIndex = index;
+    emit selectionChanged();
+    emit cursorValueChanged();
+}
+
+void SudokuGame::toggleSelection(int index) {
+    if (m_screen != Screen::Playing || index < 0 || index >= Sudoku::kCells)
+        return;
+    const auto at = std::find(m_selection.begin(), m_selection.end(), index);
+    if (at == m_selection.end()) {
+        // The cell you just picked is where you are, so the cursor follows.
+        m_selection.push_back(index);
+        m_cursorIndex = index;
+    } else {
+        m_selection.erase(at);
+        if (m_cursorIndex == index)
+            m_cursorIndex = m_selection.empty() ? -1 : m_selection.back();
+    }
+    emit selectionChanged();
+    emit cursorValueChanged();
+}
+
+void SudokuGame::moveCursor(int deltaRow, int deltaColumn) {
     if (m_screen != Screen::Playing)
         return;
-    if (m_selectedIndex < 0) {
+    if (m_cursorIndex < 0) {
         select(0);
         return;
     }
-    // Movement stops at the edges: wrapping around makes arrow keys feel lost.
-    const int row = qBound(0, Sudoku::rowOf(m_selectedIndex) + deltaRow, Sudoku::kSize - 1);
-    const int column = qBound(0, Sudoku::colOf(m_selectedIndex) + deltaColumn, Sudoku::kSize - 1);
-    select(row * Sudoku::kSize + column);
+    select(stepped(m_cursorIndex, deltaRow, deltaColumn));
+}
+
+void SudokuGame::extendSelection(int deltaRow, int deltaColumn) {
+    if (m_screen != Screen::Playing)
+        return;
+    if (m_cursorIndex < 0) {
+        select(0);
+        return;
+    }
+    // One cell at a time, so everything the cursor passes over joins in and
+    // not just where it lands.
+    const int steps = std::max(std::abs(deltaRow), std::abs(deltaColumn));
+    const int rowStep = deltaRow > 0 ? 1 : deltaRow < 0 ? -1 : 0;
+    const int columnStep = deltaColumn > 0 ? 1 : deltaColumn < 0 ? -1 : 0;
+    bool moved = false;
+    for (int step = 0; step < steps; ++step) {
+        const int next = stepped(m_cursorIndex, rowStep, columnStep);
+        if (next == m_cursorIndex)
+            break;  // the edge of the grid
+        m_cursorIndex = next;
+        if (std::find(m_selection.begin(), m_selection.end(), next) == m_selection.end())
+            m_selection.push_back(next);
+        moved = true;
+    }
+    if (!moved)
+        return;
+    emit selectionChanged();
+    emit cursorValueChanged();
+}
+
+void SudokuGame::collapseSelection() {
+    if (m_selection.size() <= 1)
+        return;
+    m_selection.assign(1, m_cursorIndex);  // the cursor stays where it is
+    emit selectionChanged();
+}
+
+bool SudokuGame::backOut() {
+    if (m_selection.size() > 1) {
+        collapseSelection();
+        return true;
+    }
+    if (m_highlightDigit >= 0) {
+        clearHighlight();
+        return true;
+    }
+    return false;
 }
 
 void SudokuGame::enterValue(int digit) {
-    if (m_screen != Screen::Playing || m_selectedIndex < 0)
+    if (m_screen != Screen::Playing || m_cursorIndex < 0)
         return;
-    applyChange(m_board.setValue(m_selectedIndex, digit));
+    // A value lands in one cell — the cursor — and folds the selection back
+    // onto it, so the digit after it cannot surprise anyone.
+    const std::vector<int> changed = m_board.setValue(m_cursorIndex, digit);
+    collapseSelection();
+    applyChange(changed);
 }
 
 void SudokuGame::toggleNote(int digit) {
-    if (m_screen != Screen::Playing || m_selectedIndex < 0)
+    if (m_screen != Screen::Playing)
         return;
-    applyChange(m_board.toggleNote(m_selectedIndex, digit));
+    // Every selected cell at once, as one undo step. This is what a
+    // multi-selection is for.
+    applyChange(m_board.toggleNotes(m_selection, digit));
 }
 
 QColor SudokuGame::highlightColor() {
@@ -350,9 +438,9 @@ void SudokuGame::clickDigit(int digit) {
 }
 
 void SudokuGame::erase() {
-    if (m_screen != Screen::Playing || m_selectedIndex < 0)
+    if (m_screen != Screen::Playing || m_cursorIndex < 0)
         return;
-    applyChange(m_board.erase(m_selectedIndex));
+    applyChange(m_board.erase(m_cursorIndex));
 }
 
 void SudokuGame::undo() {
@@ -385,7 +473,7 @@ void SudokuGame::applyChange(const std::vector<int> &changed) {
     else
         m_cells.refreshAll();
     emit boardChanged();
-    emit selectedValueChanged();
+    emit cursorValueChanged();
 
     if (m_board.isSolved()) {
         m_clock.stop();

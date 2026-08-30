@@ -45,7 +45,7 @@ void PersistenceTests::winningSwitchesStateAndClearsTheSave() {
     game.resumeSavedGame();
     QCOMPARE(game.state(), QStringLiteral("playing"));
     QCOMPARE(game.elapsedSeconds(), 42);
-    QCOMPARE(game.selectedIndex(), last);
+    QCOMPARE(game.cursorIndex(), last);
 
     // A wrong entry is flagged immediately and does not win.
     game.enterValue(expected.puzzle().solution[size_t(last)] % 9 + 1);
@@ -79,7 +79,7 @@ void PersistenceTests::savedGameSurvivesRestart() {
         game.newGame(QStringLiteral("medium"));
         technique = game.techniqueLabel();
         QVERIFY(!technique.isEmpty());
-        cell = game.selectedIndex();
+        cell = game.cursorIndex();
         game.enterValue(7);
         game.backToStart();  // saves on the way out
         QVERIFY(game.hasSavedGame());

@@ -12,7 +12,8 @@ Item {
     property int notes: 0
     property bool given: false
     property bool wrong: false
-    property bool selected: false
+    property bool selected: false   // part of the current selection
+    property bool cursor: false     // ...and the one the keyboard acts on
     property bool peer: false
     property bool sameDigit: false
     property bool highlighted: false
@@ -26,7 +27,7 @@ Item {
     readonly property int tintMs: 90     // selection and peer shading
     readonly property int settleMs: 110  // accent settle on a placement
 
-    signal clicked()
+    signal clicked(int modifiers)
 
     // Bindings are live from the first frame, so the delegate has to be told
     // when it stops being built: a puzzle loading into 81 cells is not 81
@@ -35,23 +36,27 @@ Item {
 
     Component.onCompleted: cell.ready = true
 
-    // A digit only ever lands in the selected cell, which is also what keeps a
+    // A digit only ever lands in the cursor cell, which is also what keeps a
     // wholesale refresh (a new puzzle, a restart) quiet.
     onValueChanged: {
-        if (cell.ready && cell.selected && cell.value > 0 && !cell.given)
+        if (cell.ready && cell.cursor && cell.value > 0 && !cell.given)
             settle.restart();
     }
 
     Rectangle {
         anchors.fill: parent
-        color: cell.selected ? theme.alpha(theme.accent, 0.30)
+        color: cell.cursor ? theme.alpha(theme.accent, 0.30)
+             : cell.selected ? theme.alpha(theme.accent, 0.18)
              : cell.highlighted ? cell.highlightColor
              : cell.sameDigit ? theme.alpha(theme.accent, 0.14)
              : cell.peer ? theme.alpha(theme.foreground, 0.10)
              : "transparent"
         // The selection is an outline as well as a fill, so it survives a
-        // theme whose accent barely tints and reads without color alone.
-        border.width: cell.selected ? Math.max(2, Math.round(2 * theme.textScale)) : 0
+        // theme whose accent barely tints and reads without color alone. The
+        // cursor wears the thicker one: it is where the next digit lands.
+        border.width: cell.cursor ? Math.max(2, Math.round(2 * theme.textScale))
+                    : cell.selected ? Math.max(1, Math.round(theme.textScale))
+                    : 0
         border.color: theme.accent
         Behavior on color { ColorAnimation { duration: cell.tintMs } }
     }
@@ -109,6 +114,6 @@ Item {
 
     MouseArea {
         anchors.fill: parent
-        onClicked: cell.clicked()
+        onClicked: function(mouse) { cell.clicked(mouse.modifiers); }
     }
 }

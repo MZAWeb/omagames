@@ -18,18 +18,27 @@ FocusScope {
         return minutes + ":" + (rest < 10 ? "0" : "") + rest;
     }
 
+    // Shift turns a move into a sweep: the cursor goes the same way and every
+    // cell it crosses joins the selection.
+    function moveBy(event, deltaRow, deltaColumn) {
+        if (event.modifiers & Qt.ShiftModifier)
+            game.extendSelection(deltaRow, deltaColumn);
+        else
+            game.moveCursor(deltaRow, deltaColumn);
+    }
+
     Keys.onPressed: function(event) {
         var digit = game.digitForKey(event.key, event.modifiers, event.text, event.nativeScanCode);
         if (digit > 0) {
             game.pressDigitKey(digit, event.modifiers);
         } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H) {
-            game.moveSelection(0, -1);
+            root.moveBy(event, 0, -1);
         } else if (event.key === Qt.Key_Right || event.key === Qt.Key_L) {
-            game.moveSelection(0, 1);
+            root.moveBy(event, 0, 1);
         } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
-            game.moveSelection(-1, 0);
+            root.moveBy(event, -1, 0);
         } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
-            game.moveSelection(1, 0);
+            root.moveBy(event, 1, 0);
         } else if (event.key === Qt.Key_N) {
             game.cycleClickMode();
         } else if (event.key === Qt.Key_V) {
