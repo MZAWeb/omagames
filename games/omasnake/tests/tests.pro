@@ -12,7 +12,10 @@ HEADERS += \
     ../src/snake.h \
     ../src/game.h \
     ../src/omasnakegame.h \
-    enginetests.h \
+    scenario.h \
+    snaketests.h \
+    foodtests.h \
+    speedtests.h \
     bridgetests.h
 
 SOURCES += \
@@ -22,6 +25,9 @@ SOURCES += \
     ../src/game.cpp \
     ../src/omasnakegame.cpp \
     ../src/omasnakegamemodel.cpp \
-    enginetests.cpp \
+    scenario.cpp \
+    snaketests.cpp \
+    foodtests.cpp \
+    speedtests.cpp \
     bridgetests.cpp \
     tst_omasnake.cpp
