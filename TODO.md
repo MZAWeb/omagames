@@ -30,7 +30,7 @@
 - [ ] Promote `HandView.qml` to `common/` when a second card game needs it
 
 ## Release
-- [ ] Cut v0.1.0 with `bin/release` and submit `packaging/opr/*` to omarchy-pkgs (see docs/RELEASING.md) — when the games are ready
+- [ ] Cut v0.2.0 with `bin/release` and submit `packaging/opr/*` to omarchy-pkgs (see docs/RELEASING.md) — when the games are ready
 
 ## Future games
 - [ ] **Texas hold 'em** — same table, bots with persistent personalities, chips and pacing as Black Omack; blinds, betting rounds, hand ranking, showdown
