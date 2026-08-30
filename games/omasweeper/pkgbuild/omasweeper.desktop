@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Omasweeper
+Comment=Minesweeper for Omarchy
+Exec=omasweeper
+Icon=omasweeper
+Terminal=false
+Categories=Game;LogicGame;
+StartupWMClass=omasweeper

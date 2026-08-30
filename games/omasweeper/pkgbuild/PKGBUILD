@@ -1,0 +1,29 @@
+# Maintainer: Daniel Dvorkin <daniel@mzaweb.com>
+
+pkgname=omasweeper
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Minesweeper for Omarchy, every board solvable without guessing'
+arch=('x86_64' 'aarch64')
+url='https://github.com/MZAWeb/omagames'
+license=('MIT' 'OFL-1.1')
+install='omasweeper.install'
+options=('!debug')
+depends=('hicolor-icon-theme' 'qt6-base' 'qt6-declarative' 'xdg-desktop-portal')
+makedepends=('gcc' 'make' 'qt6-base' 'qt6-declarative')
+source=()
+sha256sums=()
+
+build() {
+  cd "$startdir/../../.."
+  ./bin/build omasweeper
+}
+
+package() {
+  cd "$startdir/../../.."
+  /usr/bin/install -Dm755 build/games/omasweeper/omasweeper "$pkgdir/usr/bin/omasweeper"
+  /usr/bin/install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  /usr/bin/install -Dm644 common/fonts/OFL.txt "$pkgdir/usr/share/licenses/$pkgname/OFL.txt"
+  /usr/bin/install -Dm644 "$startdir/omasweeper.svg" "$pkgdir/usr/share/icons/hicolor/scalable/apps/omasweeper.svg"
+  /usr/bin/install -Dm644 "$startdir/omasweeper.desktop" "$pkgdir/usr/share/applications/omasweeper.desktop"
+}
