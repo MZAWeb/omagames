@@ -28,5 +28,6 @@
 
 ## Future games
 - [ ] **Tetris** clone
+- [ ] **Snake** clone (Omasnake?) — reuse Omanix's tick engine, painted `FieldView`, overlays and high-score table
 - [ ] **Solitaire** (Klondike) — reuses `PlayingCard`
 - [ ] **Mahjong** solitaire (tile matching) clone
