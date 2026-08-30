@@ -21,10 +21,11 @@ worth, so a long game is worth far more than a careful one.
 - Running into your own body ends the game — including turning into it. The
   cell the tail is about to leave is *not* your body: following your own tail
   is legal.
-- **Classic** mode: the walls kill. There is deliberately **no grace window** —
-  the step that leaves the field is the step that ends the game, exactly as
-  the original does. **Wrap** mode: the edges wrap around instead, and only
-  your own body can end the run.
+- The **edges** are a setting of their own, chosen before the run and kept
+  until you change it. **Classic**: the walls kill, with deliberately **no
+  grace window** — the step that leaves the field is the step that ends the
+  game, exactly as the original does. **Wrap**: the edges carry you across
+  instead, and only your own body can end the run.
 - Filling the board leaves nowhere to put the next dot; that ends the game
   too, as a perfect one.
 
@@ -32,7 +33,7 @@ worth, so a long game is worth far more than a careful one.
 
 The step rate is counted in ticks per move at 60 ticks a second, so a smaller
 number is a faster snake. Every few foods shaves one tick off, down to the
-difficulty's floor:
+chosen speed's floor:
 
 | | Start | Floor | Faster every | Range |
 |---|---|---|---|---|
@@ -59,11 +60,28 @@ snake has grown, up to ×5:
 
 Every constant is named in `src/game.h`.
 
-The top ten scores of each mode and difficulty (with the length reached and
-the date) are kept in `~/.config/Omacom/omasnake.conf`. The start screen shows
-the best for each difficulty in the mode you are about to play, the header
+The top ten scores of each edges setting and speed (with the length reached
+and the date) are kept in `~/.config/Omacom/omasnake.conf`. The start screen
+shows the best for each speed under the edges you are about to play, the header
 shows the best for the game in progress and tints the score once you pass it,
 and the game-over overlay names your rank when you made the table.
+
+## Start screen
+
+Two settings, and they are not the same kind of thing, so they are not one
+list:
+
+- **Edges** is a two-segment switch, Classic | Wrap, with the chosen segment
+  filled in the accent color and one line under it saying what that choice
+  costs you. `M` flips it. It changes nothing else; it just waits.
+- **Speed** is a heading over three plain buttons, Slow / Normal / Fast on
+  `1` `2` `3`, each with its range of cells a second, the best score for that
+  speed under the current edges, and a "Last played" tag on the one you chose
+  last. Pressing one starts a game right away, with whichever edges are set.
+
+Both settings are remembered between sessions. The high scores panel (`H`)
+repeats the same grouping: the edges switch on top — `M` still flips it — and
+the three tables of that setting under a **Speed** heading.
 
 ## Keyboard
 
@@ -74,10 +92,10 @@ There is no mouse control at all — the field is not clickable.
 |---|---|
 | `←` `↑` `↓` `→` or `H` `J` `K` `L` | Turn. Reversing is ignored; two turns can be queued |
 | `Space` / `P` | Pause / resume |
-| `R` | Restart with the same mode and difficulty |
+| `R` | Restart with the same edges and speed |
 | `Esc` | Leave the game (confirmed mid-game), close the high scores |
 | `1` `2` `3` | Start a Slow / Normal / Fast game (start screen) |
-| `M` | Switch between Classic and Wrap (start screen, high scores) |
+| `M` | Switch the edges, Classic ↔ Wrap (start screen, high scores) |
 | `H` | High scores (start screen) |
 | `Enter` / `Space` | Play again after a game over |
 | `Y` / `Enter`, `N` / `Esc` | Confirm / cancel a dialog |
@@ -87,7 +105,7 @@ There is no mouse control at all — the field is not clickable.
 
 The field is painted by one `FieldView` item at a whole number of pixels per
 cell, centred in the window; the header carries the score, the length, the
-current speed and the best score for this mode and difficulty. The window
+current speed and the best score for these edges and speed. The window
 scales with the desktop text size; the minimum is 640×520 logical pixels at
 100%, which still leaves at least 16 pixels a cell.
 
