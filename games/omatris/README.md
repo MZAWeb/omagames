@@ -26,10 +26,12 @@ guideline scoring with back-to-back, combos and T-spins.
 - **Soft drop** (`↓`) falls twenty times as fast and pays a point a row.
   **Hard drop** (`Space`) drops the piece to the floor and locks it at once,
   for two points a row.
-- **Lock delay**: a piece that lands has half a second before it locks, and
-  every move or rotation on the floor restarts that half second — up to
+- **Lock delay**: a piece that lands has half a second before it locks. That
+  half second only runs while the piece is resting on something — a rotation
+  that lifts it off the stack pauses the timer instead of rewinding it — and
+  every move or rotation made after it has landed restarts it, up to
   **fifteen** times. Falling to a row it has not reached before hands it a
-  fresh fifteen.
+  fresh fifteen; a kick that bounces it down and back up does not.
 - Full rows flash for 150 ms and then everything above them falls.
 - **Level** goes up every **10 lines**.
 - The game ends on **block out** (a new piece has nowhere to appear) or
