@@ -55,8 +55,10 @@ Every constant is named in `src/game.h`.
 | **Normal** | 3 | classic | one more every 3 levels | speeds up every 2 levels |
 | **Hard** | 4 | fast | one more every 2 levels | speeds up every 2 levels |
 
-The last difficulty played is preselected. The top ten scores per difficulty
-(with level and date) are kept in `~/.config/Omacom/omanix.conf`; the header
+Each difficulty has its own key and none of them is a default, so no button
+on the start screen is drawn as the primary one; the difficulty played last
+is merely marked. The top ten scores per difficulty (with level and date) are
+kept in `~/.config/Omacom/omanix.conf`; the header
 shows the best for the difficulty in play and tints the score once you pass
 it, and the game-over overlay names your rank when you made the table.
 
