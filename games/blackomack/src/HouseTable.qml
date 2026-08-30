@@ -2,7 +2,7 @@ import QtQuick
 import OmaGames
 
 // Responsive House Table: the spatial oval is primary; when seats reach their
-// minimum geometry, it becomes a dealer/human stage plus deal-order roster.
+// minimum geometry, it becomes a dealer/human stage plus play-order roster.
 Item {
     id: root
     // Too small for a third seat on the oval: the window reports this to the
@@ -65,6 +65,10 @@ Item {
                         required property int index
                         // The seating chart lives in C++ (SeatLayout), so the
                         // spacing that keeps seats off each other is tested.
+                        // Slot i belongs to the i-th mate in play order, and the
+                        // slots follow the arc, so the action sweeps down the
+                        // dealer's left, through the tray below and up the far
+                        // side.
                         readonly property rect slot: game.seatRect(root.botSeats.length, index,
                                                                    Qt.size(table.width, table.height),
                                                                    Qt.size(targetWidth, targetHeight))
@@ -171,7 +175,7 @@ Item {
 
                     Text {
                         id: rosterLabel
-                        text: "Table mates, in deal order"
+                        text: "Table mates, in play order"
                         color: theme.foreground
                         opacity: 0.75
                         font.pixelSize: 11 * theme.textScale

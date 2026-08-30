@@ -12,10 +12,16 @@
 // far enough inward to clear the dealer's cards.
 namespace SeatLayout {
 
-// Anchor of the `index`-th mate of `count`, in deal order: mates fill the arc
-// dealer-outwards, left first, so an odd extra mate sits dealer-left.
+// Anchor of the `index`-th mate of `count`, in play order: the seats are
+// ordered by where they sit on the arc, starting at the dealer's left — the
+// right of the screen — running down that side to the human's tray at the
+// bottom and on up the far side to the dealer's right, so the action sweeps
+// round the table instead of jumping about it.
 QPointF anchor(int count, int index);
 // The same seat as a rectangle on a table of `table` size.
 QRectF rect(int count, int index, const QSizeF &table, const QSizeF &seat);
+// How many mates the sweep reaches before the human's tray, which is also the
+// human's index in the table's seat order.
+int matesBeforeHuman(int count);
 
 }

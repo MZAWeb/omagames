@@ -1,5 +1,7 @@
 #include "table.h"
 
+#include "seatlayout.h"
+
 using namespace BlackjackRules;
 
 QString Seat::name() const {
@@ -48,10 +50,18 @@ bool Table::removeLastBot() {
     return true;
 }
 
-// Keeps the human in the middle of the table so bots act both before and after.
+// Play follows the seating: the array holds the seats in the order the sweep
+// meets them round the oval — from the dealer's left, down that side, through
+// the human's tray at the bottom of the table and up the far side to the
+// dealer's right. Everything that walks the seats — the bets, the pitch, the
+// insurance offer, the turn cursor — follows this array, so putting the human
+// where SeatLayout says the bottom-centre tray falls is the whole rule.
 void Table::rebalanceSeats() {
-    const Seat human = m_seats.takeAt(m_humanSeat);
-    m_humanSeat = m_seats.size() / 2;
+    int at = 0;
+    while (at < m_seats.size() && !m_seats[at].isHuman)
+        ++at;
+    const Seat human = m_seats.takeAt(at);
+    m_humanSeat = SeatLayout::matesBeforeHuman(m_seats.size());
     m_seats.insert(m_humanSeat, human);
 }
 
