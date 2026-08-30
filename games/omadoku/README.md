@@ -91,37 +91,46 @@ remembers its geometry afterwards.
 Every level is defined by the human solving techniques its puzzles need, and
 the generator guarantees the claim both ways: a puzzle at a level is fully
 solvable with that level's techniques and **not** solvable with the level
-below's, so each level really asks for something new. The bands follow the
-grading most apps and graders agree on: two singles-only levels that differ
-in how hard the scanning is, then a level where pencil marks become
-necessary, then one for the pattern techniques. Only techniques a casual
-player recognises are used, named as in the sudoku.coach lessons
-(<https://sudoku.coach/en/learn>); locked candidates (pointing pairs,
-claiming) are deliberately not part of the ladder, so no puzzle ever needs
-them. The start screen lists the techniques under each level; the board
-header shows the hardest one the current puzzle needs.
+below's, so each level really asks for something new. The techniques are
+the ones sudoku.coach teaches (<https://sudoku.coach/en/learn>), under the
+names it uses, and the bands are cut along the Sudoku Explainer (SE) rating
+sudoku.coach grades by (<https://sudoku.coach/en/learn/sudoku-difficulty>):
+its categories are Easy up to 1.2, Medium up to 2.0, Hard up to 3.0 and
+Advanced above 4.0. Locked candidates (pointing, claiming) are deliberately
+not part of the ladder, so no puzzle ever needs them. The start screen
+lists the techniques under each level; the board header shows the hardest
+one the current puzzle needs.
 
-| Level | Techniques it adds | Feel | Typical clues |
+| Level | Techniques it adds (SE rating) | Feel | Typical clues |
 | --- | --- | --- | --- |
-| Easy | naked single | some cell always has one digit left; no pencil marks | 38–42 |
-| Medium | hidden single | singles only, but you must scan each unit for where a digit has to go | 25–36 |
-| Hard | naked pair, hidden pair, naked triple | pencil marks and eliminations | 21–30 |
-| Extra hard | X-wing, XY-wing, swordfish | at least one pattern technique somewhere | 23–28 |
+| Easy | last digit (1.0), hidden single in a box (1.2), naked single (2.3) | a box scan or a cell with one digit left always moves you on; never a row or column scan | 38–42 |
+| Medium | hidden single in a row or column (1.5), naked pair (3.0) | fewer clues; scan lines too, and now and then a pair needs pencil marks | 22–35 |
+| Hard | hidden pair (3.4), naked triple (3.6), hidden triple (4.0) | pencil marks and eliminations throughout | 21–30 |
+| Extra hard | X-wing (3.2), swordfish (3.8), XY-wing (4.2) | at least one pattern technique somewhere | 23–28 |
 
 Clue counts are a target the generator aims for, not a promise: the
-technique requirement always wins. A Medium is never solvable with naked
-singles alone, a Hard never with singles alone, an Extra hard never without
-a fish or an XY-wing.
+technique requirement always wins. An Easy is never solved by hunting rows
+and columns, a Medium never with Easy's techniques, a Hard never without a
+hidden pair or a triple, an Extra hard never without a fish or an XY-wing.
 
 ### How grading works
 
 The grader is a human-technique solver that never guesses. It climbs a fixed
-ladder — naked single, hidden single, naked pair, hidden pair, naked
-triple, X-wing, XY-wing, swordfish — always trying the easiest
-rung first and starting over from the bottom after every step, exactly as a
-player would. The hardest rung it has to climb is the puzzle's grade. A grid
-it cannot finish is beyond the ladder (that is where chains, uniqueness
-arguments and the like would begin) and is never handed out.
+ladder — last digit, hidden single (box), naked single, hidden single
+(line), naked pair, hidden pair, naked triple, hidden triple, X-wing,
+swordfish, XY-wing — always trying the easiest rung first and starting over
+from the bottom after every step, exactly as a player would. The hardest
+rung it has to climb is the puzzle's grade. A grid it cannot finish is
+beyond the ladder (that is where chains, uniqueness arguments and the like
+would begin) and is never handed out.
+
+The ladder follows the SE ratings above with two deliberate deviations,
+both there so that every level is a prefix of the ladder: the naked single
+(2.3) sits ahead of the line hidden single (1.5), because Easy includes the
+former and must never need the latter; and the X-wing (3.2) sits after the
+triples, because the fish belong to Extra hard rather than to Hard. The
+last digit is SE's "last value": the one empty cell left in a row, column
+or box.
 
 The generator carves clues out of a random complete grid, removing one only
 while the puzzle stays unique and the ladder can still finish it within the
@@ -130,8 +139,8 @@ longer solve the puzzle, and when a removal would jump straight over a
 narrow band it puts a different clue back to land inside it. Each level's
 promise is checked in the test suite over fixed seeds, and every technique
 has a test on a crafted position where nothing easier makes progress.
-Generation is instant for Easy and Medium and takes a few milliseconds for
-Hard and Extra hard (worst case around 50 ms) on a laptop.
+Generation is instant for Easy and Medium and takes some 10–15 ms on average
+for Hard and Extra hard (worst case around 75 ms over 80 seeds) on a laptop.
 
 ## Build and install
 
