@@ -59,6 +59,14 @@ bool SudokuBoard::isWrong(int index) const {
     return inRange(index) && m_wrong[size_t(index)];
 }
 
+int SudokuBoard::firstEmptyIndex() const {
+    for (int i = 0; i < Sudoku::kCells; ++i) {
+        if (m_values[size_t(i)] == 0)
+            return i;
+    }
+    return -1;
+}
+
 int SudokuBoard::filledCount() const {
     return int(std::count_if(m_values.begin(), m_values.end(), [](int value) { return value != 0; }));
 }

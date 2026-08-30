@@ -23,6 +23,9 @@ public:
     quint16 notes(int index) const;
     bool isWrong(int index) const;
 
+    // The first cell with no value in it, or -1 when the grid is full: where a
+    // puzzle puts the cursor when it opens.
+    int firstEmptyIndex() const;
     int filledCount() const;
     int entryCount() const;  // cells the player filled in or pencilled
     int digitCount(int digit) const;  // placed digits, givens included

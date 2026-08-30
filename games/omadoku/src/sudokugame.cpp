@@ -2,7 +2,6 @@
 
 #include <QRect>
 
-#include "sudoku.h"
 #include "sudokukeys.h"
 #include "sudokulevels.h"
 #include "windowgeometry.h"
@@ -379,13 +378,7 @@ void SudokuGame::setHasSavedGame(bool hasSavedGame) {
 }
 
 void SudokuGame::selectFirstEmptyCell() {
-    for (int i = 0; i < Sudoku::kCells; ++i) {
-        if (m_board.value(i) == 0) {
-            select(i);
-            return;
-        }
-    }
-    select(-1);
+    select(m_board.firstEmptyIndex());
 }
 
 void SudokuGame::loadSettings() {

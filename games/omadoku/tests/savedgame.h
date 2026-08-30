@@ -44,12 +44,4 @@ inline SudokuBoard installSavedGame(int blanks, quint32 seed) {
     return board;
 }
 
-inline int firstEmptyCell(const SudokuBoard &board) {
-    for (int i = 0; i < Sudoku::kCells; ++i) {
-        if (board.value(i) == 0)
-            return i;
-    }
-    return -1;
-}
-
 }  // namespace TestSupport
