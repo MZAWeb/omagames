@@ -14,7 +14,11 @@ HEADERS += \
     ../src/difficulties.h \
     ../src/game.h \
     ../src/omanixgame.h \
-    enginetests.h \
+    scenario.h \
+    fieldtests.h \
+    movertests.h \
+    playtests.h \
+    scoringtests.h \
     bridgetests.h
 
 SOURCES += \
@@ -26,6 +30,10 @@ SOURCES += \
     ../src/game.cpp \
     ../src/omanixgame.cpp \
     ../src/omanixgamemodel.cpp \
-    enginetests.cpp \
+    scenario.cpp \
+    fieldtests.cpp \
+    movertests.cpp \
+    playtests.cpp \
+    scoringtests.cpp \
     bridgetests.cpp \
     tst_omanix.cpp
