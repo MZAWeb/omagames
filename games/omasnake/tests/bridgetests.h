@@ -20,9 +20,7 @@ private slots:
     void selfCrashAndWrapModeAreReported();
     void restartKeepsModeAndDifficulty();
     void modeOnlyChangesBetweenGames();
-    void highScoresOrderAndCap();
-    void highScoresAreSeparatePerModeAndDifficulty();
-    void highScoresRoundTripThroughSettings();
+    void savedHighScoresReachQml();
     void lastModeAndDifficultyAreRemembered();
     void windowGeometryRoundTrips();
 

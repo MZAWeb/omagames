@@ -10,9 +10,7 @@
         <file alias="KeyLegend.qml">KeyLegend.qml</file>
         <file alias="ReadyBanner.qml">ReadyBanner.qml</file>
         <file alias="ScorePopup.qml">ScorePopup.qml</file>
-        <file alias="OverlayPanel.qml">OverlayPanel.qml</file>
         <file alias="PauseOverlay.qml">PauseOverlay.qml</file>
         <file alias="GameOverOverlay.qml">GameOverOverlay.qml</file>
-        <file alias="ConfirmDialog.qml">ConfirmDialog.qml</file>
     </qresource>
 </RCC>

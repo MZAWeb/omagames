@@ -1,13 +1,13 @@
 #pragma once
 
 #include <QObject>
-#include <QTimer>
 #include <QVariantList>
 #include <QVariantMap>
 #include <memory>
 
 #include "game.h"
-#include "highscores.h"
+#include "pacer.h"
+#include "scoretable.h"
 
 // The only bridge between the engine and QML: state as properties, actions as
 // invokables, persistence and pacing. Screen state, mode and difficulty cross
@@ -53,16 +53,16 @@ public:
     int multiplier() const { return m_game ? m_game->multiplier() : 1; }
     double cellsPerSecond() const { return m_game ? m_game->cellsPerSecond() : 0.0; }
     // The best score of the mode and difficulty in play, or last chosen.
-    int best() const { return m_scores.best(m_mode, m_difficulty); }
+    int best() const;
     static int fieldWidth() { return Game::kWidth; }
     static int fieldHeight() { return Game::kHeight; }
     // "classic" | "wrap".
-    QString mode() const { return HighScores::modeId(m_mode); }
+    QString mode() const;
     QString modeLabel() const;
     // {id, label, description} for both walls rules, and for the three speeds.
     static QVariantList modes();
     // "slow" | "normal" | "fast".
-    QString difficulty() const { return HighScores::difficultyId(m_difficulty); }
+    QString difficulty() const;
     QString difficultyLabel() const;
     static QVariantList difficulties();
     // {table, mode, difficulty, label, score, length, date} for every table.
@@ -73,7 +73,7 @@ public:
     int newHighScoreRank() const { return m_newHighScoreRank; }
     QString gameOverReason() const;
     // Milliseconds between ticks; 0 stops the timer so tests drive step().
-    int stepInterval() const { return m_stepInterval; }
+    int stepInterval() const { return m_pacer.interval(); }
     void setStepInterval(int interval);
 
     // Read-only view for the renderer; null on the start screen.
@@ -124,10 +124,9 @@ private:
     void loadSettings();
 
     std::unique_ptr<Game> m_game;
-    HighScores m_scores;
-    QTimer m_timer {this};
+    OmaGames::ScoreTable m_scores;
+    OmaGames::Pacer m_pacer;
     Mode m_mode = Mode::Classic;
     Difficulty m_difficulty = Difficulty::Normal;
-    int m_stepInterval = kDefaultStepIntervalMs;
     int m_newHighScoreRank = -1;
 };
