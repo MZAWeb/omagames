@@ -23,6 +23,8 @@ private slots:
     void highlightWearsAFixedHighlighterYellow();
     void cursorValueFollowsTheCursor();
     void undoRestartAndEraseGoThroughTheBoard();
+    void restartAsksBeforeWipingTheBoard();
+    void restartIsNotExposedToQmlWithoutTheDialog();
     void untouchedPuzzleIsNotInProgress();
     void validateAsYouGoFlipsMidGame();
     void clockRunsOnlyWhilePlaying();

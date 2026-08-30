@@ -44,7 +44,7 @@ FocusScope {
         } else if (event.key === Qt.Key_V) {
             game.validateAsYouGo = !game.validateAsYouGo;
         } else if (event.key === Qt.Key_R) {
-            game.restart();
+            game.requestRestart();
         } else if (event.key === Qt.Key_Backspace || event.key === Qt.Key_Delete
                    || event.key === Qt.Key_0) {
             game.erase();

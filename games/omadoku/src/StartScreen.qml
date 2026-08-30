@@ -72,10 +72,11 @@ FocusScope {
                 Layout.fillWidth: true
                 spacing: 3 * theme.textScale
 
+                // Plain, like every other level: an accent fill would promise
+                // that Enter picks this one, and nothing here answers Enter.
                 OmaHintButton {
                     Layout.fillWidth: true
                     text: level.modelData.label
-                    primary: level.index === 0
                     hint: (level.index + 1).toString()
                     onClicked: game.newGame(level.modelData.id)
                 }

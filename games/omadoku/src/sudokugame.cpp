@@ -418,6 +418,31 @@ void SudokuGame::undo() {
     applyChange(m_board.undo());
 }
 
+void SudokuGame::requestRestart() {
+    if (m_screen != Screen::Playing)
+        return;
+    // An untouched puzzle has nothing to lose, so it is not worth a question.
+    if (!inProgress()) {
+        restart();
+        return;
+    }
+    setRestartPending(true);
+}
+
+void SudokuGame::confirmRestart() {
+    // Only ever the answer to the question requestRestart() asked: without a
+    // question outstanding this does nothing, so the board cannot be wiped by
+    // a stray call from QML.
+    if (!m_restartPending)
+        return;
+    setRestartPending(false);
+    restart();
+}
+
+void SudokuGame::cancelRestart() {
+    setRestartPending(false);
+}
+
 void SudokuGame::restart() {
     if (m_screen != Screen::Playing)
         return;
@@ -495,12 +520,20 @@ void SudokuGame::setScreen(Screen screen) {
     if (m_screen == screen)
         return;
     m_screen = screen;
+    setRestartPending(false);  // no question outlives the puzzle it was about
     // The clock only runs while a puzzle is actually on screen.
     if (m_screen == Screen::Playing)
         m_clock.start();
     else
         m_clock.stop();
     emit stateChanged();
+}
+
+void SudokuGame::setRestartPending(bool pending) {
+    if (m_restartPending == pending)
+        return;
+    m_restartPending = pending;
+    emit restartPendingChanged();
 }
 
 void SudokuGame::setHighlightDigit(int digit) {

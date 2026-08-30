@@ -46,7 +46,9 @@ Item {
                           || game.cursorIndex % 9 === cellColumn
                           || (Math.floor(Math.floor(game.cursorIndex / 9) / 3) === Math.floor(cellRow / 3)
                               && Math.floor((game.cursorIndex % 9) / 3) === Math.floor(cellColumn / 3)))
-                highlighted: !selected && model.value > 0 && model.value === game.highlightDigit
+                // The highlighter survives the cursor and the selection: a
+                // highlighted cell stays lit and wears the outline on top.
+                highlighted: model.value > 0 && model.value === game.highlightDigit
                 highlightColor: game.highlightColor
                 highlightInk: game.highlightInk
                 sameDigit: !selected && !highlighted && model.value > 0 && model.value === game.cursorValue

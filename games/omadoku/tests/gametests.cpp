@@ -319,6 +319,57 @@ void GameTests::undoRestartAndEraseGoThroughTheBoard() {
     QVERIFY(!game.canUndo());
 }
 
+void GameTests::restartAsksBeforeWipingTheBoard() {
+    SudokuGame game;
+    game.newGame(QStringLiteral("easy"));
+    const int filled = game.filledCount();
+
+    // Nothing entered yet, nothing to lose: no question, no board left over.
+    game.requestRestart();
+    QVERIFY(!game.restartPending());
+
+    game.enterValue(2);
+    QSignalSpy spy(&game, &SudokuGame::restartPendingChanged);
+    game.requestRestart();
+    QVERIFY(game.restartPending());
+    QCOMPARE(spy.count(), 1);
+    QCOMPARE(game.filledCount(), filled + 1);  // the question changes nothing
+
+    game.cancelRestart();
+    QVERIFY(!game.restartPending());
+    QCOMPARE(game.filledCount(), filled + 1);  // and neither does saying no
+
+    game.requestRestart();
+    game.confirmRestart();
+    QVERIFY(!game.restartPending());
+    QCOMPARE(game.filledCount(), filled);
+    QVERIFY(!game.canUndo());
+
+    // Leaving the puzzle takes the question with it.
+    game.enterValue(2);
+    game.requestRestart();
+    game.backToStart();
+    QVERIFY(!game.restartPending());
+}
+
+void GameTests::restartIsNotExposedToQmlWithoutTheDialog() {
+    // QML can only ask (requestRestart) and answer (confirm/cancel): restart()
+    // itself is not invokable, so no .qml file can wipe a board on its own.
+    const QMetaObject &meta = SudokuGame::staticMetaObject;
+    QCOMPARE(meta.indexOfMethod("restart()"), -1);
+    QVERIFY(meta.indexOfMethod("requestRestart()") >= 0);
+    QVERIFY(meta.indexOfMethod("confirmRestart()") >= 0);
+    QVERIFY(meta.indexOfMethod("cancelRestart()") >= 0);
+
+    // And an answer with no question outstanding does nothing.
+    SudokuGame game;
+    game.newGame(QStringLiteral("easy"));
+    const int filled = game.filledCount();
+    game.enterValue(2);
+    game.confirmRestart();
+    QCOMPARE(game.filledCount(), filled + 1);
+}
+
 void GameTests::clockRunsOnlyWhilePlaying() {
     SudokuGame game;
     QCOMPARE(game.elapsedSeconds(), 0);
