@@ -8,7 +8,6 @@
 - [ ] Extra hard almost always lands on Y-wing (swordfish 1/80); add XY-chain / uniqueness to widen the top band
 
 ## Omanix
-- [ ] Play-test the difficulty ramp (ball speed per level, chaser count) and tune the constants in `level.cpp`
 - [ ] Optional: reduced-motion setting for the sweep-fill/pulse animations
 
 ## Omasweeper

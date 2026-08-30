@@ -35,7 +35,8 @@ Be explicit that:
 - it never touches `main`, never runs `git worktree`, never force-pushes,
   never merges its own PR,
 - it verifies with tests, `qmllint` (the exact command from
-  `.github/workflows/ci.yml`) and a run under `QT_FORCE_STDERR_LOGGING=1`
+  `.github/workflows/ci.yml`), the `-Wall -Wextra -Werror` build of the game
+  *and* its test suite (CI rebuilds both), and a run under `QT_FORCE_STDERR_LOGGING=1`
   (Qt logs QML warnings to journald when stderr is not a tty) — and does
   **not** take or update screenshots; those are refreshed by hand now and then,
 - it finishes with `rm -rf build build-tests && bin/build <game> && bin/test <game>`,
