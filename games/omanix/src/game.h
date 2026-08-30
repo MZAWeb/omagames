@@ -1,7 +1,6 @@
 #pragma once
 
 #include <QRandomGenerator>
-#include <limits>
 #include <vector>
 
 #include "entities.h"
@@ -56,8 +55,6 @@ public:
     // little longer while a level announces itself.
     static constexpr int kRespawnTicks = Level::kTicksPerSecond;
     static constexpr int kLevelIntroTicks = Level::kTicksPerSecond * 6 / 5;
-    // No chaser can walk to this cell at all.
-    static constexpr int kUnreached = std::numeric_limits<int>::max();
 
     Game(Difficulty difficulty, quint32 seed);
 
@@ -102,9 +99,6 @@ public:
 
 private:
     void startLevel();
-    std::vector<int> chaserDistances() const;
-    void spawnBalls();
-    void spawnChasers();
     void respawnPlayer();
     void movePlayer(std::vector<Event> &events);
     void moveBalls(std::vector<Event> &events);

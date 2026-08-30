@@ -8,6 +8,7 @@ HEADERS += \
     src/field.h \
     src/entities.h \
     src/level.h \
+    src/spawn.h \
     src/difficulties.h \
     src/game.h \
     src/omanixgame.h \
@@ -17,6 +18,7 @@ SOURCES += \
     src/field.cpp \
     src/entities.cpp \
     src/level.cpp \
+    src/spawn.cpp \
     src/difficulties.cpp \
     src/game.cpp \
     src/omanixgame.cpp \
