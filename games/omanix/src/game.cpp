@@ -3,12 +3,7 @@
 #include <algorithm>
 #include <cstdlib>
 
-namespace {
-
-// Balls spawn away from the bottom edge, where the marker starts.
-constexpr int kSpawnClearance = 10;
-
-}  // namespace
+#include "spawn.h"
 
 Game::Game(Difficulty difficulty, quint32 seed)
     : m_difficulty(difficulty), m_rng(seed), m_params(Level::params(difficulty, Level::kFirstLevel)) {
@@ -22,90 +17,13 @@ void Game::startLevel() {
     m_freezeTicks = 0;
     m_introTicks = kLevelIntroTicks;
     m_phase = Phase::Playing;
-    spawnBalls();
-    spawnChasers();
+    m_balls = Spawn::balls(m_field, m_params.balls, m_rng);
+    m_chasers = Spawn::chasers(m_field, m_params.chasers, m_rng);
     respawnPlayer();
 }
 
-void Game::spawnBalls() {
-    m_balls.clear();
-    const int left = Field::kBorder;
-    const int right = m_field.width() - Field::kBorder;
-    const int top = Field::kBorder;
-    const int bottom = m_field.height() - Field::kBorder - kSpawnClearance;
-    while (int(m_balls.size()) < m_params.balls) {
-        const QPoint pos {int(m_rng.bounded(left, right)), int(m_rng.bounded(top, bottom))};
-        const bool taken = std::any_of(m_balls.begin(), m_balls.end(), [pos](const Ball &b) { return b.pos == pos; });
-        if (taken)
-            continue;
-        const QPoint dir {m_rng.bounded(2) ? 1 : -1, m_rng.bounded(2) ? 1 : -1};
-        m_balls.push_back({pos, dir});
-    }
-}
-
-void Game::spawnChasers() {
-    m_chasers.clear();
-    // Spread along the top edge, the far side of the frame from where the
-    // marker starts, all of them crawling clockwise.
-    for (int i = 0; i < m_params.chasers; ++i) {
-        const QPoint pos {int(m_rng.bounded(Field::kBorder, m_field.width() - Field::kBorder)), 0};
-        m_chasers.push_back({pos, {1, 0}});
-    }
-}
-
-// How far each claimed cell is from the nearest chaser, counted in the steps
-// a chaser would actually take: chasers never leave the ground, so a cell
-// across the sea is not near at all. Unreached cells come back as kUnreached.
-std::vector<int> Game::chaserDistances() const {
-    std::vector<int> distance(size_t(m_field.cellCount()), kUnreached);
-    std::vector<int> queue;
-    for (const Chaser &c : m_chasers) {
-        if (!m_field.contains(c.pos) || m_field.at(c.pos) != Cell::Claimed)
-            continue;
-        const int start = m_field.index(c.pos);
-        if (distance[size_t(start)] != kUnreached)
-            continue;
-        distance[size_t(start)] = 0;
-        queue.push_back(start);
-    }
-    for (size_t head = 0; head < queue.size(); ++head) {
-        const QPoint p = m_field.point(queue[head]);
-        const int next = distance[size_t(queue[head])] + 1;
-        for (QPoint step : {QPoint(1, 0), QPoint(0, 1), QPoint(-1, 0), QPoint(0, -1)}) {
-            const QPoint n = p + step;
-            if (!m_field.contains(n) || m_field.at(n) != Cell::Claimed)
-                continue;
-            const int index = m_field.index(n);
-            if (distance[size_t(index)] != kUnreached)
-                continue;
-            distance[size_t(index)] = next;
-            queue.push_back(index);
-        }
-    }
-    return distance;
-}
-
 void Game::respawnPlayer() {
-    // Bottom edge, on the cell the nearest chaser has the longest crawl to,
-    // centre first on ties.
-    const int y = m_field.height() - 1;
-    const std::vector<int> distance = chaserDistances();
-    const int centre = m_field.width() / 2;
-    QPoint best {centre, y};
-    int bestDistance = -1;
-    for (int offset = 0; offset < m_field.width(); ++offset) {
-        for (int x : {centre - offset, centre + offset}) {
-            if (x < 0 || x >= m_field.width())
-                continue;
-            const int nearest = distance[size_t(m_field.index({x, y}))];
-            if (nearest > bestDistance) {
-                bestDistance = nearest;
-                best = {x, y};
-            }
-        }
-    }
-    m_player = Player {};
-    m_player.pos = best;
+    placePlayer(Spawn::playerStart(m_field, m_chasers));
 }
 
 void Game::setDirection(Direction direction) {

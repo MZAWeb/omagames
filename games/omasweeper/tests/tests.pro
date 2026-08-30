@@ -16,16 +16,22 @@ HEADERS += \
     boardtests.h \
     solvertests.h \
     generatortests.h \
-    bridgetests.h
+    scenario.h \
+    bridgetests.h \
+    playtests.h
 
 SOURCES += \
+    ../src/presets.cpp \
     ../src/board.cpp \
     ../src/frontier.cpp \
     ../src/solver.cpp \
     ../src/generator.cpp \
     ../src/omasweepergame.cpp \
+    ../src/omasweepergamemodel.cpp \
     boardtests.cpp \
     solvertests.cpp \
     generatortests.cpp \
+    scenario.cpp \
     bridgetests.cpp \
+    playtests.cpp \
     tst_omasweeper.cpp

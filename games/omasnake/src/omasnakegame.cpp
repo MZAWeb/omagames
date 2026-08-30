@@ -3,8 +3,8 @@
 #include <QRandomGenerator>
 #include <QRect>
 #include <QSettings>
-#include <QVector>
 
+#include "choices.h"
 #include "windowgeometry.h"
 
 namespace {
@@ -15,48 +15,6 @@ const auto kDifficultyKey = QStringLiteral("play/difficulty");
 const auto kStartId = QStringLiteral("start");
 const auto kPlayingId = QStringLiteral("playing");
 const auto kGameOverId = QStringLiteral("gameover");
-
-// The walls rule and the speed cross to QML, and name a score table, as
-// these ids; a table is keyed by both, "classic-normal".
-QString modeId(Mode mode) {
-    return mode == Mode::Wrap ? QStringLiteral("wrap") : QStringLiteral("classic");
-}
-
-QString difficultyId(Difficulty difficulty) {
-    switch (difficulty) {
-    case Difficulty::Slow:
-        return QStringLiteral("slow");
-    case Difficulty::Fast:
-        return QStringLiteral("fast");
-    case Difficulty::Normal:
-        break;
-    }
-    return QStringLiteral("normal");
-}
-
-QString tableId(Mode mode, Difficulty difficulty) {
-    return modeId(mode) + QLatin1Char('-') + difficultyId(difficulty);
-}
-
-bool modeFromId(const QString &id, Mode *mode) {
-    for (int i = 0; i < kModeCount; ++i) {
-        if (modeId(Mode(i)) == id) {
-            *mode = Mode(i);
-            return true;
-        }
-    }
-    return false;
-}
-
-bool difficultyFromId(const QString &id, Difficulty *difficulty) {
-    for (int i = 0; i < kDifficultyCount; ++i) {
-        if (difficultyId(Difficulty(i)) == id) {
-            *difficulty = Difficulty(i);
-            return true;
-        }
-    }
-    return false;
-}
 
 // The top ten of every walls-and-speed pair, ranked on the score, with the
 // length the snake reached beside it.
@@ -69,33 +27,6 @@ OmaGames::ScoreTable scoreTable() {
     return OmaGames::ScoreTable(
         {QStringLiteral("score"), QStringLiteral("length")}, 10,
         OmaGames::ScoreTable::sameOrder(ids, OmaGames::ScoreTable::HigherIsBetter));
-}
-
-QVector<QPair<Mode, QString>> modeLabels() {
-    return {{Mode::Classic, OmasnakeGame::tr("Classic")}, {Mode::Wrap, OmasnakeGame::tr("Wrap")}};
-}
-
-QString modeDescription(Mode mode) {
-    return mode == Mode::Wrap ? OmasnakeGame::tr("The edges carry you across; only your own tail can stop you.")
-                              : OmasnakeGame::tr("The walls kill. No grace, no second chance.");
-}
-
-QVector<QPair<Difficulty, QString>> difficultyLabels() {
-    return {{Difficulty::Slow, OmasnakeGame::tr("Slow")},
-            {Difficulty::Normal, OmasnakeGame::tr("Normal")},
-            {Difficulty::Fast, OmasnakeGame::tr("Fast")}};
-}
-
-// Spelled out from the ladder itself, so the start screen can never drift
-// from what the engine actually does.
-QString difficultyDescription(Difficulty difficulty) {
-    const SpeedParams speed = Rules::params(difficulty);
-    const double from = double(Rules::kTicksPerSecond) / speed.startMoveTicks;
-    const double to = double(Rules::kTicksPerSecond) / speed.minMoveTicks;
-    return OmasnakeGame::tr("%1 to %2 cells a second, one step faster every %3 foods.")
-        .arg(from, 0, 'f', 1)
-        .arg(to, 0, 'f', 1)
-        .arg(speed.foodsPerSpeedUp);
 }
 
 }  // namespace
@@ -113,17 +44,17 @@ int OmasnakeGame::best() const {
 }
 
 QString OmasnakeGame::mode() const {
-    return modeId(m_mode);
+    return Modes::id(m_mode);
 }
 
 QString OmasnakeGame::difficulty() const {
-    return difficultyId(m_difficulty);
+    return Difficulties::id(m_difficulty);
 }
 
 void OmasnakeGame::loadSettings() {
     QSettings settings;
-    modeFromId(settings.value(kModeKey).toString(), &m_mode);
-    difficultyFromId(settings.value(kDifficultyKey).toString(), &m_difficulty);
+    Modes::fromId(settings.value(kModeKey).toString(), &m_mode);
+    Difficulties::fromId(settings.value(kDifficultyKey).toString(), &m_difficulty);
     m_scores.load();
 }
 
@@ -147,73 +78,6 @@ QString OmasnakeGame::gameOverReason() const {
     return QStringLiteral("wall");
 }
 
-QString OmasnakeGame::modeLabel() const {
-    for (const auto &[mode, label] : modeLabels()) {
-        if (mode == m_mode)
-            return label;
-    }
-    return {};
-}
-
-QString OmasnakeGame::difficultyLabel() const {
-    for (const auto &[difficulty, label] : difficultyLabels()) {
-        if (difficulty == m_difficulty)
-            return label;
-    }
-    return {};
-}
-
-QVariantList OmasnakeGame::modes() {
-    QVariantList list;
-    for (const auto &[mode, label] : modeLabels()) {
-        list.append(QVariantMap {
-            {QStringLiteral("id"), modeId(mode)},
-            {QStringLiteral("label"), label},
-            {QStringLiteral("description"), modeDescription(mode)},
-        });
-    }
-    return list;
-}
-
-QVariantList OmasnakeGame::difficulties() {
-    QVariantList list;
-    for (const auto &[difficulty, label] : difficultyLabels()) {
-        list.append(QVariantMap {
-            {QStringLiteral("id"), difficultyId(difficulty)},
-            {QStringLiteral("label"), label},
-            {QStringLiteral("description"), difficultyDescription(difficulty)},
-        });
-    }
-    return list;
-}
-
-QVariantList OmasnakeGame::highScores() const {
-    QVariantList list;
-    for (const auto &[mode, modeName] : modeLabels()) {
-        for (const auto &[difficulty, difficultyName] : difficultyLabels()) {
-            const QString table = tableId(mode, difficulty);
-            for (const QVariant &entry : m_scores.toVariantList(table)) {
-                QVariantMap row = entry.toMap();
-                row.insert(QStringLiteral("table"), table);
-                row.insert(QStringLiteral("mode"), modeId(mode));
-                row.insert(QStringLiteral("difficulty"), difficultyId(difficulty));
-                row.insert(QStringLiteral("label"), difficultyName);
-                list.append(row);
-            }
-        }
-    }
-    return list;
-}
-
-QVariantMap OmasnakeGame::bests() const {
-    QVariantMap map;
-    for (int m = 0; m < kModeCount; ++m) {
-        for (int d = 0; d < kDifficultyCount; ++d)
-            map.insert(tableId(Mode(m), Difficulty(d)), m_scores.best(tableId(Mode(m), Difficulty(d))));
-    }
-    return map;
-}
-
 void OmasnakeGame::setStepInterval(int interval) {
     if (!m_pacer.setInterval(interval))
         return;
@@ -229,8 +93,8 @@ void OmasnakeGame::startGame(Mode mode, Difficulty difficulty, quint32 seed) {
     m_mode = mode;
     m_difficulty = difficulty;
     QSettings settings;
-    settings.setValue(kModeKey, modeId(mode));
-    settings.setValue(kDifficultyKey, difficultyId(difficulty));
+    settings.setValue(kModeKey, Modes::id(mode));
+    settings.setValue(kDifficultyKey, Difficulties::id(difficulty));
 
     m_game = std::make_unique<Game>(mode, difficulty, seed);
     m_newHighScoreRank = -1;
@@ -249,7 +113,7 @@ void OmasnakeGame::startGame(Mode mode, Difficulty difficulty, quint32 seed) {
 
 void OmasnakeGame::newGame(const QString &difficulty) {
     Difficulty speed = m_difficulty;
-    difficultyFromId(difficulty, &speed);
+    Difficulties::fromId(difficulty, &speed);
     startGame(m_mode, speed, QRandomGenerator::global()->generate());
 }
 
@@ -262,16 +126,16 @@ void OmasnakeGame::restart() {
 // The walls rule belongs to a whole run, so it only moves between games.
 void OmasnakeGame::setMode(const QString &mode) {
     Mode wanted = m_mode;
-    if (m_game || !modeFromId(mode, &wanted) || wanted == m_mode)
+    if (m_game || !Modes::fromId(mode, &wanted) || wanted == m_mode)
         return;
     m_mode = wanted;
-    QSettings().setValue(kModeKey, modeId(m_mode));
+    QSettings().setValue(kModeKey, Modes::id(m_mode));
     emit modeChanged();
     emit bestChanged();
 }
 
 void OmasnakeGame::toggleMode() {
-    setMode(modeId(m_mode == Mode::Classic ? Mode::Wrap : Mode::Classic));
+    setMode(Modes::id(m_mode == Mode::Classic ? Mode::Wrap : Mode::Classic));
 }
 
 bool OmasnakeGame::directionFromId(const QString &id, Direction *direction) {

@@ -11,13 +11,17 @@ HEADERS += \
     src/solver.h \
     src/generator.h \
     src/omasweepergame.h \
+    src/fieldpainter.h \
     src/fieldview.h
 SOURCES += \
     src/main.cpp \
+    src/presets.cpp \
     src/board.cpp \
     src/frontier.cpp \
     src/solver.cpp \
     src/generator.cpp \
     src/omasweepergame.cpp \
+    src/omasweepergamemodel.cpp \
+    src/fieldpainter.cpp \
     src/fieldview.cpp
 RESOURCES += src/resources.qrc

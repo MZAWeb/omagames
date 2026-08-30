@@ -21,28 +21,12 @@ quint32 freshSeed() {
     return QRandomGenerator::global()->generate();
 }
 
-// A preset's key is the id everything outside the engine uses: the setting,
-// the QML model and the best-times table.
-QString presetId(Preset preset) {
-    return QString::fromLatin1(Presets::spec(preset).key);
-}
-
-bool presetFromId(const QString &id, Preset *preset) {
-    for (const PresetSpec &spec : Presets::kAll) {
-        if (QLatin1String(spec.key) == id) {
-            *preset = spec.id;
-            return true;
-        }
-    }
-    return false;
-}
-
 // The five fastest wins per preset. Faster is better; no names, just the
 // clock and the day.
 OmaGames::ScoreTable timesTable() {
     QStringList ids;
     for (const PresetSpec &spec : Presets::kAll)
-        ids << QString::fromLatin1(spec.key);
+        ids << Presets::id(spec.id);
     return OmaGames::ScoreTable({QStringLiteral("seconds")}, 5,
                                 OmaGames::ScoreTable::sameOrder(ids, OmaGames::ScoreTable::LowerIsBetter));
 }
@@ -57,12 +41,12 @@ OmasweeperGame::OmasweeperGame(QObject *parent)
 }
 
 QString OmasweeperGame::preset() const {
-    return presetId(m_preset);
+    return Presets::id(m_preset);
 }
 
 void OmasweeperGame::loadSettings() {
     QSettings settings;
-    presetFromId(settings.value(kPresetKey).toString(), &m_preset);
+    Presets::fromId(settings.value(kPresetKey).toString(), &m_preset);
     m_times.load();
 }
 
@@ -97,44 +81,6 @@ QString OmasweeperGame::status() const {
     return kPlayingId;
 }
 
-QString OmasweeperGame::presetLabel() const {
-    return QString::fromLatin1(spec().label);
-}
-
-QVariantList OmasweeperGame::presets() {
-    QVariantList list;
-    for (const PresetSpec &s : Presets::kAll) {
-        list.append(QVariantMap {
-            {QStringLiteral("id"), QString::fromLatin1(s.key)},
-            {QStringLiteral("label"), QString::fromLatin1(s.label)},
-            {QStringLiteral("width"), s.width},
-            {QStringLiteral("height"), s.height},
-            {QStringLiteral("mines"), s.mines},
-        });
-    }
-    return list;
-}
-
-QVariantList OmasweeperGame::bestTimes() const {
-    QVariantList list;
-    for (const PresetSpec &s : Presets::kAll) {
-        for (const QVariant &entry : m_times.toVariantList(QString::fromLatin1(s.key))) {
-            QVariantMap row = entry.toMap();
-            row.insert(QStringLiteral("preset"), QString::fromLatin1(s.key));
-            row.insert(QStringLiteral("label"), QString::fromLatin1(s.label));
-            list.append(row);
-        }
-    }
-    return list;
-}
-
-QVariantMap OmasweeperGame::bests() const {
-    QVariantMap map;
-    for (const PresetSpec &s : Presets::kAll)
-        map.insert(QString::fromLatin1(s.key), m_times.best(QString::fromLatin1(s.key)));
-    return map;
-}
-
 void OmasweeperGame::setStepInterval(int interval) {
     if (!m_pacer.setInterval(interval))
         return;
@@ -148,7 +94,7 @@ void OmasweeperGame::syncTimer() {
 
 void OmasweeperGame::startGame(Preset preset, quint32 seed) {
     m_preset = preset;
-    QSettings().setValue(kPresetKey, presetId(preset));
+    QSettings().setValue(kPresetKey, Presets::id(preset));
     m_seed = seed;
     const PresetSpec &s = Presets::spec(preset);
     m_board.emplace(s.width, s.height, s.mines, seed);
@@ -171,7 +117,7 @@ void OmasweeperGame::startGame(Preset preset, quint32 seed) {
 
 void OmasweeperGame::newGame(const QString &preset) {
     Preset chosen = m_preset;
-    presetFromId(preset, &chosen);
+    Presets::fromId(preset, &chosen);
     startGame(chosen, freshSeed());
 }
 
@@ -316,7 +262,7 @@ void OmasweeperGame::buildRipple(const std::vector<int> &cells, QPoint origin) {
 void OmasweeperGame::finishGame(Status status) {
     if (status != Status::Won)
         return;
-    m_newBestRank = m_times.insert(presetId(m_preset), {m_elapsedSeconds, QDate::currentDate(), {}});
+    m_newBestRank = m_times.insert(Presets::id(m_preset), {m_elapsedSeconds, QDate::currentDate(), {}});
     if (m_newBestRank >= 0) {
         m_times.save();
         emit bestTimesChanged();

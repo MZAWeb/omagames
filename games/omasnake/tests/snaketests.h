@@ -2,9 +2,9 @@
 
 #include <QObject>
 
-// The snake, the speed ladder and the game state machine, all driven by
-// tick() with fixed seeds and hand-placed scenarios.
-class EngineTests : public QObject {
+// The snake under the player's hand: where it starts, the beats that hold it
+// still, how turns are taken, how it grows, and every way a run ends.
+class SnakeTests : public QObject {
     Q_OBJECT
 
 private slots:
@@ -21,12 +21,4 @@ private slots:
     void runningIntoItselfEndsTheGame();
     void followingItsOwnTailIsLegal();
     void gameOverFreezesEverything();
-    void foodNeverLandsOnTheSnake();
-    void fillingTheBoardEndsThePerfectGame();
-    void bonusFollowsEveryFifthFood();
-    void bonusExpiresAfterItsLifetime();
-    void bonusEatenScoresItsFlatFifty();
-    void speedRampsWithFoodEaten();
-    void theThreeDifficultiesFormALadder();
-    void sameSeedSameGame();
 };
