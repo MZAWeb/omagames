@@ -4,6 +4,7 @@ import QtQuick.Layouts
 // qmldir for qmllint to find it, so the import and the one block that uses
 // it are excused from the lint that needs one.
 import Omanix // qmllint disable import
+import OmaGames
 
 // The playing screen: header, the painted field centred at a whole number
 // of pixels per cell, and the key legend. All rules live in `game`; this
@@ -112,7 +113,7 @@ FocusScope {
 
             Component {
                 id: popupComponent
-                BonusPopup { onFinished: destroy() }
+                OmaBonusPopup { onFinished: destroy() }
             }
 
             Connections {

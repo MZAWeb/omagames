@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import OmaGames
 
-OverlayPanel {
+OmaOverlayPanel {
     id: root
 
     Keys.onPressed: function(event) {

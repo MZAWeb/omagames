@@ -6,6 +6,7 @@
 #include <QtTest>
 
 #include "omanixgame.h"
+#include "scoretable.h"
 
 namespace {
 
@@ -242,52 +243,36 @@ void BridgeTests::scriptedGameOverRecordsAHighScore() {
     QCOMPARE(game.phase(), QStringLiteral("gameover"));
 }
 
-void BridgeTests::highScoresOrderAndCap() {
-    HighScores scores;
-    const QDate day(2026, 8, 30);
-    QCOMPARE(scores.insert(Difficulty::Easy, {100, 1, day}), 0);
-    QCOMPARE(scores.insert(Difficulty::Easy, {300, 2, day}), 0);
-    QCOMPARE(scores.insert(Difficulty::Easy, {200, 1, day}), 1);
-    // A tie ranks below the older score.
-    QCOMPARE(scores.insert(Difficulty::Easy, {200, 3, day}), 2);
-    QCOMPARE(scores.entries(Difficulty::Easy).at(2).level, 3);
-    QCOMPARE(scores.best(Difficulty::Easy), 300);
-    QCOMPARE(scores.best(Difficulty::Hard), 0);
-    QVERIFY(scores.entries(Difficulty::Normal).empty());
-
-    for (int i = 0; i < 20; ++i)
-        scores.insert(Difficulty::Hard, {i * 10, 1, day});
-    QCOMPARE(int(scores.entries(Difficulty::Hard).size()), HighScores::kMaxEntries);
-    QCOMPARE(scores.entries(Difficulty::Hard).front().score, 190);
-    QCOMPARE(scores.entries(Difficulty::Hard).back().score, 100);
-    QCOMPARE(scores.insert(Difficulty::Hard, {50, 1, day}), -1);
-    QCOMPARE(scores.insert(Difficulty::Hard, {150, 1, day}), 5);
-    QCOMPARE(scores.entries(Difficulty::Hard).back().score, 110);
-}
-
-void BridgeTests::highScoresRoundTripThroughSettings() {
+// Ordering, the cap and the ranks are ScoreTable's own tests now; what is
+// Omanix's is the shape the table reaches QML in.
+void BridgeTests::savedHighScoresReachQml() {
     {
-        HighScores scores;
-        scores.insert(Difficulty::Normal, {4200, 3, QDate(2026, 8, 30)});
-        scores.insert(Difficulty::Normal, {900, 1, QDate(2026, 8, 29)});
-        scores.insert(Difficulty::Hard, {7000, 5, QDate(2026, 8, 28)});
+        OmaGames::ScoreTable scores({QStringLiteral("score"), QStringLiteral("level")}, 10,
+                                    OmaGames::ScoreTable::sameOrder({QStringLiteral("easy"),
+                                                                     QStringLiteral("normal"),
+                                                                     QStringLiteral("hard")},
+                                                                    OmaGames::ScoreTable::HigherIsBetter));
+        scores.insert(QStringLiteral("normal"),
+                      {4200, QDate(2026, 8, 30), {{QStringLiteral("level"), 3}}});
+        scores.insert(QStringLiteral("normal"),
+                      {900, QDate(2026, 8, 29), {{QStringLiteral("level"), 1}}});
+        scores.insert(QStringLiteral("hard"), {7000, QDate(2026, 8, 28), {{QStringLiteral("level"), 5}}});
         scores.save();
     }
-    HighScores loaded;
-    loaded.load();
-    QCOMPARE(int(loaded.entries(Difficulty::Normal).size()), 2);
-    QCOMPARE(loaded.entries(Difficulty::Normal).front().score, 4200);
-    QCOMPARE(loaded.entries(Difficulty::Normal).front().level, 3);
-    QCOMPARE(loaded.entries(Difficulty::Normal).front().date, QDate(2026, 8, 30));
-    QCOMPARE(loaded.entries(Difficulty::Normal).back().date, QDate(2026, 8, 29));
-    QCOMPARE(loaded.best(Difficulty::Hard), 7000);
-    QVERIFY(loaded.entries(Difficulty::Easy).empty());
 
     OmanixGame game;
-    QCOMPARE(game.highScores().size(), 3);
-    QCOMPARE(game.highScores().first().toMap().value(QStringLiteral("label")).toString(), QStringLiteral("Normal"));
+    const QVariantList rows = game.highScores();
+    QCOMPARE(rows.size(), 3);
+    const QVariantMap first = rows.first().toMap();
+    QCOMPARE(first.value(QStringLiteral("difficulty")).toString(), QStringLiteral("normal"));
+    QCOMPARE(first.value(QStringLiteral("label")).toString(), QStringLiteral("Normal"));
+    QCOMPARE(first.value(QStringLiteral("score")).toInt(), 4200);
+    QCOMPARE(first.value(QStringLiteral("level")).toInt(), 3);
+    QCOMPARE(first.value(QStringLiteral("date")).toString(), QStringLiteral("2026-08-30"));
+    QCOMPARE(rows.at(1).toMap().value(QStringLiteral("score")).toInt(), 900);
     QCOMPARE(game.bests().value(QStringLiteral("normal")).toInt(), 4200);
     QCOMPARE(game.bests().value(QStringLiteral("hard")).toInt(), 7000);
+    QCOMPARE(game.bests().value(QStringLiteral("easy")).toInt(), 0);
 }
 
 void BridgeTests::lastDifficultyIsRemembered() {
