@@ -11,6 +11,7 @@ HEADERS += \
     src/sudokutechniques.h \
     src/sudokugrader.h \
     src/sudokuboard.h \
+    src/sudokulevels.h \
     src/sudokustore.h \
     src/sudokukeys.h \
     src/cellmodel.h \
@@ -25,6 +26,7 @@ SOURCES += \
     src/sudokufish.cpp \
     src/sudokugrader.cpp \
     src/sudokuboard.cpp \
+    src/sudokulevels.cpp \
     src/sudokustore.cpp \
     src/sudokukeys.cpp \
     src/cellmodel.cpp \

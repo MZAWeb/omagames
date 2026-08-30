@@ -10,7 +10,6 @@
 #include "savedgame.h"
 #include "sudoku.h"
 #include "sudokugame.h"
-#include "sudokugrader.h"
 
 namespace {
 
@@ -123,52 +122,6 @@ void GameTests::digitsGoIntoTheSelectedCellOnly() {
     QVERIFY(game.canUndo());
 }
 
-void GameTests::exposesDifficultiesWithLabels() {
-    SudokuGame game;
-    const QVariantList levels = game.difficulties();
-    QCOMPARE(levels.size(), 4);
-
-    const QVariantMap easy = levels.first().toMap();
-    QCOMPARE(easy.value(QStringLiteral("id")).toString(), QStringLiteral("easy"));
-    QVERIFY(!easy.value(QStringLiteral("label")).toString().isEmpty());
-    QVERIFY(!easy.value(QStringLiteral("description")).toString().isEmpty());
-    QCOMPARE(easy.value(QStringLiteral("techniques")).toStringList(),
-             QStringList({QStringLiteral("Last digit"), QStringLiteral("Hidden single (box)"),
-                          QStringLiteral("Naked single")}));
-    const QVariantMap medium = levels.at(1).toMap();
-    QCOMPARE(medium.value(QStringLiteral("techniques")).toStringList(),
-             QStringList({QStringLiteral("Hidden single (line)"), QStringLiteral("Naked pair")}));
-
-    // Every level introduces at least one rung, and no rung is listed twice.
-    QStringList seen;
-    for (const QVariant &entry : levels) {
-        const QStringList techniques = entry.toMap().value(QStringLiteral("techniques")).toStringList();
-        QVERIFY(!techniques.isEmpty());
-        for (const QString &technique : techniques) {
-            QVERIFY2(!seen.contains(technique), qPrintable(technique + QStringLiteral(" listed twice")));
-            seen << technique;
-        }
-    }
-    QCOMPARE(seen.size(), SudokuGrader::kTechniqueCount);
-
-    const QVariantMap extra = levels.last().toMap();
-    QCOMPARE(extra.value(QStringLiteral("id")).toString(), QStringLiteral("extrahard"));
-    game.newGame(extra.value(QStringLiteral("id")).toString());
-    QCOMPARE(game.difficulty(), QStringLiteral("extrahard"));
-    QCOMPARE(game.difficultyLabel(), extra.value(QStringLiteral("label")).toString());
-    // What the puzzle needs is one of the rungs the level promises.
-    QVERIFY(extra.value(QStringLiteral("techniques")).toStringList().contains(game.techniqueLabel()));
-
-    game.newGame(QStringLiteral("hard"));
-    QCOMPARE(game.difficulty(), QStringLiteral("hard"));
-
-    game.newGame(QStringLiteral("nonsense"));  // an unknown id lands on Easy
-    QCOMPARE(game.difficulty(), QStringLiteral("easy"));
-
-    game.setClickMode(QStringLiteral("nonsense"));  // and an unknown mode on Fill
-    QCOMPARE(game.clickMode(), QStringLiteral("fill"));
-}
-
 void GameTests::clickModeDecidesWhatAKeypadClickDoes() {
     SudokuGame game;
     game.newGame(QStringLiteral("easy"));
@@ -194,6 +147,9 @@ void GameTests::clickModeDecidesWhatAKeypadClickDoes() {
     QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 0);
     game.clickDigit(6);  // the same digit again clears it
     QCOMPARE(game.highlightDigit(), -1);
+
+    game.setClickMode(QStringLiteral("nonsense"));  // an unknown mode lands on Fill
+    QCOMPARE(game.clickMode(), QStringLiteral("fill"));
 }
 
 void GameTests::keyboardMappingIgnoresTheClickMode() {

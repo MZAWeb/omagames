@@ -5,50 +5,11 @@
 #include <algorithm>
 
 #include "sudoku.h"
-#include "sudokugrader.h"
 #include "sudokukeys.h"
+#include "sudokulevels.h"
 #include "windowgeometry.h"
 
 namespace {
-
-// Levels cross to QML, and name a best-times table, as these ids. They are
-// stored under the same ids QML sees, so a table survives their order
-// changing.
-QString difficultyId(Difficulty difficulty) {
-    switch (difficulty) {
-    case Difficulty::Easy:
-        return QStringLiteral("easy");
-    case Difficulty::Medium:
-        return QStringLiteral("medium");
-    case Difficulty::Hard:
-        return QStringLiteral("hard");
-    case Difficulty::ExtraHard:
-        break;
-    }
-    return QStringLiteral("extrahard");
-}
-
-bool difficultyFromId(const QString &id, Difficulty *difficulty) {
-    for (int i = 0; i < kDifficultyCount; ++i) {
-        if (difficultyId(Difficulty(i)) == id) {
-            *difficulty = Difficulty(i);
-            return true;
-        }
-    }
-    return false;
-}
-
-// The five fastest solves per level. Faster is better, and a solve of no
-// time at all is a hand-edited file, not a record.
-OmaGames::ScoreTable timesTable() {
-    QStringList ids;
-    for (int i = 0; i < kDifficultyCount; ++i)
-        ids << difficultyId(Difficulty(i));
-    OmaGames::ScoreTable table({QStringLiteral("seconds")}, 5,
-                               OmaGames::ScoreTable::sameOrder(ids, OmaGames::ScoreTable::LowerIsBetter));
-    table.setMinimumValue(1);
-    return table;
-}
 
 // Ids shared with QML. They are stable identifiers, never shown to the player:
 // the labels beside them are.
@@ -58,47 +19,6 @@ const auto kWonId = QStringLiteral("won");
 const auto kHighlightId = QStringLiteral("highlight");
 const auto kNoteId = QStringLiteral("note");
 const auto kFillId = QStringLiteral("fill");
-
-QString techniqueName(SudokuGrader::Technique technique) {
-    using SudokuGrader::Technique;
-    switch (technique) {
-    case Technique::LastDigit:
-        return SudokuGame::tr("Last digit");
-    case Technique::HiddenSingleBox:
-        return SudokuGame::tr("Hidden single (box)");
-    case Technique::NakedSingle:
-        return SudokuGame::tr("Naked single");
-    case Technique::HiddenSingleLine:
-        return SudokuGame::tr("Hidden single (line)");
-    case Technique::NakedPair:
-        return SudokuGame::tr("Naked pair");
-    case Technique::HiddenPair:
-        return SudokuGame::tr("Hidden pair");
-    case Technique::NakedTriple:
-        return SudokuGame::tr("Naked triple");
-    case Technique::HiddenTriple:
-        return SudokuGame::tr("Hidden triple");
-    case Technique::XWing:
-        return SudokuGame::tr("X-wing");
-    case Technique::Swordfish:
-        return SudokuGame::tr("Swordfish");
-    case Technique::XYWing:
-        break;
-    }
-    return SudokuGame::tr("XY-wing");
-}
-
-// The rungs a level adds on top of the level below: everything between the
-// two ceilings, which is exactly what its puzzles can demand and the easier
-// level's never do.
-QStringList techniquesIntroducedBy(Difficulty difficulty) {
-    const int from = difficulty == Difficulty::Easy
-        ? 0 : int(SudokuGenerator::ceiling(Difficulty(int(difficulty) - 1))) + 1;
-    QStringList names;
-    for (int t = from; t <= int(SudokuGenerator::ceiling(difficulty)); ++t)
-        names << techniqueName(SudokuGrader::Technique(t));
-    return names;
-}
 
 // Writing on every keystroke would hit the disk far too often; a short delay
 // still survives a crash or a kill in practice.
@@ -124,44 +44,19 @@ QString SudokuGame::state() const {
 }
 
 QString SudokuGame::difficulty() const {
-    return difficultyId(m_board.puzzle().difficulty);
+    return SudokuLevels::id(m_board.puzzle().difficulty);
 }
 
 QString SudokuGame::difficultyLabel() const {
-    for (const QVariant &entry : difficulties()) {
-        const QVariantMap map = entry.toMap();
-        if (map.value(QStringLiteral("id")).toString() == difficulty())
-            return map.value(QStringLiteral("label")).toString();
-    }
-    return {};
+    return SudokuLevels::label(difficulty());
 }
 
 QString SudokuGame::techniqueLabel() const {
-    return techniqueName(m_board.puzzle().hardest);
+    return SudokuLevels::techniqueName(m_board.puzzle().hardest);
 }
 
 QVariantList SudokuGame::difficulties() {
-    struct Level {
-        Difficulty difficulty;
-        QString label;
-        QString description;
-    };
-    const QVector<Level> levels {
-        {Difficulty::Easy, tr("Easy"), tr("Plenty of clues; a box scan or a lone digit always moves you on.")},
-        {Difficulty::Medium, tr("Medium"), tr("Fewer clues; scan rows and columns too, or spot a naked pair.")},
-        {Difficulty::Hard, tr("Hard"), tr("Needs pencil marks: a hidden pair, naked triple or hidden triple.")},
-        {Difficulty::ExtraHard, tr("Extra hard"), tr("Needs an X-wing, swordfish or XY-wing somewhere.")},
-    };
-    QVariantList list;
-    for (const Level &level : levels) {
-        list.append(QVariantMap {
-            {QStringLiteral("id"), difficultyId(level.difficulty)},
-            {QStringLiteral("label"), level.label},
-            {QStringLiteral("techniques"), techniquesIntroducedBy(level.difficulty)},
-            {QStringLiteral("description"), level.description},
-        });
-    }
-    return list;
+    return SudokuLevels::all();
 }
 
 // An unknown id only reaches here from a stale setting, so it means "no
@@ -188,7 +83,7 @@ QString SudokuGame::clickMode() const {
     return kFillId;
 }
 
-SudokuGame::SudokuGame(QObject *parent) : QObject(parent), m_times(timesTable()) {
+SudokuGame::SudokuGame(QObject *parent) : QObject(parent), m_times(SudokuLevels::timesTable()) {
     m_clock.setInterval(1000);
     connect(&m_clock, &QTimer::timeout, this, [this]() {
         ++m_elapsedSeconds;
@@ -261,7 +156,7 @@ void SudokuGame::newGame(const QString &difficulty) {
     // An unknown id can only come from a caller with a stale idea of the
     // levels; Easy is the safe landing.
     Difficulty level = Difficulty::Easy;
-    difficultyFromId(difficulty, &level);
+    SudokuLevels::fromId(difficulty, &level);
     m_board.setPuzzle(SudokuGenerator::generate(level));
     m_cells.refreshAll();
 
@@ -524,9 +419,9 @@ QVariantList SudokuGame::bestTimes() const {
     for (const QVariant &entry : difficulties()) {
         const QVariantMap level = entry.toMap();
         Difficulty difficulty = Difficulty::Easy;
-        if (!difficultyFromId(level.value(QStringLiteral("id")).toString(), &difficulty))
+        if (!SudokuLevels::fromId(level.value(QStringLiteral("id")).toString(), &difficulty))
             continue;
-        const QString id = difficultyId(difficulty);
+        const QString id = SudokuLevels::id(difficulty);
         for (const QVariant &time : m_times.toVariantList(id)) {
             QVariantMap row = time.toMap();
             row.insert(QStringLiteral("difficulty"), id);
@@ -540,14 +435,14 @@ QVariantList SudokuGame::bestTimes() const {
 QVariantMap SudokuGame::bests() const {
     QVariantMap map;
     for (int i = 0; i < kDifficultyCount; ++i)
-        map.insert(difficultyId(Difficulty(i)), m_times.best(difficultyId(Difficulty(i))));
+        map.insert(SudokuLevels::id(Difficulty(i)), m_times.best(SudokuLevels::id(Difficulty(i))));
     return map;
 }
 
 // The clock has already stopped by the time this runs, so what goes in the
 // table is exactly the time the player is about to be shown.
 void SudokuGame::recordWin() {
-    m_newBestRank = m_times.insert(difficultyId(m_board.puzzle().difficulty),
+    m_newBestRank = m_times.insert(SudokuLevels::id(m_board.puzzle().difficulty),
                                    {m_elapsedSeconds, QDate::currentDate(), {}});
     if (m_newBestRank < 0)
         return;

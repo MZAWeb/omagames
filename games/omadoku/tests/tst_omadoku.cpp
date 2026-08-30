@@ -8,6 +8,7 @@
 #include "generatortests.h"
 #include "persistencetests.h"
 #include "gradertests.h"
+#include "leveltests.h"
 #include "techniquetests.h"
 #include "solvertests.h"
 
@@ -28,6 +29,8 @@ int main(int argc, char *argv[]) {
     status |= QTest::qExec(&grader, argc, argv);
     BoardTests board;
     status |= QTest::qExec(&board, argc, argv);
+    LevelTests levels;
+    status |= QTest::qExec(&levels, argc, argv);
     GameTests gameTests;
     status |= QTest::qExec(&gameTests, argc, argv);
     InputTests input;
