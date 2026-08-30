@@ -22,6 +22,7 @@ private slots:
     void highScoresRankByScoreOrByTime();
     void highScoresRoundTripThroughSettings();
     void lastModeIsRemembered();
+    void ghostToggleIsRemembered();
     void windowGeometryRoundTrips();
 
 private:

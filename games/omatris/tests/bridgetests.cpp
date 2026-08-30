@@ -369,6 +369,25 @@ void BridgeTests::lastModeIsRemembered() {
     QCOMPARE(game.lineGoal(), 0);
 }
 
+void BridgeTests::ghostToggleIsRemembered() {
+    {
+        OmatrisGame game;
+        QSignalSpy spy(&game, &OmatrisGame::ghostEnabledChanged);
+        QVERIFY(game.ghostEnabled());
+        game.toggleGhost();
+        QVERIFY(!game.ghostEnabled());
+        QCOMPARE(spy.count(), 1);
+    }
+    {
+        OmatrisGame game;
+        QVERIFY(!game.ghostEnabled());
+        game.toggleGhost();
+        QVERIFY(game.ghostEnabled());
+    }
+    OmatrisGame game;
+    QVERIFY(game.ghostEnabled());
+}
+
 void BridgeTests::windowGeometryRoundTrips() {
     OmatrisGame game;
     QVERIFY(!game.windowGeometry().value(QStringLiteral("valid")).toBool());

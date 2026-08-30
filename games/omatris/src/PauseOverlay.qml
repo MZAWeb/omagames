@@ -14,6 +14,8 @@ OverlayPanel {
             game.resume();
         else if (event.key === Qt.Key_R)
             game.restart();
+        else if (event.key === Qt.Key_G)
+            game.toggleGhost();
         else if (event.key === Qt.Key_Escape)
             root.leaveRequested();
         else
@@ -49,6 +51,12 @@ OverlayPanel {
         text: qsTr("Restart")
         hint: qsTr("R")
         onClicked: game.restart()
+    }
+    OmaHintButton {
+        Layout.fillWidth: true
+        text: game.ghostEnabled ? qsTr("Ghost on") : qsTr("Ghost off")
+        hint: qsTr("G")
+        onClicked: game.toggleGhost()
     }
     OmaHintButton {
         Layout.fillWidth: true

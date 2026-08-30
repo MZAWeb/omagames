@@ -57,6 +57,14 @@ void FieldView::setCellSize(int cellSize) {
     update();
 }
 
+void FieldView::setShowGhost(bool show) {
+    if (m_showGhost == show)
+        return;
+    m_showGhost = show;
+    emit showGhostChanged();
+    update();
+}
+
 void FieldView::setPieceColors(const QVariantList &colors) {
     if (m_pieceColors == colors)
         return;
@@ -143,15 +151,17 @@ void FieldView::paintGhostAndPiece(QPainter *painter, const Game &game) {
     const int c = m_cellSize;
     const QColor color = colorFor(int(game.piece().type));
 
-    const double pen = std::max(1.0, c / 10.0);
-    painter->setBrush(Qt::NoBrush);
-    painter->setPen(QPen(OmarchyTheme::mix(m_ghostColor, color, 0.5), pen));
-    for (QPoint cell : game.ghost().cells()) {
-        const int row = cell.y() - Board::kHiddenRows;
-        if (row >= 0)
-            painter->drawRect(QRectF(cell.x() * c + pen / 2, row * c + pen / 2, c - pen, c - pen));
+    if (m_showGhost) {
+        const double pen = std::max(1.0, c / 10.0);
+        painter->setBrush(Qt::NoBrush);
+        painter->setPen(QPen(OmarchyTheme::mix(m_ghostColor, color, 0.5), pen));
+        for (QPoint cell : game.ghost().cells()) {
+            const int row = cell.y() - Board::kHiddenRows;
+            if (row >= 0)
+                painter->drawRect(QRectF(cell.x() * c + pen / 2, row * c + pen / 2, c - pen, c - pen));
+        }
+        painter->setPen(Qt::NoPen);
     }
-    painter->setPen(Qt::NoPen);
 
     for (QPoint cell : game.piece().cells()) {
         const int row = cell.y() - Board::kHiddenRows;

@@ -35,6 +35,7 @@ FocusScope {
         case Qt.Key_Up: case Qt.Key_X: game.rotateCw(); break;
         case Qt.Key_Z: game.rotateCcw(); break;
         case Qt.Key_C: game.swapHold(); break;
+        case Qt.Key_G: game.toggleGhost(); break;
         case Qt.Key_P: game.togglePause(); break;
         case Qt.Key_R: game.restart(); break;
         case Qt.Key_Escape: root.leaveRequested(); break;
@@ -98,6 +99,15 @@ FocusScope {
                         cell: Math.round(arena.cell * 0.7)
                         available: game.holdAvailable
                     }
+                    // Only worth saying when the ghost is gone: on, it shows.
+                    Text {
+                        Layout.fillWidth: true
+                        Layout.topMargin: 4 * theme.textScale
+                        visible: !game.ghostEnabled
+                        text: qsTr("Ghost off")
+                        color: theme.mix(theme.background, theme.foreground, 0.45)
+                        font.pixelSize: 11 * theme.textScale
+                    }
                     Item { Layout.fillHeight: true }
                 }
 
@@ -110,6 +120,7 @@ FocusScope {
                     FieldView {
                         anchors.fill: parent
                         cellSize: arena.cell
+                        showGhost: game.ghostEnabled
                         source: game
                         pieceColors: root.pieceColors
                         emptyColor: theme.mix(theme.background, theme.darkerBackground, 0.7)

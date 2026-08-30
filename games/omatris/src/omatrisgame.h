@@ -22,6 +22,7 @@ class OmatrisGame : public QObject {
     // "start" | "playing" | "gameover" | "finished"
     Q_PROPERTY(QString phase READ phase NOTIFY phaseChanged)
     Q_PROPERTY(bool paused READ paused NOTIFY pausedChanged)
+    Q_PROPERTY(bool ghostEnabled READ ghostEnabled NOTIFY ghostEnabledChanged)
     Q_PROPERTY(QString mode READ mode NOTIFY modeChanged)
     Q_PROPERTY(QString modeLabel READ modeLabel NOTIFY modeChanged)
     Q_PROPERTY(bool rankByTime READ rankByTime NOTIFY modeChanged)
@@ -56,6 +57,8 @@ public:
 
     QString phase() const;
     bool paused() const { return m_game && m_game->paused(); }
+    // Whether the well outlines where the falling piece would land.
+    bool ghostEnabled() const { return m_ghostEnabled; }
     // "marathon" | "sprint" | "zen": the one being played, or the last chosen.
     QString mode() const { return HighScores::idFor(m_mode); }
     QString modeLabel() const;
@@ -105,6 +108,7 @@ public:
     Q_INVOKABLE void pause();
     Q_INVOKABLE void resume();
     Q_INVOKABLE void togglePause();
+    Q_INVOKABLE void toggleGhost();
     Q_INVOKABLE void step();
     // {cells: [{x, y}], width, height} of a piece in its spawn orientation,
     // for the hold box and the next queue.
@@ -116,6 +120,7 @@ public:
 signals:
     void phaseChanged();
     void pausedChanged();
+    void ghostEnabledChanged();
     void modeChanged();
     void scoreChanged();
     void levelChanged();
@@ -168,6 +173,7 @@ private:
     Mode m_mode = Mode::Marathon;
     int m_stepInterval = kDefaultStepIntervalMs;
     int m_newHighScoreRank = -1;
+    bool m_ghostEnabled = true;
     // -1 left, +1 right, 0 nothing held; and how long it has been held.
     int m_shift = 0;
     int m_shiftTicks = 0;
