@@ -4,6 +4,7 @@
 #include "boardtests.h"
 #include "bridgetests.h"
 #include "generatortests.h"
+#include "playtests.h"
 #include "solvertests.h"
 
 // One binary runs every suite so each area keeps its own small file.
@@ -21,5 +22,7 @@ int main(int argc, char *argv[]) {
     status |= QTest::qExec(&generator, argc, argv);
     BridgeTests bridge;
     status |= QTest::qExec(&bridge, argc, argv);
+    PlayTests play;
+    status |= QTest::qExec(&play, argc, argv);
     return status;
 }

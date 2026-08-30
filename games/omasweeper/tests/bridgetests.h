@@ -1,11 +1,9 @@
 #pragma once
 
 #include <QObject>
-#include <QString>
 
-// The OmasweeperGame bridge driven with stepInterval 0: screen flow, whole
-// games played to a win and to a loss through the invokables, the clock, the
-// counters, the no-guess flag and the best-time table.
+// The OmasweeperGame bridge driven with stepInterval 0: the screens, the
+// presets, and everything remembered between runs.
 class BridgeTests : public QObject {
     Q_OBJECT
 
@@ -14,21 +12,10 @@ private slots:
     void init();
     void startsOnTheStartScreenWithPresets();
     void newGameExposesThePreset();
-    void cursorMovesAndStopsAtTheEdges();
-    void firstRevealOpensASafeZeroRegion();
-    void flagsCountDownAndMayGoNegative();
-    void revealOnANumberChords();
-    void chordThroughTheBridge();
-    void theClockRunsFromTheFirstRevealToTheEnd();
-    void aSolvedBoardIsWonAndTimed();
-    void hittingAMineLoses();
     void generatorGivingUpClearsTheNoGuessFlag();
     void restartKeepsThePresetAndDrawsANewBoard();
     void backToStartClearsTheBoard();
     void savedBestTimesReachQml();
     void lastPresetIsRemembered();
     void windowGeometryRoundTrips();
-
-private:
-    QString m_settingsDir;
 };

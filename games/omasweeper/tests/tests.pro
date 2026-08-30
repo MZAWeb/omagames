@@ -16,7 +16,9 @@ HEADERS += \
     boardtests.h \
     solvertests.h \
     generatortests.h \
-    bridgetests.h
+    scenario.h \
+    bridgetests.h \
+    playtests.h
 
 SOURCES += \
     ../src/presets.cpp \
@@ -29,5 +31,7 @@ SOURCES += \
     boardtests.cpp \
     solvertests.cpp \
     generatortests.cpp \
+    scenario.cpp \
     bridgetests.cpp \
+    playtests.cpp \
     tst_omasweeper.cpp
