@@ -1,6 +1,7 @@
 #include "omatrisgame.h"
 
 #include <QRandomGenerator>
+#include <QRect>
 #include <QSettings>
 #include <algorithm>
 

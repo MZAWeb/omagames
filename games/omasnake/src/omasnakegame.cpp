@@ -1,6 +1,7 @@
 #include "omasnakegame.h"
 
 #include <QRandomGenerator>
+#include <QRect>
 #include <QSettings>
 #include <QVector>
 

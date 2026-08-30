@@ -4,11 +4,10 @@
 
 #include <algorithm>
 
-#include "windowgeometry.h"
-
 #include "sudoku.h"
 #include "sudokugrader.h"
 #include "sudokukeys.h"
+#include "windowgeometry.h"
 
 namespace {
 

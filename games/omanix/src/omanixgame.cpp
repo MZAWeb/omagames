@@ -1,6 +1,7 @@
 #include "omanixgame.h"
 
 #include <QRandomGenerator>
+#include <QRect>
 #include <QSettings>
 
 #include "windowgeometry.h"
