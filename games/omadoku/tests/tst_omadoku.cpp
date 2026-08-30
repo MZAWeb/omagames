@@ -10,6 +10,7 @@
 #include "gradertests.h"
 #include "leveltests.h"
 #include "techniquetests.h"
+#include "selectiontests.h"
 #include "solvertests.h"
 
 // One binary runs every suite so each area keeps its own small file.
@@ -33,6 +34,8 @@ int main(int argc, char *argv[]) {
     status |= QTest::qExec(&levels, argc, argv);
     GameTests gameTests;
     status |= QTest::qExec(&gameTests, argc, argv);
+    SelectionTests selection;
+    status |= QTest::qExec(&selection, argc, argv);
     InputTests input;
     status |= QTest::qExec(&input, argc, argv);
     BestTimesTests bestTimes;

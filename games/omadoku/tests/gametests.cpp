@@ -6,20 +6,10 @@
 
 #include <cmath>
 
-#include "cellmodel.h"
+#include "gameprobe.h"
 #include "savedgame.h"
-#include "sudoku.h"
-#include "sudokugame.h"
 
 namespace {
-
-int cellInt(QAbstractListModel *model, int cell, CellModel::Role role) {
-    return model->data(model->index(cell, 0), role).toInt();
-}
-
-bool cellBool(QAbstractListModel *model, int cell, CellModel::Role role) {
-    return model->data(model->index(cell, 0), role).toBool();
-}
 
 // WCAG relative luminance and contrast ratio, so "readable" is measured the
 // way a contrast checker would rather than guessed at.
@@ -35,15 +25,11 @@ double contrastRatio(const QColor &a, const QColor &b) {
     return (std::max(first, second) + 0.05) / (std::min(first, second) + 0.05);
 }
 
-int firstGiven(QAbstractListModel *model) {
-    for (int i = 0; i < Sudoku::kCells; ++i) {
-        if (cellBool(model, i, CellModel::GivenRole))
-            return i;
-    }
-    return -1;
-}
-
 }  // namespace
+
+using TestSupport::cellBool;
+using TestSupport::cellInt;
+using TestSupport::firstGiven;
 
 void GameTests::initTestCase() {
     // Never touch the real ~/.config/Omacom while testing.
@@ -77,48 +63,27 @@ void GameTests::newGameSelectsTheFirstEmptyCell() {
     QCOMPARE(stateSpy.count(), 1);
     QCOMPARE(game.difficulty(), QStringLiteral("hard"));
     QVERIFY(game.cursorIndex() >= 0);
-    QCOMPARE(cellInt(game.cells(), game.cursorIndex(), CellModel::ValueRole), 0);
+    QCOMPARE(cellInt(&game, game.cursorIndex(), CellModel::ValueRole), 0);
 
     QVERIFY(game.filledCount() > 0);
     QCOMPARE(game.digitCounts().size(), 9);
-}
-
-void GameTests::cursorMovesWithinTheGrid() {
-    SudokuGame game;
-    game.newGame(QStringLiteral("easy"));
-
-    game.select(40);
-    game.moveCursor(-1, 0);
-    QCOMPARE(game.cursorIndex(), 31);
-    game.moveCursor(0, 1);
-    QCOMPARE(game.cursorIndex(), 32);
-
-    game.select(0);
-    game.moveCursor(-1, -1);  // clamped at the top-left corner
-    QCOMPARE(game.cursorIndex(), 0);
-    game.select(80);
-    game.moveCursor(1, 1);
-    QCOMPARE(game.cursorIndex(), 80);
-
-    game.select(200);  // out of range is ignored
-    QCOMPARE(game.cursorIndex(), 80);
 }
 
 void GameTests::digitsGoIntoTheSelectedCellOnly() {
     SudokuGame game;
     game.newGame(QStringLiteral("easy"));
     const int empty = game.cursorIndex();  // the first empty cell
-    const int given = firstGiven(game.cells());
-    const int givenValue = cellInt(game.cells(), given, CellModel::ValueRole);
+    const int given = firstGiven(&game);
+    const int givenValue = cellInt(&game, given, CellModel::ValueRole);
 
     game.select(given);
     game.enterValue(givenValue % 9 + 1);
-    QCOMPARE(cellInt(game.cells(), given, CellModel::ValueRole), givenValue);
+    QCOMPARE(cellInt(&game, given, CellModel::ValueRole), givenValue);
     QVERIFY(!game.canUndo());
 
     game.select(empty);
     game.enterValue(5);
-    QCOMPARE(cellInt(game.cells(), empty, CellModel::ValueRole), 5);
+    QCOMPARE(cellInt(&game, empty, CellModel::ValueRole), 5);
     QVERIFY(game.canUndo());
 }
 
@@ -129,22 +94,22 @@ void GameTests::clickModeDecidesWhatAKeypadClickDoes() {
     QCOMPARE(game.clickMode(), QStringLiteral("fill"));  // the default
 
     game.clickDigit(4);
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 4);
+    QCOMPARE(cellInt(&game, cell, CellModel::ValueRole), 4);
     QCOMPARE(game.highlightDigit(), -1);
 
     game.erase();
     game.setClickMode(QStringLiteral("note"));
     game.clickDigit(3);
     game.clickDigit(8);
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), (1 << 2) | (1 << 7));
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 0);
+    QCOMPARE(cellInt(&game, cell, CellModel::NotesRole), (1 << 2) | (1 << 7));
+    QCOMPARE(cellInt(&game, cell, CellModel::ValueRole), 0);
     game.clickDigit(3);  // toggles back off
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), 1 << 7);
+    QCOMPARE(cellInt(&game, cell, CellModel::NotesRole), 1 << 7);
 
     game.setClickMode(QStringLiteral("highlight"));
     game.clickDigit(6);
     QCOMPARE(game.highlightDigit(), 6);
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 0);
+    QCOMPARE(cellInt(&game, cell, CellModel::ValueRole), 0);
     game.clickDigit(6);  // the same digit again clears it
     QCOMPARE(game.highlightDigit(), -1);
 
@@ -164,20 +129,20 @@ void GameTests::keyboardMappingIgnoresTheClickMode() {
         game.setClickMode(mode);
 
         game.pressDigitKey(5, Qt::NoModifier);
-        QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 5);
+        QCOMPARE(cellInt(&game, cell, CellModel::ValueRole), 5);
         game.erase();
 
         game.pressDigitKey(7, Qt::ShiftModifier);
-        QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), 1 << 6);
-        QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 0);
+        QCOMPARE(cellInt(&game, cell, CellModel::NotesRole), 1 << 6);
+        QCOMPARE(cellInt(&game, cell, CellModel::ValueRole), 0);
         game.pressDigitKey(7, Qt::ShiftModifier);
-        QCOMPARE(cellInt(game.cells(), cell, CellModel::NotesRole), 0);
+        QCOMPARE(cellInt(&game, cell, CellModel::NotesRole), 0);
 
         game.pressDigitKey(9, Qt::ControlModifier);
         QCOMPARE(game.highlightDigit(), 9);
         game.pressDigitKey(9, Qt::AltModifier);  // Alt is an alias for Ctrl here
         QCOMPARE(game.highlightDigit(), -1);
-        QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 0);
+        QCOMPARE(cellInt(&game, cell, CellModel::ValueRole), 0);
     }
 }
 
@@ -264,9 +229,9 @@ void GameTests::undoRestartAndEraseGoThroughTheBoard() {
     QCOMPARE(game.filledCount(), filled);
 
     game.undo();  // undoes the erase
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 2);
+    QCOMPARE(cellInt(&game, cell, CellModel::ValueRole), 2);
     game.undo();  // undoes the entry
-    QCOMPARE(cellInt(game.cells(), cell, CellModel::ValueRole), 0);
+    QCOMPARE(cellInt(&game, cell, CellModel::ValueRole), 0);
     QVERIFY(!game.canUndo());
 
     game.enterValue(2);
@@ -349,8 +314,8 @@ void GameTests::cursorValueFollowsTheCursor() {
     QCOMPARE(game.cursorValue(), 6);
     QVERIFY(spy.count() > 0);
 
-    game.select(firstGiven(game.cells()));
-    QCOMPARE(game.cursorValue(), cellInt(game.cells(), game.cursorIndex(), CellModel::ValueRole));
+    game.select(firstGiven(&game));
+    QCOMPARE(game.cursorValue(), cellInt(&game, game.cursorIndex(), CellModel::ValueRole));
 
     game.select(empty);
     QCOMPARE(game.cursorValue(), 6);
@@ -367,13 +332,13 @@ void GameTests::validateAsYouGoFlipsMidGame() {
     game.setValidateAsYouGo(true);
 
     game.enterValue(expected.puzzle().solution[size_t(cell)] % 9 + 1);
-    QVERIFY(cellBool(game.cells(), cell, CellModel::WrongRole));
+    QVERIFY(cellBool(&game, cell, CellModel::WrongRole));
 
     QSignalSpy spy(&game, &SudokuGame::validateAsYouGoChanged);
     game.setValidateAsYouGo(false);  // off: the mark vanishes until the grid is full
-    QVERIFY(!cellBool(game.cells(), cell, CellModel::WrongRole));
+    QVERIFY(!cellBool(&game, cell, CellModel::WrongRole));
     game.setValidateAsYouGo(true);   // on: it is back at once, no new entry needed
-    QVERIFY(cellBool(game.cells(), cell, CellModel::WrongRole));
+    QVERIFY(cellBool(&game, cell, CellModel::WrongRole));
     QCOMPARE(spy.count(), 2);
 }
 

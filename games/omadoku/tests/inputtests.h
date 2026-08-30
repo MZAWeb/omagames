@@ -17,13 +17,6 @@ private slots:
     void theBridgeAnswersTheSameAsTheHelper();
     void aShiftHeldSweepNeverWritesANote();
 
-    void ctrlClickTogglesCellsInAndOutOfTheSelection();
-    void shiftArrowsSweepTheCellsTheCursorCrosses();
-    void plainMovesAndClicksCollapseTheSelection();
-    void notesGoToEverySelectedEmptyCellAsOneStep();
-    void aValueGoesToTheCursorAndFoldsTheSelection();
-    void escapeUnwindsSelectionThenHighlight();
-
 private:
     QString m_settingsDir;
 };

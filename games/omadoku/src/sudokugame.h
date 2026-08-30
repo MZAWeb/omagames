@@ -10,6 +10,7 @@
 #include "cellmodel.h"
 #include "sudokuboard.h"
 #include "scoretable.h"
+#include "sudokuselection.h"
 #include "sudokustore.h"
 
 // The only bridge between the engine and QML: state as properties, actions as
@@ -71,10 +72,10 @@ public:
     // The cell the keyboard acts on (-1 = none). It is always one of
     // `selectedIndices`, which holds the whole multi-cell selection in the
     // order the cells joined it — a single cell most of the time.
-    int cursorIndex() const { return m_cursorIndex; }
+    int cursorIndex() const { return m_selection.cursor(); }
     QVariantList selectedIndices() const;
     // Digit under the cursor (0 when empty), so the UI can highlight twins.
-    int cursorValue() const { return m_board.value(m_cursorIndex); }
+    int cursorValue() const { return m_board.value(m_selection.cursor()); }
     bool canUndo() const { return m_board.canUndo(); }
     int filledCount() const { return m_board.filledCount(); }
     bool inProgress() const;
@@ -164,9 +165,9 @@ private:
     enum class ClickMode { Highlight, Note, Fill };
 
     static ClickMode modeFromId(const QString &id, ClickMode fallback);
-    // The cell `deltaRow`/`deltaColumn` away, clamped to the grid: movement
-    // stops at the edges because wrapping makes arrow keys feel lost.
-    static int stepped(int index, int deltaRow, int deltaColumn);
+    // Every way of picking cells lands here: where the cursor is and what the
+    // digit keys will act on both moved, so both are announced together.
+    void emitSelectionChanged();
     void applyChange(const std::vector<int> &changed);
     void setScreen(Screen screen);
     void setHighlightDigit(int digit);
@@ -184,8 +185,7 @@ private:
     QTimer m_clock {this};
     QTimer m_saveTimer {this};
     Screen m_screen = Screen::Start;
-    std::vector<int> m_selection;
-    int m_cursorIndex = -1;
+    SudokuSelection m_selection;
     int m_highlightDigit = -1;
     int m_elapsedSeconds = 0;
     OmaGames::ScoreTable m_times;

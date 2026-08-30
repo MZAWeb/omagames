@@ -10,6 +10,7 @@ HEADERS += \
     ../src/cellmodel.h \
     ../src/sudokukeys.h \
     ../src/sudokulevels.h \
+    ../src/sudokuselection.h \
     ../src/sudokustore.h \
     ../src/sudokugame.h \
     testgrids.h \
@@ -20,9 +21,11 @@ HEADERS += \
     boardtests.h \
     leveltests.h \
     gametests.h \
+    selectiontests.h \
     inputtests.h \
     besttimestests.h \
     persistencetests.h \
+    gameprobe.h \
     savedgame.h
 
 SOURCES += \
@@ -34,6 +37,7 @@ SOURCES += \
     ../src/sudokugrader.cpp \
     ../src/sudokuboard.cpp \
     ../src/sudokulevels.cpp \
+    ../src/sudokuselection.cpp \
     ../src/sudokustore.cpp \
     ../src/sudokukeys.cpp \
     ../src/cellmodel.cpp \
@@ -45,6 +49,7 @@ SOURCES += \
     boardtests.cpp \
     leveltests.cpp \
     gametests.cpp \
+    selectiontests.cpp \
     inputtests.cpp \
     besttimestests.cpp \
     persistencetests.cpp \

@@ -13,7 +13,6 @@ private slots:
 
     void startsOnTheStartScreen();
     void newGameSelectsTheFirstEmptyCell();
-    void cursorMovesWithinTheGrid();
     void digitsGoIntoTheSelectedCellOnly();
     void clickModeDecidesWhatAKeypadClickDoes();
     void keyboardMappingIgnoresTheClickMode();
