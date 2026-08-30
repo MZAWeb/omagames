@@ -12,8 +12,9 @@ private slots:
     void init();
 
     void givensAreImmutable();
-    void entryClearsOwnAndPeerNotes();
+    void entryClearsOnlyItsOwnNotes();
     void notesToggleOnlyInEmptyCells();
+    void notesAcrossManyCellsAreOneStep();
     void eraseClearsValueAndNotes();
     void undoRestoresValuesAndNotes();
     void undoKeepsAtLeastAHundredLevels();

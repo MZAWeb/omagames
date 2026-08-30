@@ -1,6 +1,8 @@
 # TODO
 
 ## Omadoku
+- [ ] Layout-aware digit keys (AZERTY: unshifted row is symbols) — digits resolve only from Key_1-9 and the US shifted symbols since the keycode fallback was removed
+- [ ] `sudokugame.cpp` is ~575 lines; split the selection/notes/highlight handling out of the bridge
 - [ ] **Sudoku coach** — like Black Omack's coach: opt-in, off by default, one panel that names the next logical step for the selected cell/board ("Naked single: only 5 fits in r5c5", up to X-wing/Y-wing/swordfish with the cells involved highlighted on request). Must be backed by the real technique ladder in `sudokugrader` so every explanation is a genuine deduction, never a lookup of the solution. Larger; needs the grader to report the cells/candidates behind each step.
 - [ ] Hints (next single), timer/stats per difficulty, best times
 - [ ] Extra hard almost always lands on Y-wing (swordfish 1/80); add XY-chain / uniqueness to widen the top band

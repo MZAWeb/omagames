@@ -14,16 +14,33 @@ current Omarchy theme.
   only once all 81 cells are filled; flip it mid-game and the marks appear or
   vanish immediately.
 - **Notes** are pencil marks: up to nine small digits per empty cell. Placing a
-  digit clears that cell's notes and retracts the digit from the notes of every
-  cell in the same row, column and box. Notes are never checked.
-- **Mode** (the segmented control under the keypad in the rail) decides what a digit does,
-  typed or clicked: *Highlight*, *Note* or *Fill*. `N` cycles it and it is
-  remembered between sessions; Highlight is the default. Holding a modifier
-  overrides it for one press without switching mode, which is what each
-  segment's badge spells out: `Alt+1-9` highlights, `Shift+1-9` notes,
-  `Ctrl+1-9` fills — and with no cell selected any digit just highlights.
-- **Highlighting** lights up every cell holding that digit, givens included.
-  The same digit again (or `Escape`) clears it, another digit switches it.
+  digit clears that cell's own notes and nothing else: the marks you left in the
+  rest of the row, column and box are your bookkeeping to keep or tidy. Notes
+  are never checked.
+- **The keyboard mapping is fixed** and never depends on anything on screen:
+  `1`-`9` fill, `Shift+1`-`9` note, `Ctrl+1`-`9` (or `Alt+1`-`9`) highlight. The
+  line under the keypad says so at all times.
+- **Mouse clicks** (the segmented control under that line) is the one thing the
+  *Highlight* / *Note* / *Fill* selector decides: what clicking a key on the
+  keypad does. It changes nothing about the keyboard. `N` cycles it and it is
+  remembered between sessions; Fill is the default.
+- **Selecting several cells** is for pencilling: `Ctrl+click` picks cells out
+  one at a time, `Shift`+arrows (or `Shift+h` `j` `k` `l`) sweeps a run, taking
+  every cell the cursor crosses. `Shift`+a digit then pencils it into all of
+  them at once — cells that already hold a value are skipped — and one `Ctrl+Z`
+  takes the whole lot back. A plain digit still fills the cursor cell only, and
+  folds the selection back onto it; so does a plain arrow or a plain click. The
+  cursor is outlined more strongly than the rest of the selection.
+- **Highlighting** lights up every cell holding that digit, givens included,
+  and the key on the keypad with it. The same digit again (or `Escape`) clears
+  it, another digit switches it. It is the one thing in the game that does not
+  follow the Omarchy theme: a highlighter pen is highlighter yellow, with dark
+  ink on top, whatever the desktop looks like.
+- **Best times**: solving a puzzle files the clock, with the day, in that
+  level's top five, and the won screen says where it landed (*New best!*, or
+  *#3 for Hard*). The start screen shows the fastest under each level and
+  keeps the full tables behind *Best times* (`B`). Restarting or leaving a
+  puzzle files nothing.
 - An unfinished puzzle is saved automatically and offered as *Resume* the next
   time you start the game.
 
@@ -31,36 +48,39 @@ current Omarchy theme.
 
 | Key | Action |
 | --- | --- |
-| Arrows or `h` `j` `k` `l` | move the selection |
-| `1`–`9` | do the selected mode's action with that digit |
-| `Alt+1`–`Alt+9` | highlight every cell holding that digit |
-| `Shift+1`–`Shift+9` | toggle the digit as a note in the selected cell |
-| `Ctrl+1`–`Ctrl+9` | fill the digit into the selected cell |
-| `N` | cycle the mode: Highlight → Note → Fill |
+| Arrows or `h` `j` `k` `l` | move the cursor, collapsing any multi-cell selection |
+| `Shift`+arrows or `Shift+h` `j` `k` `l` | extend the selection along the way |
+| `Ctrl`+click | add a cell to the selection, or take it out |
+| `1`–`9` | fill the digit into the cursor cell |
+| `Shift+1`–`Shift+9` | toggle the digit as a note in every selected empty cell |
+| `Ctrl+1`–`Ctrl+9` (or `Alt+1`–`Alt+9`) | highlight every cell holding that digit |
+| `N` | cycle what a keypad click does: Highlight → Note → Fill |
 | `Backspace`, `Delete`, `0` | erase the cell |
 | `Ctrl+Z` | undo |
 | `R` | restart the puzzle |
 | `V` | toggle *Validate as I go* |
-| `Escape` | clear the highlight, else back to the start screen (confirms mid-puzzle) |
+| `Escape` | collapse the selection, else clear the highlight, else back to the start screen (confirms mid-puzzle) |
 | `Ctrl+Q` | quit |
 
-On the start screen `1`, `2`, `3`, `4` pick a difficulty and `R` resumes.
+On the start screen `1`, `2`, `3`, `4` pick a difficulty, `R` resumes and `B`
+shows the best times (`Escape` closes them).
 Every button shows its key, so nothing above needs memorising.
 
 ## Layout
 
 The board is the hero: square, centred, and given every pixel the controls do
 not need. Everything else lives in one rail, always in the same order — the
-3×3 keypad, the mode selector, *Validate as I go*, then Erase, Undo, Restart
-and New game, with a line of keyboard reminders at the foot.
+3×3 keypad, the line stating the keyboard mapping, the *Mouse clicks*
+selector, *Validate as I go*, then Erase, Undo, Restart and New game, with a
+line of keyboard reminders at the foot.
 
 The rail sits beside the board on the right, and folds into a bottom sheet
 under it when that leaves the board bigger — which is what a tall, narrow
 window or a large desktop text scale amounts to. The controls keep their order
 across the switch; only their number of columns changes, so nothing a hand has
 learnt moves. Feedback stays local to the cell that changed: a placement
-settles, retracted pencil marks fade where they stood, and a wrong entry marks
-its own corner instead of the board reacting as a whole.
+settles and a wrong entry marks its own corner, instead of the board reacting
+as a whole.
 
 The window is at least 700×560 logical pixels, both multiplied by the desktop
 text scale (so 1400×1120 at 200%). It opens at 880×640 the first time and
@@ -123,4 +143,5 @@ bin/run omadoku       # play
 bin/install omadoku   # build + install the Arch package from a checkout
 ```
 
-Settings and the saved puzzle live in `~/.config/Omacom/omadoku.conf`.
+Settings, the best times and the saved puzzle live in
+`~/.config/Omacom/omadoku.conf`.

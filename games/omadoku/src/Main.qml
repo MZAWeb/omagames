@@ -18,12 +18,11 @@ ApplicationWindow {
     Material.foreground: theme.foreground
     Material.background: theme.background
 
-    // Escape unwinds one step at a time: first the digit highlight, then the
-    // puzzle itself.
+    // Escape unwinds one step at a time. The bridge owns the order — a
+    // multi-cell selection, then the digit highlight — and says so by
+    // returning false once only the puzzle itself is left to leave.
     function backOut() {
-        if (game.highlightDigit >= 0)
-            game.clearHighlight();
-        else
+        if (!game.backOut())
             leaveGame();
     }
 
@@ -72,6 +71,8 @@ ApplicationWindow {
         sourceComponent: WonOverlay {
             difficultyName: game.difficultyLabel
             seconds: game.elapsedSeconds
+            rank: game.newBestRank
+            best: game.bests[game.difficulty]
             onNewGameRequested: game.newGame(game.difficulty)
             onBackRequested: game.backToStart()
         }

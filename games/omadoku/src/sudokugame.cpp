@@ -1,23 +1,14 @@
 #include "sudokugame.h"
 
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QRect>
-#include <QSettings>
+
+#include <algorithm>
 
 #include "sudoku.h"
 #include "sudokugrader.h"
+#include "sudokukeys.h"
 
 namespace {
-
-const auto kStateKey = QStringLiteral("state/v1");
-// Still the key it was first stored under, so an existing preference survives
-// the control's rename.
-const auto kValidateKey = QStringLiteral("play/checkAsYouGo");
-const auto kPadModeKey = QStringLiteral("play/padMode");
-const auto kGeometryKey = QStringLiteral("window/geometry");
-const auto kMaximizedKey = QStringLiteral("window/maximized");
-const auto kElapsedKey = QStringLiteral("elapsed");
 
 // Ids shared with QML. They are stable identifiers, never shown to the player:
 // the labels beside them are.
@@ -27,24 +18,6 @@ const auto kWonId = QStringLiteral("won");
 const auto kHighlightId = QStringLiteral("highlight");
 const auto kNoteId = QStringLiteral("note");
 const auto kFillId = QStringLiteral("fill");
-const auto kEasyId = QStringLiteral("easy");
-const auto kMediumId = QStringLiteral("medium");
-const auto kHardId = QStringLiteral("hard");
-const auto kExtraHardId = QStringLiteral("extrahard");
-
-QString idFor(Difficulty difficulty) {
-    switch (difficulty) {
-    case Difficulty::Easy:
-        return kEasyId;
-    case Difficulty::Medium:
-        return kMediumId;
-    case Difficulty::Hard:
-        return kHardId;
-    case Difficulty::ExtraHard:
-        return kExtraHardId;
-    }
-    return kEasyId;
-}
 
 QString techniqueName(SudokuGrader::Technique technique) {
     using SudokuGrader::Technique;
@@ -85,6 +58,11 @@ QStringList techniquesIntroducedBy(Difficulty difficulty) {
 // still survives a crash or a kill in practice.
 constexpr int kSaveDelayMs = 500;
 
+// Highlighter yellow, and an ink dark enough to stay readable on it. The one
+// place in the game that is deliberately deaf to the Omarchy theme.
+constexpr QColor kHighlightColor(0xff, 0xf0, 0x2b);
+constexpr QColor kHighlightInk(0x1a, 0x1a, 0x14);
+
 }  // namespace
 
 QString SudokuGame::state() const {
@@ -100,7 +78,7 @@ QString SudokuGame::state() const {
 }
 
 QString SudokuGame::difficulty() const {
-    return idFor(m_board.puzzle().difficulty);
+    return BestTimes::idFor(m_board.puzzle().difficulty);
 }
 
 QString SudokuGame::difficultyLabel() const {
@@ -131,7 +109,7 @@ QVariantList SudokuGame::difficulties() {
     QVariantList list;
     for (const Level &level : levels) {
         list.append(QVariantMap {
-            {QStringLiteral("id"), idFor(level.difficulty)},
+            {QStringLiteral("id"), BestTimes::idFor(level.difficulty)},
             {QStringLiteral("label"), level.label},
             {QStringLiteral("techniques"), techniquesIntroducedBy(level.difficulty)},
             {QStringLiteral("description"), level.description},
@@ -140,25 +118,25 @@ QVariantList SudokuGame::difficulties() {
     return list;
 }
 
-// Unknown ids only reach here from a stale setting or an empty override, so
-// they mean "no opinion" rather than an error.
-SudokuGame::PadMode SudokuGame::modeFromId(const QString &id, PadMode fallback) {
+// An unknown id only reaches here from a stale setting, so it means "no
+// opinion" rather than an error.
+SudokuGame::ClickMode SudokuGame::modeFromId(const QString &id, ClickMode fallback) {
     if (id == kHighlightId)
-        return PadMode::Highlight;
+        return ClickMode::Highlight;
     if (id == kNoteId)
-        return PadMode::Note;
+        return ClickMode::Note;
     if (id == kFillId)
-        return PadMode::Fill;
+        return ClickMode::Fill;
     return fallback;
 }
 
-QString SudokuGame::padMode() const {
-    switch (m_padMode) {
-    case PadMode::Highlight:
+QString SudokuGame::clickMode() const {
+    switch (m_clickMode) {
+    case ClickMode::Highlight:
         return kHighlightId;
-    case PadMode::Note:
+    case ClickMode::Note:
         return kNoteId;
-    case PadMode::Fill:
+    case ClickMode::Fill:
         break;
     }
     return kFillId;
@@ -196,25 +174,25 @@ QVariantList SudokuGame::digitCounts() const {
     return counts;
 }
 
-void SudokuGame::setPadMode(const QString &padMode) {
-    const PadMode mode = modeFromId(padMode, PadMode::Highlight);
-    if (m_padMode == mode)
+void SudokuGame::setClickMode(const QString &clickMode) {
+    const ClickMode mode = modeFromId(clickMode, ClickMode::Fill);
+    if (m_clickMode == mode)
         return;
-    m_padMode = mode;
-    QSettings().setValue(kPadModeKey, this->padMode());
-    emit padModeChanged();
+    m_clickMode = mode;
+    m_store.setClickMode(this->clickMode());
+    emit clickModeChanged();
 }
 
-void SudokuGame::cyclePadMode() {
-    switch (m_padMode) {
-    case PadMode::Highlight:
-        setPadMode(kNoteId);
+void SudokuGame::cycleClickMode() {
+    switch (m_clickMode) {
+    case ClickMode::Highlight:
+        setClickMode(kNoteId);
         break;
-    case PadMode::Note:
-        setPadMode(kFillId);
+    case ClickMode::Note:
+        setClickMode(kFillId);
         break;
-    case PadMode::Fill:
-        setPadMode(kHighlightId);
+    case ClickMode::Fill:
+        setClickMode(kHighlightId);
         break;
     }
 }
@@ -223,25 +201,27 @@ void SudokuGame::setValidateAsYouGo(bool validateAsYouGo) {
     if (m_board.validateAsYouGo() == validateAsYouGo)
         return;
     m_board.setValidateAsYouGo(validateAsYouGo);
-    QSettings().setValue(kValidateKey, validateAsYouGo);
+    m_store.setValidateAsYouGo(validateAsYouGo);
     m_cells.refreshAll();
     emit validateAsYouGoChanged();
     emit boardChanged();
+}
+
+int SudokuGame::digitForKey(int key, int modifiers, const QString &text) const {
+    return SudokuKeys::digitFor(key, Qt::KeyboardModifiers(modifiers), text);
 }
 
 void SudokuGame::newGame(const QString &difficulty) {
     // An unknown id can only come from a caller with a stale idea of the
     // levels; Easy is the safe landing.
     Difficulty level = Difficulty::Easy;
-    for (int i = 0; i < kDifficultyCount; ++i) {
-        if (idFor(Difficulty(i)) == difficulty)
-            level = Difficulty(i);
-    }
+    BestTimes::difficultyFromId(difficulty, &level);
     m_board.setPuzzle(SudokuGenerator::generate(level));
     m_cells.refreshAll();
 
     m_elapsedSeconds = 0;
     emit elapsedSecondsChanged();
+    m_newBestRank = -1;
     clearHighlight();
     selectFirstEmptyCell();
     clearSavedGame();
@@ -252,42 +232,137 @@ void SudokuGame::newGame(const QString &difficulty) {
 void SudokuGame::resumeSavedGame() {
     if (!m_hasSavedGame)
         return;
+    m_newBestRank = -1;
     selectFirstEmptyCell();
     setScreen(Screen::Playing);
     emit boardChanged();
 }
 
-void SudokuGame::select(int index) {
-    if (index < -1 || index >= Sudoku::kCells || index == m_selectedIndex)
-        return;
-    m_selectedIndex = index;
-    emit selectedIndexChanged();
-    emit selectedValueChanged();
+QVariantList SudokuGame::selectedIndices() const {
+    QVariantList indices;
+    indices.reserve(int(m_selection.size()));
+    for (int index : m_selection)
+        indices.append(index);
+    return indices;
 }
 
-void SudokuGame::moveSelection(int deltaRow, int deltaColumn) {
+int SudokuGame::stepped(int index, int deltaRow, int deltaColumn) {
+    const int row = qBound(0, Sudoku::rowOf(index) + deltaRow, Sudoku::kSize - 1);
+    const int column = qBound(0, Sudoku::colOf(index) + deltaColumn, Sudoku::kSize - 1);
+    return row * Sudoku::kSize + column;
+}
+
+void SudokuGame::select(int index) {
+    if (index < -1 || index >= Sudoku::kCells)
+        return;
+    if (index == m_cursorIndex && m_selection.size() <= 1)
+        return;
+    m_selection.clear();
+    if (index >= 0)
+        m_selection.push_back(index);
+    m_cursorIndex = index;
+    emit selectionChanged();
+    emit cursorValueChanged();
+}
+
+void SudokuGame::toggleSelection(int index) {
+    if (m_screen != Screen::Playing || index < 0 || index >= Sudoku::kCells)
+        return;
+    const auto at = std::find(m_selection.begin(), m_selection.end(), index);
+    if (at == m_selection.end()) {
+        // The cell you just picked is where you are, so the cursor follows.
+        m_selection.push_back(index);
+        m_cursorIndex = index;
+    } else {
+        m_selection.erase(at);
+        if (m_cursorIndex == index)
+            m_cursorIndex = m_selection.empty() ? -1 : m_selection.back();
+    }
+    emit selectionChanged();
+    emit cursorValueChanged();
+}
+
+void SudokuGame::moveCursor(int deltaRow, int deltaColumn) {
     if (m_screen != Screen::Playing)
         return;
-    if (m_selectedIndex < 0) {
+    if (m_cursorIndex < 0) {
         select(0);
         return;
     }
-    // Movement stops at the edges: wrapping around makes arrow keys feel lost.
-    const int row = qBound(0, Sudoku::rowOf(m_selectedIndex) + deltaRow, Sudoku::kSize - 1);
-    const int column = qBound(0, Sudoku::colOf(m_selectedIndex) + deltaColumn, Sudoku::kSize - 1);
-    select(row * Sudoku::kSize + column);
+    select(stepped(m_cursorIndex, deltaRow, deltaColumn));
+}
+
+void SudokuGame::extendSelection(int deltaRow, int deltaColumn) {
+    if (m_screen != Screen::Playing)
+        return;
+    if (m_cursorIndex < 0) {
+        select(0);
+        return;
+    }
+    // One cell at a time, so everything the cursor passes over joins in and
+    // not just where it lands.
+    const int steps = std::max(std::abs(deltaRow), std::abs(deltaColumn));
+    const int rowStep = deltaRow > 0 ? 1 : deltaRow < 0 ? -1 : 0;
+    const int columnStep = deltaColumn > 0 ? 1 : deltaColumn < 0 ? -1 : 0;
+    bool moved = false;
+    for (int step = 0; step < steps; ++step) {
+        const int next = stepped(m_cursorIndex, rowStep, columnStep);
+        if (next == m_cursorIndex)
+            break;  // the edge of the grid
+        m_cursorIndex = next;
+        if (std::find(m_selection.begin(), m_selection.end(), next) == m_selection.end())
+            m_selection.push_back(next);
+        moved = true;
+    }
+    if (!moved)
+        return;
+    emit selectionChanged();
+    emit cursorValueChanged();
+}
+
+void SudokuGame::collapseSelection() {
+    if (m_selection.size() <= 1)
+        return;
+    m_selection.assign(1, m_cursorIndex);  // the cursor stays where it is
+    emit selectionChanged();
+}
+
+bool SudokuGame::backOut() {
+    if (m_selection.size() > 1) {
+        collapseSelection();
+        return true;
+    }
+    if (m_highlightDigit >= 0) {
+        clearHighlight();
+        return true;
+    }
+    return false;
 }
 
 void SudokuGame::enterValue(int digit) {
-    if (m_screen != Screen::Playing || m_selectedIndex < 0)
+    if (m_screen != Screen::Playing || m_cursorIndex < 0)
         return;
-    applyChange(m_board.setValue(m_selectedIndex, digit));
+    // A value lands in one cell — the cursor — and folds the selection back
+    // onto it, so the digit after it cannot surprise anyone.
+    const std::vector<int> changed = m_board.setValue(m_cursorIndex, digit);
+    collapseSelection();
+    applyChange(changed);
 }
 
 void SudokuGame::toggleNote(int digit) {
-    if (m_screen != Screen::Playing || m_selectedIndex < 0)
+    if (m_screen != Screen::Playing)
         return;
-    applyChange(m_board.toggleNote(m_selectedIndex, digit));
+    // Every selected cell at once, as one undo step. This is what a
+    // multi-selection is for.
+    applyChange(m_board.toggleNotes(m_selection, digit));
+}
+
+QColor SudokuGame::highlightColor() {
+    return kHighlightColor;
+}
+
+QColor SudokuGame::highlightInk() {
+    return kHighlightInk;
 }
 
 void SudokuGame::toggleHighlight(int digit) {
@@ -298,22 +373,37 @@ void SudokuGame::clearHighlight() {
     setHighlightDigit(-1);
 }
 
-void SudokuGame::pressDigit(int digit, const QString &overrideMode) {
-    const PadMode mode = modeFromId(overrideMode, m_padMode);
-    // With no cell to write into, a digit can only light itself up, whatever
-    // the mode or the modifier asked for.
-    if (mode == PadMode::Highlight || m_screen != Screen::Playing || m_selectedIndex < 0)
+void SudokuGame::pressDigitKey(int digit, int modifiers) {
+    // The one place the keyboard contract is written down. It is deliberately
+    // deaf to the click mode: a key does the same thing in every mode, so no
+    // player has to look at a selector before typing a digit.
+    const Qt::KeyboardModifiers mods(modifiers);
+    if (mods & (Qt::ControlModifier | Qt::AltModifier))
         toggleHighlight(digit);
-    else if (mode == PadMode::Note)
+    else if (mods & Qt::ShiftModifier)
         toggleNote(digit);
     else
         enterValue(digit);
 }
 
-void SudokuGame::erase() {
-    if (m_screen != Screen::Playing || m_selectedIndex < 0)
+void SudokuGame::clickDigit(int digit) {
+    switch (m_clickMode) {
+    case ClickMode::Highlight:
+        toggleHighlight(digit);
         return;
-    applyChange(m_board.erase(m_selectedIndex));
+    case ClickMode::Note:
+        toggleNote(digit);
+        return;
+    case ClickMode::Fill:
+        enterValue(digit);
+        return;
+    }
+}
+
+void SudokuGame::erase() {
+    if (m_screen != Screen::Playing || m_cursorIndex < 0)
+        return;
+    applyChange(m_board.erase(m_cursorIndex));
 }
 
 void SudokuGame::undo() {
@@ -346,15 +436,53 @@ void SudokuGame::applyChange(const std::vector<int> &changed) {
     else
         m_cells.refreshAll();
     emit boardChanged();
-    emit selectedValueChanged();
+    emit cursorValueChanged();
 
     if (m_board.isSolved()) {
         m_clock.stop();
         clearSavedGame();
+        recordWin();
         setScreen(Screen::Won);
         return;
     }
     m_saveTimer.start();
+}
+
+QVariantList SudokuGame::bestTimes() const {
+    QVariantList list;
+    for (const QVariant &entry : difficulties()) {
+        const QVariantMap level = entry.toMap();
+        Difficulty difficulty = Difficulty::Easy;
+        if (!BestTimes::difficultyFromId(level.value(QStringLiteral("id")).toString(), &difficulty))
+            continue;
+        for (const TimeEntry &time : m_times.entries(difficulty)) {
+            list.append(QVariantMap {
+                {QStringLiteral("difficulty"), BestTimes::idFor(difficulty)},
+                {QStringLiteral("label"), level.value(QStringLiteral("label"))},
+                {QStringLiteral("seconds"), time.seconds},
+                {QStringLiteral("date"), time.date.toString(Qt::ISODate)},
+            });
+        }
+    }
+    return list;
+}
+
+QVariantMap SudokuGame::bests() const {
+    QVariantMap map;
+    for (int i = 0; i < kDifficultyCount; ++i)
+        map.insert(BestTimes::idFor(Difficulty(i)), m_times.best(Difficulty(i)));
+    return map;
+}
+
+// The clock has already stopped by the time this runs, so what goes in the
+// table is exactly the time the player is about to be shown.
+void SudokuGame::recordWin() {
+    m_newBestRank = m_times.insert(m_board.puzzle().difficulty,
+                                   {m_elapsedSeconds, QDate::currentDate()});
+    if (m_newBestRank < 0)
+        return;
+    m_times.save();
+    emit bestTimesChanged();
 }
 
 void SudokuGame::setScreen(Screen screen) {
@@ -394,19 +522,17 @@ void SudokuGame::selectFirstEmptyCell() {
 }
 
 void SudokuGame::loadSettings() {
-    const QSettings settings;
-    // Off by default: a first puzzle should not correct you before you have
-    // finished thinking. A choice already stored still wins.
-    m_board.setValidateAsYouGo(settings.value(kValidateKey, false).toBool());
-    // Anything unrecognised (including the int this key held before the modes
-    // got names) falls back to the default.
-    m_padMode = modeFromId(settings.value(kPadModeKey).toString(), PadMode::Highlight);
+    m_times.load();
+    // Validation is off by default: a first puzzle should not correct you
+    // before you have finished thinking. A choice already stored still wins,
+    // and anything unrecognised falls back to the default.
+    m_board.setValidateAsYouGo(m_store.validateAsYouGo(false));
+    m_clickMode = modeFromId(m_store.clickMode(), ClickMode::Fill);
 
-    const QJsonObject json =
-        QJsonDocument::fromJson(settings.value(kStateKey).toString().toUtf8()).object();
-    if (json.isEmpty() || !SudokuBoard::fromJson(json, &m_board))
+    const SudokuStore::SavedGame saved = m_store.savedGame();
+    if (saved.board.isEmpty() || !SudokuBoard::fromJson(saved.board, &m_board))
         return;
-    m_elapsedSeconds = json.value(kElapsedKey).toInt(0);
+    m_elapsedSeconds = saved.elapsedSeconds;
     // A finished puzzle is not worth resuming.
     if (m_board.isSolved()) {
         clearSavedGame();
@@ -417,34 +543,29 @@ void SudokuGame::loadSettings() {
 }
 
 void SudokuGame::saveGame() {
-    QJsonObject json = m_board.toJson();
-    json.insert(kElapsedKey, m_elapsedSeconds);
-    QSettings().setValue(kStateKey, QString::fromUtf8(QJsonDocument(json).toJson(QJsonDocument::Compact)));
+    m_store.saveGame(m_board.toJson(), m_elapsedSeconds);
     setHasSavedGame(true);
 }
 
 void SudokuGame::clearSavedGame() {
-    QSettings().remove(kStateKey);
+    m_store.clearSavedGame();
     setHasSavedGame(false);
 }
 
 QVariantMap SudokuGame::windowGeometry() const {
-    const QSettings settings;
-    const QRect geometry = settings.value(kGeometryKey).toRect();
+    const SudokuStore::WindowGeometry geometry = m_store.windowGeometry();
     QVariantMap map;
     // Positions can legitimately be negative on monitors left of or above the
     // primary, so validity travels separately instead of being encoded as -1.
-    map.insert(QStringLiteral("valid"), geometry.isValid());
-    map.insert(QStringLiteral("x"), geometry.x());
-    map.insert(QStringLiteral("y"), geometry.y());
-    map.insert(QStringLiteral("width"), geometry.width());
-    map.insert(QStringLiteral("height"), geometry.height());
-    map.insert(QStringLiteral("maximized"), settings.value(kMaximizedKey, false).toBool());
+    map.insert(QStringLiteral("valid"), geometry.rect.isValid());
+    map.insert(QStringLiteral("x"), geometry.rect.x());
+    map.insert(QStringLiteral("y"), geometry.rect.y());
+    map.insert(QStringLiteral("width"), geometry.rect.width());
+    map.insert(QStringLiteral("height"), geometry.rect.height());
+    map.insert(QStringLiteral("maximized"), geometry.maximized);
     return map;
 }
 
 void SudokuGame::saveWindowGeometry(int x, int y, int width, int height, bool maximized) {
-    QSettings settings;
-    settings.setValue(kGeometryKey, QRect(x, y, width, height));
-    settings.setValue(kMaximizedKey, maximized);
+    m_store.saveWindowGeometry(QRect(x, y, width, height), maximized);
 }
