@@ -1,5 +1,7 @@
 # TODO
 
+**Suggested order for the next session:** 1) Shared Omabucks wallet (small, unblocks the poker games), 2) Omaflow, 3) the three Black Omack small items, 4) the Omanix perf redo (carefully, on-screen verification per commit). Process for briefing agents: `docs/PARALLEL-AGENTS.md`.
+
 ## Omadoku
 - [ ] Layout-aware digit keys (AZERTY: unshifted row is symbols) — digits resolve only from Key_1-9 and the US shifted symbols since the keycode fallback was removed
 - [ ] **Sudoku coach** — like Black Omack's coach: opt-in, off by default, one panel that names the next logical step for the selected cell/board ("Naked single: only 5 fits in r5c5", up to X-wing/Y-wing/swordfish with the cells involved highlighted on request). Must be backed by the real technique ladder in `sudokugrader` so every explanation is a genuine deduction, never a lookup of the solution. Larger; needs the grader to report the cells/candidates behind each step.
@@ -35,7 +37,7 @@
 ## Future games
 - [ ] **Texas hold 'em** — same table, bots with persistent personalities, chips and pacing as Black Omack; blinds, betting rounds, hand ranking, showdown
 - [ ] **Five-card draw poker** — same family as hold 'em (ante, draw, showdown), sharing the poker hand evaluator
-- [ ] **Shared Omabucks wallet** — one bankroll persisted in `common/` and used by every betting game (Black Omack, hold 'em, five-card draw); best-bankroll high score becomes shared too
+- [ ] **Shared Omabucks wallet** — an `OmaGames::Wallet` in `common/src/` (QSettings org Omacom, app "omagames-wallet" or a shared scope, JSON under `wallet/v1`: balance, best-ever, created date), API like balance()/spend()/credit()/best() with signals, unit-tested like ScoreTable. Black Omack migrates to it: on first launch with a wallet, import its existing per-game bankroll (and best) once, then drop its own fields from `state/v1` (keep reading old saves). The dock's "Best" and the broke/new-game flow move to wallet semantics — decide whether "New game" resets the shared wallet (probably yes, with a confirm that names the other games). Hold 'em / five-card draw then just take a Wallet reference.
 - [ ] **Breakout / Arkanoid** — on the Omanix tick engine and painted field; paddle, ball, bricks, a few power-ups
 - [ ] **2048** — tiny engine, slide/merge animations, keyboard-native, high scores
 - [ ] **Asteroids** — Omanix loop with painted vector shapes; thrust/rotate, wrap edges, high scores
