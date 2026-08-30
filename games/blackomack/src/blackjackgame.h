@@ -9,6 +9,7 @@
 #include <QVariantList>
 #include <QVariantMap>
 
+#include "coach.h"
 #include "pacer.h"
 #include "sessionstats.h"
 #include "table.h"
@@ -97,10 +98,10 @@ public:
     QString rulesSummary() const;
     bool coachEnabled() const { return m_coachEnabled; }
     void setCoachEnabled(bool enabled);
-    // The play to make ("Hit") and the spot it applies to ("16 against a 10"),
-    // both empty unless the coach is on and the human has a live decision.
-    QString coachAction() const { return coachLookup().action; }
-    QString coachSituation() const { return coachLookup().situation; }
+    // The coach's two lines, both empty unless it is on and the human has a
+    // live decision.
+    QString coachAction() const { return advice().action; }
+    QString coachSituation() const { return advice().situation; }
 
     // Test seam for deterministic bridge scenarios; deliberately not exposed to QML.
     void stackDeck(const QVector<Card> &cards) { m_table.stackDeck(cards); }
@@ -146,11 +147,7 @@ signals:
     void compactLayoutChanged();
 
 private:
-    struct Advice {
-        QString action;
-        QString situation;
-    };
-    Advice coachLookup() const;
+    Advice advice() const { return m_coachEnabled ? Coach::adviceFor(m_table) : Advice(); }
     void humanAct(Table::Action action);
     void seatBots(int count);
     int pace() const;

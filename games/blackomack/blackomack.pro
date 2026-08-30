@@ -9,6 +9,7 @@ HEADERS += \
     src/hand.h \
     src/blackjackrules.h \
     src/basicstrategy.h \
+    src/coach.h \
     src/botplayer.h \
     src/table.h \
     src/tablelog.h \
@@ -22,6 +23,7 @@ SOURCES += \
     src/hand.cpp \
     src/blackjackrules.cpp \
     src/basicstrategy.cpp \
+    src/coach.cpp \
     src/botplayer.cpp \
     src/table.cpp \
     src/tableround.cpp \

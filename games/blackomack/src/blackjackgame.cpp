@@ -2,7 +2,6 @@
 
 #include <QSettings>
 
-#include "basicstrategy.h"
 #include "gamestate.h"
 #include "seatlayout.h"
 #include "windowgeometry.h"
@@ -15,37 +14,6 @@ constexpr int kDefaultStepMs = 500;
 // cards are pitched faster than the bot and dealer steps.
 constexpr int kDealStepMs = 180;
 constexpr const char *kCoachEnabledKey = "coach/enabled";
-
-QString actionText(Action action) {
-    switch (action) {
-    case Action::Hit: return QStringLiteral("Hit");
-    case Action::Stand: return QStringLiteral("Stand");
-    case Action::Double: return QStringLiteral("Double");
-    case Action::Split: return QStringLiteral("Split");
-    }
-    return QString();
-}
-
-// The coach speaks the way a player would: "Pair of 8s against a 6", never
-// "pair 8s vs 6". Only eight takes "an" among the dealer's possible up cards.
-QString dealerText(const Card &up) {
-    if (up.isAce())
-        return QStringLiteral("an ace");
-    return QStringLiteral("%1 %2")
-        .arg(up.value() == 8 ? QStringLiteral("an") : QStringLiteral("a"))
-        .arg(up.value());
-}
-
-QString handText(const Hand &hand, bool pairAvailable) {
-    if (pairAvailable && hand.canSplit()) {
-        const Card &card = hand.cards.first();
-        return card.isAce() ? QStringLiteral("Pair of aces")
-                            : QStringLiteral("Pair of %1s").arg(card.value());
-    }
-    if (hand.isSoft())
-        return QStringLiteral("Soft %1").arg(hand.total());
-    return QString::number(hand.total());
-}
 }
 
 BlackjackGame::BlackjackGame(QObject *parent)
@@ -66,30 +34,6 @@ void BlackjackGame::setCoachEnabled(bool enabled) {
     QSettings().setValue(QString::fromLatin1(kCoachEnabledKey), enabled);
     emit coachEnabledChanged();
     emit coachChanged();
-}
-
-BlackjackGame::Advice BlackjackGame::coachLookup() const {
-    if (!m_coachEnabled)
-        return {};
-    // Insurance is a losing bet at every count a basic-strategy player knows.
-    if (m_table.waitingForInsurance())
-        return {QStringLiteral("No insurance"), QStringLiteral("Dealer shows an ace")};
-    if (!m_table.waitingForHuman())
-        return {};
-    const int handIndex = m_table.currentHand();
-    if (handIndex < 0 || handIndex >= m_table.human().hands.size())
-        return {};
-    const Hand &hand = m_table.human().hands[handIndex];
-    const bool canDouble = m_table.canAct(m_table.humanSeat(), Action::Double);
-    const bool canSplit = m_table.canAct(m_table.humanSeat(), Action::Split);
-    const Action action = BasicStrategy::decide(hand, m_table.dealerUpCard(), canDouble, canSplit);
-    QString situation = QStringLiteral("%1 against %2")
-        .arg(handText(hand, canSplit), dealerText(m_table.dealerUpCard()));
-    if (m_table.human().hands.size() > 1)
-        situation.prepend(QStringLiteral("Hand %1 of %2 · ")
-                              .arg(handIndex + 1)
-                              .arg(m_table.human().hands.size()));
-    return {actionText(action), situation};
 }
 
 QVariantList BlackjackGame::betPresets() const {
