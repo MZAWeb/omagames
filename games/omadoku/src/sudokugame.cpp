@@ -1,9 +1,6 @@
 #include "sudokugame.h"
 
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QRect>
-#include <QSettings>
 
 #include <algorithm>
 
@@ -12,17 +9,6 @@
 #include "sudokukeys.h"
 
 namespace {
-
-const auto kStateKey = QStringLiteral("state/v1");
-// Still the key it was first stored under, so an existing preference survives
-// the control's rename.
-const auto kValidateKey = QStringLiteral("play/checkAsYouGo");
-// A new key: the old one stored what *every* digit did, which is not what
-// the selector means any more.
-const auto kClickModeKey = QStringLiteral("play/clickMode");
-const auto kGeometryKey = QStringLiteral("window/geometry");
-const auto kMaximizedKey = QStringLiteral("window/maximized");
-const auto kElapsedKey = QStringLiteral("elapsed");
 
 // Ids shared with QML. They are stable identifiers, never shown to the player:
 // the labels beside them are.
@@ -197,7 +183,7 @@ void SudokuGame::setClickMode(const QString &clickMode) {
     if (m_clickMode == mode)
         return;
     m_clickMode = mode;
-    QSettings().setValue(kClickModeKey, this->clickMode());
+    m_store.setClickMode(this->clickMode());
     emit clickModeChanged();
 }
 
@@ -219,7 +205,7 @@ void SudokuGame::setValidateAsYouGo(bool validateAsYouGo) {
     if (m_board.validateAsYouGo() == validateAsYouGo)
         return;
     m_board.setValidateAsYouGo(validateAsYouGo);
-    QSettings().setValue(kValidateKey, validateAsYouGo);
+    m_store.setValidateAsYouGo(validateAsYouGo);
     m_cells.refreshAll();
     emit validateAsYouGoChanged();
     emit boardChanged();
@@ -541,18 +527,16 @@ void SudokuGame::selectFirstEmptyCell() {
 
 void SudokuGame::loadSettings() {
     m_times.load();
-    const QSettings settings;
-    // Off by default: a first puzzle should not correct you before you have
-    // finished thinking. A choice already stored still wins.
-    m_board.setValidateAsYouGo(settings.value(kValidateKey, false).toBool());
-    // Anything unrecognised falls back to the default.
-    m_clickMode = modeFromId(settings.value(kClickModeKey).toString(), ClickMode::Fill);
+    // Validation is off by default: a first puzzle should not correct you
+    // before you have finished thinking. A choice already stored still wins,
+    // and anything unrecognised falls back to the default.
+    m_board.setValidateAsYouGo(m_store.validateAsYouGo(false));
+    m_clickMode = modeFromId(m_store.clickMode(), ClickMode::Fill);
 
-    const QJsonObject json =
-        QJsonDocument::fromJson(settings.value(kStateKey).toString().toUtf8()).object();
-    if (json.isEmpty() || !SudokuBoard::fromJson(json, &m_board))
+    const SudokuStore::SavedGame saved = m_store.savedGame();
+    if (saved.board.isEmpty() || !SudokuBoard::fromJson(saved.board, &m_board))
         return;
-    m_elapsedSeconds = json.value(kElapsedKey).toInt(0);
+    m_elapsedSeconds = saved.elapsedSeconds;
     // A finished puzzle is not worth resuming.
     if (m_board.isSolved()) {
         clearSavedGame();
@@ -563,34 +547,29 @@ void SudokuGame::loadSettings() {
 }
 
 void SudokuGame::saveGame() {
-    QJsonObject json = m_board.toJson();
-    json.insert(kElapsedKey, m_elapsedSeconds);
-    QSettings().setValue(kStateKey, QString::fromUtf8(QJsonDocument(json).toJson(QJsonDocument::Compact)));
+    m_store.saveGame(m_board.toJson(), m_elapsedSeconds);
     setHasSavedGame(true);
 }
 
 void SudokuGame::clearSavedGame() {
-    QSettings().remove(kStateKey);
+    m_store.clearSavedGame();
     setHasSavedGame(false);
 }
 
 QVariantMap SudokuGame::windowGeometry() const {
-    const QSettings settings;
-    const QRect geometry = settings.value(kGeometryKey).toRect();
+    const SudokuStore::WindowGeometry geometry = m_store.windowGeometry();
     QVariantMap map;
     // Positions can legitimately be negative on monitors left of or above the
     // primary, so validity travels separately instead of being encoded as -1.
-    map.insert(QStringLiteral("valid"), geometry.isValid());
-    map.insert(QStringLiteral("x"), geometry.x());
-    map.insert(QStringLiteral("y"), geometry.y());
-    map.insert(QStringLiteral("width"), geometry.width());
-    map.insert(QStringLiteral("height"), geometry.height());
-    map.insert(QStringLiteral("maximized"), settings.value(kMaximizedKey, false).toBool());
+    map.insert(QStringLiteral("valid"), geometry.rect.isValid());
+    map.insert(QStringLiteral("x"), geometry.rect.x());
+    map.insert(QStringLiteral("y"), geometry.rect.y());
+    map.insert(QStringLiteral("width"), geometry.rect.width());
+    map.insert(QStringLiteral("height"), geometry.rect.height());
+    map.insert(QStringLiteral("maximized"), geometry.maximized);
     return map;
 }
 
 void SudokuGame::saveWindowGeometry(int x, int y, int width, int height, bool maximized) {
-    QSettings settings;
-    settings.setValue(kGeometryKey, QRect(x, y, width, height));
-    settings.setValue(kMaximizedKey, maximized);
+    m_store.saveWindowGeometry(QRect(x, y, width, height), maximized);
 }

@@ -10,6 +10,7 @@
 #include "besttimes.h"
 #include "cellmodel.h"
 #include "sudokuboard.h"
+#include "sudokustore.h"
 
 // The only bridge between the engine and QML: state as properties, actions as
 // invokables. It owns no rules of its own beyond screen flow and persistence.
@@ -164,6 +165,7 @@ private:
     void clearSavedGame();
 
     SudokuBoard m_board;
+    SudokuStore m_store;
     CellModel m_cells {&m_board, this};
     QTimer m_clock {this};
     QTimer m_saveTimer {this};

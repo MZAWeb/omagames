@@ -12,6 +12,7 @@ HEADERS += \
     src/sudokugrader.h \
     src/sudokuboard.h \
     src/besttimes.h \
+    src/sudokustore.h \
     src/sudokukeys.h \
     src/cellmodel.h \
     src/sudokugame.h
@@ -26,6 +27,7 @@ SOURCES += \
     src/sudokugrader.cpp \
     src/sudokuboard.cpp \
     src/besttimes.cpp \
+    src/sudokustore.cpp \
     src/sudokukeys.cpp \
     src/cellmodel.cpp \
     src/sudokugame.cpp

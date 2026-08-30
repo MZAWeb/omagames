@@ -10,6 +10,7 @@ HEADERS += \
     ../src/cellmodel.h \
     ../src/sudokukeys.h \
     ../src/besttimes.h \
+    ../src/sudokustore.h \
     ../src/sudokugame.h \
     testgrids.h \
     solvertests.h \
@@ -32,6 +33,7 @@ SOURCES += \
     ../src/sudokugrader.cpp \
     ../src/sudokuboard.cpp \
     ../src/besttimes.cpp \
+    ../src/sudokustore.cpp \
     ../src/sudokukeys.cpp \
     ../src/cellmodel.cpp \
     ../src/sudokugame.cpp \
