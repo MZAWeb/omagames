@@ -19,7 +19,10 @@ private slots:
     void gravityFollowsTheGuidelineCurve();
     void softDropIsTwentyTimesGravityAndPaysACell();
     void hardDropPaysTwoACellAndLocksAtOnce();
-    void lockDelayResetsOnMoveAndCapsAtFifteen();
+    void lockDelayResetsOnMoveAndCapsAtTheAllowance();
+    void spinningOnTheSpotCannotOutlastTheLockDelay();
+    void shiftingAtAWallCannotOutlastTheLockDelay();
+    void fallingToANewLowestRowRenewsTheAllowance();
     void holdSwapsOncePerPiece();
     void ghostLandsOnTheStack();
     void lineClearFlashesThenCascades();

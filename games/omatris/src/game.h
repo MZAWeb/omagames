@@ -94,8 +94,7 @@ private:
     bool playable() const { return m_phase == Phase::Playing && !m_paused; }
     bool shift(int dx);
     bool grounded() const;
-    // Charges a lock-delay reset against a move that happened on the floor,
-    // and clears the count whenever the piece reaches a new lowest row.
+    // Charges a lock-delay reset against a move made once the piece has landed.
     void noteMove();
     Spin detectSpin(int kickIndex) const;
     void applyGravity();
@@ -122,9 +121,14 @@ private:
     int m_combo = -1;
     int m_lockTicks = 0;
     int m_lockResets = 0;
+    // The deepest row the piece's origin has ever reached, so a kick that
+    // bounces it down and back up cannot pass for falling.
     int m_lowestRow = 0;
     int m_clearTicks = 0;
     Spin m_spin = Spin::None;
+    // Set once the piece has rested on something since it last fell to a new
+    // lowest row: only then does a move spend part of the allowance.
+    bool m_lockPending = false;
     bool m_hasPiece = false;
     bool m_holdUsed = false;
     bool m_backToBack = false;
