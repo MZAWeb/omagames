@@ -8,6 +8,7 @@
 
 #include "autoshift.h"
 #include "game.h"
+#include "modes.h"
 #include "pacer.h"
 #include "scoretable.h"
 
@@ -57,11 +58,11 @@ public:
     // Whether the well outlines where the falling piece would land.
     bool ghostEnabled() const { return m_ghostEnabled; }
     // "marathon" | "sprint" | "zen": the one being played, or the last chosen.
-    QString mode() const;
-    QString modeLabel() const;
+    QString mode() const { return Modes::id(m_mode); }
+    QString modeLabel() const { return Modes::label(m_mode); }
     bool rankByTime() const { return Rules::params(m_mode).rankByTime; }
     // {id, label, description, goal} for the start screen, in play order.
-    static QVariantList modes();
+    static QVariantList modes() { return Modes::list(); }
     int score() const { return m_game ? m_game->score() : 0; }
     int level() const { return m_game ? m_game->level() : 0; }
     int lines() const { return m_game ? m_game->lines() : 0; }
@@ -78,8 +79,8 @@ public:
     static int boardHeight() { return Board::kVisibleHeight; }
     // {mode, label, score, lines, level, millis, date} for every table, best
     // first, and mode id -> the number that mode is judged on.
-    QVariantList highScores() const;
-    QVariantMap bests() const;
+    QVariantList highScores() const { return Modes::scoreRows(m_scores); }
+    QVariantMap bests() const { return Modes::bests(m_scores); }
     int newHighScoreRank() const { return m_newHighScoreRank; }
     int stepInterval() const { return m_pacer.interval(); }
     void setStepInterval(int interval);

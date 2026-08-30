@@ -12,69 +12,10 @@ namespace {
 const auto kModeKey = QStringLiteral("play/mode");
 const auto kGhostKey = QStringLiteral("play/ghost");
 
-const auto kMarathonId = QStringLiteral("marathon");
-const auto kSprintId = QStringLiteral("sprint");
-const auto kZenId = QStringLiteral("zen");
-
 const auto kStartId = QStringLiteral("start");
 const auto kPlayingId = QStringLiteral("playing");
 const auto kGameOverId = QStringLiteral("gameover");
 const auto kFinishedId = QStringLiteral("finished");
-
-struct ModeInfo {
-    Mode mode;
-    QString label;
-    QString description;
-};
-
-// Modes cross to QML, and name a score table, as these ids.
-QString modeId(Mode mode) {
-    switch (mode) {
-    case Mode::Sprint:
-        return kSprintId;
-    case Mode::Zen:
-        return kZenId;
-    case Mode::Marathon:
-        break;
-    }
-    return kMarathonId;
-}
-
-bool modeFromId(const QString &id, Mode *mode) {
-    for (int i = 0; i < kModeCount; ++i) {
-        if (modeId(Mode(i)) == id) {
-            *mode = Mode(i);
-            return true;
-        }
-    }
-    return false;
-}
-
-// The top ten per mode. A run keeps its score, lines, level and clock
-// whatever the mode; which of them ranks is the mode's business, and Sprint
-// is the one raced against the clock.
-OmaGames::ScoreTable scoreTable() {
-    std::vector<OmaGames::ScoreTable::Category> categories;
-    for (int i = 0; i < kModeCount; ++i) {
-        const Mode mode = Mode(i);
-        const bool byTime = Rules::params(mode).rankByTime;
-        categories.push_back({modeId(mode),
-                              byTime ? OmaGames::ScoreTable::LowerIsBetter
-                                     : OmaGames::ScoreTable::HigherIsBetter,
-                              byTime ? QStringLiteral("millis") : QString()});
-    }
-    return OmaGames::ScoreTable({QStringLiteral("score"), QStringLiteral("lines"),
-                                 QStringLiteral("level"), QStringLiteral("millis")},
-                                10, std::move(categories));
-}
-
-QVector<ModeInfo> modeInfos() {
-    return {
-        {Mode::Marathon, OmatrisGame::tr("Marathon"), OmatrisGame::tr("Endless. The levels keep coming and so does gravity.")},
-        {Mode::Sprint, OmatrisGame::tr("Sprint"), OmatrisGame::tr("Forty lines at the first level's pace. The clock is the score.")},
-        {Mode::Zen, OmatrisGame::tr("Zen"), OmatrisGame::tr("Endless and never faster. Stack for as long as you like.")},
-    };
-}
 
 // What a clear is called on the popup, or nothing when it is not worth saying.
 QString clearName(const ClearInfo &clear) {
@@ -89,20 +30,16 @@ QString clearName(const ClearInfo &clear) {
 }  // namespace
 
 OmatrisGame::OmatrisGame(QObject *parent)
-    : QObject(parent), m_scores(scoreTable()),
+    : QObject(parent), m_scores(Modes::scoreTable()),
       m_pacer(OmaGames::Pacer::Repeating, [this]() { step(); }, this) {
     m_pacer.setTimerType(Qt::PreciseTimer);
     m_pacer.setInterval(kDefaultStepIntervalMs);
     loadSettings();
 }
 
-QString OmatrisGame::mode() const {
-    return modeId(m_mode);
-}
-
 void OmatrisGame::loadSettings() {
     QSettings settings;
-    modeFromId(settings.value(kModeKey).toString(), &m_mode);
+    Modes::fromId(settings.value(kModeKey).toString(), &m_mode);
     m_ghostEnabled = settings.value(kGhostKey, true).toBool();
     m_scores.load();
 }
@@ -125,27 +62,6 @@ bool OmatrisGame::playing() const {
     return m_game && m_game->phase() == Phase::Playing && !m_game->paused();
 }
 
-QString OmatrisGame::modeLabel() const {
-    for (const ModeInfo &info : modeInfos()) {
-        if (info.mode == m_mode)
-            return info.label;
-    }
-    return {};
-}
-
-QVariantList OmatrisGame::modes() {
-    QVariantList list;
-    for (const ModeInfo &info : modeInfos()) {
-        list.append(QVariantMap {
-            {QStringLiteral("id"), modeId(info.mode)},
-            {QStringLiteral("label"), info.label},
-            {QStringLiteral("description"), info.description},
-            {QStringLiteral("goal"), Rules::params(info.mode).lineGoal},
-        });
-    }
-    return list;
-}
-
 int OmatrisGame::holdPiece() const {
     return m_game ? int(m_game->heldPiece()) : int(PieceType::None);
 }
@@ -157,27 +73,6 @@ QVariantList OmatrisGame::nextQueue() const {
     for (PieceType piece : m_game->nextQueue())
         list.append(int(piece));
     return list;
-}
-
-QVariantList OmatrisGame::highScores() const {
-    QVariantList list;
-    for (const ModeInfo &info : modeInfos()) {
-        const QString id = modeId(info.mode);
-        for (const QVariant &entry : m_scores.toVariantList(id)) {
-            QVariantMap row = entry.toMap();
-            row.insert(QStringLiteral("mode"), id);
-            row.insert(QStringLiteral("label"), info.label);
-            list.append(row);
-        }
-    }
-    return list;
-}
-
-QVariantMap OmatrisGame::bests() const {
-    QVariantMap map;
-    for (int i = 0; i < kModeCount; ++i)
-        map.insert(modeId(Mode(i)), m_scores.best(modeId(Mode(i))));
-    return map;
 }
 
 QVariantMap OmatrisGame::pieceShape(int piece) const {
@@ -213,7 +108,7 @@ void OmatrisGame::syncTimer() {
 
 void OmatrisGame::startGame(Mode mode, quint32 seed) {
     m_mode = mode;
-    QSettings().setValue(kModeKey, modeId(mode));
+    QSettings().setValue(kModeKey, Modes::id(mode));
     m_game = std::make_unique<Game>(mode, seed);
     m_newHighScoreRank = -1;
     m_shift.clear();
@@ -233,7 +128,7 @@ void OmatrisGame::startGame(Mode mode, quint32 seed) {
 
 void OmatrisGame::newGame(const QString &mode) {
     Mode chosen = m_mode;
-    modeFromId(mode, &chosen);
+    Modes::fromId(mode, &chosen);
     startGame(chosen, QRandomGenerator::global()->generate());
 }
 
@@ -412,7 +307,7 @@ void OmatrisGame::finishGame() {
     // A Sprint that tops out never crossed the line, so it has no time to keep.
     const bool ranked = m_game->phase() == Phase::Finished || !rankByTime();
     m_newHighScoreRank =
-        ranked ? m_scores.insert(modeId(m_mode),
+        ranked ? m_scores.insert(Modes::id(m_mode),
                                  {rankByTime() ? m_game->elapsedMs() : m_game->score(),
                                   QDate::currentDate(),
                                   {{QStringLiteral("score"), m_game->score()},
