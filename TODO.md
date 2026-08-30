@@ -33,5 +33,12 @@
 - [ ] Cut v0.1.0 with `bin/release` and submit `packaging/opr/*` to omarchy-pkgs (see docs/RELEASING.md) — when the games are ready
 
 ## Future games
+- [ ] **Texas hold 'em** — same table, bots with persistent personalities, chips and pacing as Black Omack; blinds, betting rounds, hand ranking, showdown
+- [ ] **Five-card draw poker** — same family as hold 'em (ante, draw, showdown), sharing the poker hand evaluator
+- [ ] **Shared Omabucks wallet** — one bankroll persisted in `common/` and used by every betting game (Black Omack, hold 'em, five-card draw); best-bankroll high score becomes shared too
+- [ ] **Breakout / Arkanoid** — on the Omanix tick engine and painted field; paddle, ball, bricks, a few power-ups
+- [ ] **2048** — tiny engine, slide/merge animations, keyboard-native, high scores
+- [ ] **Asteroids** — Omanix loop with painted vector shapes; thrust/rotate, wrap edges, high scores
+- [ ] **FreeCell** — reuses `PlayingCard`; keyboard cursor over piles; every deal solvable (Microsoft-compatible deal numbers)
 - [ ] **Solitaire** (Klondike) — reuses `PlayingCard`
 - [ ] **Mahjong** solitaire (tile matching) clone
