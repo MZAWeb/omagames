@@ -91,7 +91,9 @@ OmaPanel {
             readonly property real buttonWidth: fourAcross ? (width - 3 * spacing) / 4
                                                            : (width - spacing) / 2
 
-            OmaHintButton { width: Math.max(implicitWidth, actionFlow.buttonWidth); text: "Hit"; hint: "H"; primary: true; enabled: game.canHit; onClicked: game.hit() }
+            // None of the four is primary: an accent fill is the promise that
+            // Enter or Space presses this button, and no key but H hits.
+            OmaHintButton { width: Math.max(implicitWidth, actionFlow.buttonWidth); text: "Hit"; hint: "H"; enabled: game.canHit; onClicked: game.hit() }
             OmaHintButton { width: Math.max(implicitWidth, actionFlow.buttonWidth); text: "Stand"; hint: "S"; enabled: game.canStand; onClicked: game.stand() }
             OmaHintButton { width: Math.max(implicitWidth, actionFlow.buttonWidth); text: "Double"; hint: "D"; enabled: game.canDouble; onClicked: game.doubleDown() }
             OmaHintButton { width: Math.max(implicitWidth, actionFlow.buttonWidth); text: "Split"; hint: "P"; enabled: game.canSplit; onClicked: game.split() }
@@ -116,7 +118,6 @@ OmaPanel {
                 width: Math.max(implicitWidth, insuranceFlow.buttonWidth)
                 text: "No insurance"
                 hint: "N"
-                primary: true
                 onClicked: game.declineInsurance()
             }
         }
