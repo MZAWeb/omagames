@@ -2,10 +2,7 @@
 
 #include <QSettings>
 
-#include "basicstrategy.h"
-#include "gamestate.h"
 #include "seatlayout.h"
-#include "windowgeometry.h"
 
 using namespace BlackjackRules;
 
@@ -14,39 +11,7 @@ constexpr int kDefaultStepMs = 500;
 // The opening deal is a formality rather than a decision to follow, so the
 // cards are pitched faster than the bot and dealer steps.
 constexpr int kDealStepMs = 180;
-constexpr int kLogLength = 8;
 constexpr const char *kCoachEnabledKey = "coach/enabled";
-
-QString actionText(Action action) {
-    switch (action) {
-    case Action::Hit: return QStringLiteral("Hit");
-    case Action::Stand: return QStringLiteral("Stand");
-    case Action::Double: return QStringLiteral("Double");
-    case Action::Split: return QStringLiteral("Split");
-    }
-    return QString();
-}
-
-// The coach speaks the way a player would: "Pair of 8s against a 6", never
-// "pair 8s vs 6". Only eight takes "an" among the dealer's possible up cards.
-QString dealerText(const Card &up) {
-    if (up.isAce())
-        return QStringLiteral("an ace");
-    return QStringLiteral("%1 %2")
-        .arg(up.value() == 8 ? QStringLiteral("an") : QStringLiteral("a"))
-        .arg(up.value());
-}
-
-QString handText(const Hand &hand, bool pairAvailable) {
-    if (pairAvailable && hand.canSplit()) {
-        const Card &card = hand.cards.first();
-        return card.isAce() ? QStringLiteral("Pair of aces")
-                            : QStringLiteral("Pair of %1s").arg(card.value());
-    }
-    if (hand.isSoft())
-        return QStringLiteral("Soft %1").arg(hand.total());
-    return QString::number(hand.total());
-}
 }
 
 BlackjackGame::BlackjackGame(QObject *parent)
@@ -67,30 +32,6 @@ void BlackjackGame::setCoachEnabled(bool enabled) {
     QSettings().setValue(QString::fromLatin1(kCoachEnabledKey), enabled);
     emit coachEnabledChanged();
     emit coachChanged();
-}
-
-BlackjackGame::Advice BlackjackGame::coachLookup() const {
-    if (!m_coachEnabled)
-        return {};
-    // Insurance is a losing bet at every count a basic-strategy player knows.
-    if (m_table.waitingForInsurance())
-        return {QStringLiteral("No insurance"), QStringLiteral("Dealer shows an ace")};
-    if (!m_table.waitingForHuman())
-        return {};
-    const int handIndex = m_table.currentHand();
-    if (handIndex < 0 || handIndex >= m_table.human().hands.size())
-        return {};
-    const Hand &hand = m_table.human().hands[handIndex];
-    const bool canDouble = m_table.canAct(m_table.humanSeat(), Action::Double);
-    const bool canSplit = m_table.canAct(m_table.humanSeat(), Action::Split);
-    const Action action = BasicStrategy::decide(hand, m_table.dealerUpCard(), canDouble, canSplit);
-    QString situation = QStringLiteral("%1 against %2")
-        .arg(handText(hand, canSplit), dealerText(m_table.dealerUpCard()));
-    if (m_table.human().hands.size() > 1)
-        situation.prepend(QStringLiteral("Hand %1 of %2 · ")
-                              .arg(handIndex + 1)
-                              .arg(m_table.human().hands.size()));
-    return {actionText(action), situation};
 }
 
 QVariantList BlackjackGame::betPresets() const {
@@ -169,7 +110,7 @@ void BlackjackGame::betMax() {
 void BlackjackGame::dealRound() {
     if (!canDeal())
         return;
-    m_roundStake = m_bet;
+    m_stats.stake(m_bet);
     record(m_table.placeBets(m_bet));
     emit stateChanged();
     schedule();
@@ -180,7 +121,7 @@ void BlackjackGame::humanAct(Table::Action action) {
     if (events.isEmpty())
         return;
     if (action == Table::Action::Double || action == Table::Action::Split)
-        m_roundStake += m_bet;
+        m_stats.addStake(m_bet);
     record(events);
     emit stateChanged();
     schedule();
@@ -196,7 +137,7 @@ void BlackjackGame::insurance() {
     const auto events = m_table.takeInsurance();
     if (events.isEmpty())
         return;
-    m_roundStake += cost;
+    m_stats.addStake(cost);
     record(events);
     emit stateChanged();
     schedule();
@@ -214,7 +155,7 @@ void BlackjackGame::declineInsurance() {
 void BlackjackGame::nextRound() {
     if (!roundOver())
         return;
-    m_newBest = false;   // the celebration lasts exactly one round
+    m_stats.clearCelebration();
     record(m_table.nextRound(m_rng));
     setBet(m_bet);   // re-clamp to what is left
     emit stateChanged();
@@ -256,9 +197,7 @@ void BlackjackGame::newGame() {
         return;
     const int bots = m_table.botCount();
     m_table = Table();
-    m_handsPlayed = 0;
-    m_netResult = 0;
-    m_newBest = false;   // m_bestBankroll deliberately survives: it is a high score
+    m_stats.reset();   // the best bankroll deliberately survives: it is a high score
     m_log.clear();
     seatBots(bots);   // a new game reseats the table it replaces, cap or no cap
     setBet(50);
@@ -267,18 +206,9 @@ void BlackjackGame::newGame() {
     emit stateChanged();
 }
 
-// Most cards of the opening deal speak for themselves, so events without text
-// (they still drive the animation) leave the log alone.
 void BlackjackGame::record(const QVector<TableEvent> &events) {
-    const int before = m_log.size();
-    for (const TableEvent &e : events)
-        if (!e.text.isEmpty())
-            m_log.append(e.text);
-    if (m_log.size() == before)
-        return;
-    while (m_log.size() > kLogLength)
-        m_log.removeFirst();
-    emit messageChanged();
+    if (m_log.record(events))
+        emit messageChanged();
 }
 
 // Automatic steps run on the timer so people can follow the bots and dealer;
@@ -315,12 +245,7 @@ void BlackjackGame::finishRound() {
     int returned = m_table.human().insuranceReturned;
     for (const Hand &h : m_table.human().hands)
         returned += h.returned;
-    ++m_handsPlayed;
-    m_netResult += returned - m_roundStake;
-    if (bankroll() > m_bestBankroll) {
-        m_bestBankroll = bankroll();
-        m_newBest = true;
-    }
+    m_stats.settle(returned, bankroll());
     save();
 }
 
@@ -335,48 +260,4 @@ void BlackjackGame::setCompactLayout(bool compact) {
 
 QRectF BlackjackGame::seatRect(int count, int index, const QSizeF &table, const QSizeF &seat) const {
     return SeatLayout::rect(count, index, table, seat);
-}
-
-QRect BlackjackGame::windowGeometry() const {
-    return OmaGames::WindowGeometry::rect();
-}
-
-// Black Omack has never restored a maximized window, only the rect, so the
-// flag it stores is always false.
-void BlackjackGame::saveWindowGeometry(const QRect &geometry) {
-    OmaGames::WindowGeometry::save(geometry, false);
-}
-
-// False when there is nothing saved yet, so the caller can set a table up.
-bool BlackjackGame::load() {
-    QSettings settings;
-    const QString text = settings.value(QString::fromLatin1(GameState::kKey)).toString();
-    if (text.isEmpty())
-        return false;
-    const GameState state = GameState::fromString(text);
-    m_table.setHumanBankroll(state.bankroll);
-    const int savedBots = qMin(state.bots.size(), kMaxBots);
-    for (int i = 0; i < savedBots; ++i) {
-        const GameState::Bot &b = state.bots[i];
-        m_table.addBot(b.personality, b.bankroll, m_rng.generate());
-    }
-    m_handsPlayed = state.handsPlayed;
-    m_netResult = state.netResult;
-    m_bestBankroll = qMax(state.bestBankroll, bankroll());
-    if (state.bots.size() > kMaxBots)
-        save();   // permanently trim state written by a newer or invalid configuration
-    return true;
-}
-
-void BlackjackGame::save() const {
-    GameState state;
-    state.bankroll = bankroll();
-    state.bestBankroll = m_bestBankroll;
-    for (const Seat &s : m_table.seats())
-        if (!s.isHuman)
-            state.bots.append({s.bot.personality(), s.bankroll});
-    state.handsPlayed = m_handsPlayed;
-    state.netResult = m_netResult;
-    QSettings settings;
-    settings.setValue(QString::fromLatin1(GameState::kKey), state.toString());
 }

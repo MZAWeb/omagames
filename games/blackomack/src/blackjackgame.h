@@ -9,8 +9,11 @@
 #include <QVariantList>
 #include <QVariantMap>
 
+#include "coach.h"
 #include "pacer.h"
+#include "sessionstats.h"
 #include "table.h"
+#include "tablelog.h"
 
 // The only bridge between the engine and QML (`game` context property). Owns
 // the Table, paces automatic steps with a timer, mirrors state into plain
@@ -79,14 +82,12 @@ public:
     bool roundOver() const { return m_table.roundOver(); }
     bool waitingForHuman() const { return m_table.waitingForHuman(); }
     bool isBroke() const { return m_table.human().broke() && m_table.phase() == Table::Phase::Betting; }
-    QString message() const { return m_log.isEmpty() ? QString() : m_log.last(); }
-    QStringList log() const { return m_log; }
-    int handsPlayed() const { return m_handsPlayed; }
-    int netResult() const { return m_netResult; }
-    // The best bankroll ever held: kept across newGame(), so only clearing the
-    // settings wipes it. True for the round that set it, so the dock can celebrate.
-    int bestBankroll() const { return m_bestBankroll; }
-    bool newBest() const { return m_newBest; }
+    QString message() const { return m_log.message(); }
+    QStringList log() const { return m_log.lines(); }
+    int handsPlayed() const { return m_stats.handsPlayed(); }
+    int netResult() const { return m_stats.netResult(); }
+    int bestBankroll() const { return m_stats.bestBankroll(); }
+    bool newBest() const { return m_stats.newBest(); }
     int stepInterval() const { return m_pacer.interval(); }
     void setStepInterval(int ms);
     QVariantList seats() const;
@@ -97,10 +98,10 @@ public:
     QString rulesSummary() const;
     bool coachEnabled() const { return m_coachEnabled; }
     void setCoachEnabled(bool enabled);
-    // The play to make ("Hit") and the spot it applies to ("16 against a 10"),
-    // both empty unless the coach is on and the human has a live decision.
-    QString coachAction() const { return coachLookup().action; }
-    QString coachSituation() const { return coachLookup().situation; }
+    // The coach's two lines, both empty unless it is on and the human has a
+    // live decision.
+    QString coachAction() const { return advice().action; }
+    QString coachSituation() const { return advice().situation; }
 
     // Test seam for deterministic bridge scenarios; deliberately not exposed to QML.
     void stackDeck(const QVector<Card> &cards) { m_table.stackDeck(cards); }
@@ -146,11 +147,7 @@ signals:
     void compactLayoutChanged();
 
 private:
-    struct Advice {
-        QString action;
-        QString situation;
-    };
-    Advice coachLookup() const;
+    Advice advice() const { return m_coachEnabled ? Coach::adviceFor(m_table) : Advice(); }
     void humanAct(Table::Action action);
     void seatBots(int count);
     int pace() const;
@@ -165,13 +162,9 @@ private:
     Table m_table;
     QRandomGenerator m_rng;
     OmaGames::Pacer m_pacer;
-    QStringList m_log;
+    TableLog m_log;
+    SessionStats m_stats;
     int m_bet = 50;
-    int m_handsPlayed = 0;
-    int m_netResult = 0;
-    int m_bestBankroll = BlackjackRules::kStartingBankroll;
-    bool m_newBest = false;
-    int m_roundStake = 0;
     bool m_coachEnabled = false;
     bool m_compactLayout = false;
 };
