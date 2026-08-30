@@ -1,6 +1,7 @@
 #include "fieldview.h"
 
 #include <QPainter>
+#include <QtMath>
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -34,7 +35,18 @@ FieldView::FieldView(QQuickItem *parent) : QQuickPaintedItem(parent) {
     m_clock.start();
     m_animation.setInterval(kFrameMs);
     connect(&m_animation, &QTimer::timeout, this, &FieldView::animate);
-    connect(this, &FieldView::colorsChanged, this, &QQuickItem::update);
+    connect(this, &FieldView::colorsChanged, this, &FieldView::invalidateGround);
+}
+
+void FieldView::invalidateGround() {
+    m_groundDirty = true;
+    update();
+}
+
+void FieldView::geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry) {
+    QQuickPaintedItem::geometryChange(newGeometry, oldGeometry);
+    if (newGeometry.size() != oldGeometry.size())
+        invalidateGround();
 }
 
 QObject *FieldView::source() const {
@@ -55,7 +67,7 @@ void FieldView::setSource(QObject *source) {
     }
     m_history.clear();
     emit sourceChanged();
-    update();
+    invalidateGround();
 }
 
 void FieldView::setTrailThreatened(bool threatened) {
@@ -73,7 +85,7 @@ void FieldView::setCellSize(int cellSize) {
         return;
     m_cellSize = cellSize;
     emit cellSizeChanged();
-    update();
+    invalidateGround();
 }
 
 const Game *FieldView::engine() const {
@@ -148,38 +160,84 @@ QColor FieldView::trailColorNow(qint64 now) const {
 }
 
 void FieldView::paint(QPainter *painter) {
-    painter->fillRect(boundingRect(), m_openColor);
     const Game *game = engine();
-    if (!game)
+    if (!game) {
+        painter->fillRect(boundingRect(), m_openColor);
         return;
+    }
     const qint64 now = m_clock.elapsed();
     paintCells(painter, *game, now);
     paintMovers(painter, *game, now);
 }
 
+void FieldView::refreshGround(const Field &field, qreal scale) {
+    const qreal dpr = scale > 0 ? scale : 1.0;
+    const QSize pixels(qMax(1, qCeil(width() * dpr)), qMax(1, qCeil(height() * dpr)));
+    if (!m_groundDirty && m_groundRevision == field.groundRevision() && m_ground.size() == pixels)
+        return;
+    if (m_ground.size() != pixels)
+        m_ground = QImage(pixels, QImage::Format_ARGB32_Premultiplied);
+    m_ground.setDevicePixelRatio(dpr);
+    m_groundRevision = field.groundRevision();
+    m_groundDirty = false;
+
+    const int c = m_cellSize;
+    QPainter painter(&m_ground);
+    painter.scale(dpr, dpr);
+    painter.fillRect(QRectF(0, 0, width(), height()), m_openColor);
+    painter.setPen(Qt::NoPen);
+    for (int y = 0; y < field.height(); ++y) {
+        for (int x = 0; x < field.width(); ++x) {
+            if (field.at({x, y}) == Cell::Claimed)
+                painter.fillRect(x * c, y * c, c, c, m_claimedColor);
+        }
+    }
+    if (c >= kMinGridCell) {
+        painter.setPen(QPen(m_gridColor, 1));
+        for (int x = 1; x < field.width(); ++x)
+            painter.drawLine(QPointF(x * c + 0.5, 0), QPointF(x * c + 0.5, height()));
+        for (int y = 1; y < field.height(); ++y)
+            painter.drawLine(QPointF(0, y * c + 0.5), QPointF(width(), y * c + 0.5));
+    }
+}
+
+void FieldView::paintGridEdges(QPainter *painter, QPoint cell) const {
+    if (m_cellSize < kMinGridCell)
+        return;
+    const int c = m_cellSize;
+    if (cell.x() >= 1)
+        painter->fillRect(cell.x() * c, cell.y() * c, 1, c, m_gridColor);
+    if (cell.y() >= 1)
+        painter->fillRect(cell.x() * c, cell.y() * c, c, 1, m_gridColor);
+}
+
 void FieldView::paintCells(QPainter *painter, const Game &game, qint64 now) {
     const Field &field = game.field();
     const int c = m_cellSize;
+    refreshGround(field, painter->combinedTransform().m11());
+    painter->drawImage(QPointF(0, 0), m_ground);
+
     const QColor trail = trailColorNow(now);
     painter->setPen(Qt::NoPen);
     for (int y = 0; y < field.height(); ++y) {
         for (int x = 0; x < field.width(); ++x) {
-            const Cell cell = field.at({x, y});
-            if (cell == Cell::Claimed)
-                painter->fillRect(x * c, y * c, c, c, m_claimedColor);
-            else if (cell == Cell::Trail)
-                painter->fillRect(x * c, y * c, c, c, trail);
+            if (field.at({x, y}) != Cell::Trail)
+                continue;
+            painter->fillRect(x * c, y * c, c, c, trail);
+            paintGridEdges(painter, {x, y});
         }
     }
+    // The ground already shows the claim; the sea fades off it instead of
+    // the claim fading in, which is the same blend from the other side.
     for (const SweepCell &sweep : m_sweep) {
         const double t = progress(now - m_sweepStart - sweep.delayMs, kFadeMs);
         if (t >= 1.0)
             continue;
         const QPoint p = field.point(sweep.index);
-        painter->fillRect(p.x() * c, p.y() * c, c, c, m_openColor);
-        QColor tint = m_claimedColor;
-        tint.setAlphaF(tint.alphaF() * t);
-        painter->fillRect(p.x() * c, p.y() * c, c, c, tint);
+        QColor sea = m_openColor;
+        sea.setAlphaF(sea.alphaF() * (1.0 - t));
+        painter->fillRect(p.x() * c, p.y() * c, c, c, sea);
+        paintGridEdges(painter, p);
     }
     if (m_flashStart >= 0) {
         const double t = progress(now - m_flashStart, kFlashMs);
@@ -188,14 +246,8 @@ void FieldView::paintCells(QPainter *painter, const Game &game, qint64 now) {
         for (int index : m_flash) {
             const QPoint p = field.point(index);
             painter->fillRect(p.x() * c, p.y() * c, c, c, tint);
+            paintGridEdges(painter, p);
         }
-    }
-    if (c >= kMinGridCell) {
-        painter->setPen(QPen(m_gridColor, 1));
-        for (int x = 1; x < field.width(); ++x)
-            painter->drawLine(QPointF(x * c + 0.5, 0), QPointF(x * c + 0.5, height()));
-        for (int y = 1; y < field.height(); ++y)
-            painter->drawLine(QPointF(0, y * c + 0.5), QPointF(width(), y * c + 0.5));
     }
 }
 
