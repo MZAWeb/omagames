@@ -2,6 +2,13 @@
 # Build and launch one game: bin/run omadoku [args...]
 set -eu
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
-GAME="${1:?usage: bin/run <game> [args]}"; shift
+GAMES="$(ls "$ROOT/games" | tr '\n' ' ')"
+GAME="${1:-}"
+if [ -z "$GAME" ] || [ ! -d "$ROOT/games/$GAME" ]; then
+  echo "usage: bin/run <game> [args]" >&2
+  echo "games: $GAMES" >&2
+  exit 1
+fi
+shift
 "$ROOT/bin/build" "$GAME" >/dev/null
 exec "$ROOT/build/games/$GAME/$GAME" "$@"
