@@ -35,18 +35,21 @@ RowLayout {
         Layout.alignment: Qt.AlignVCenter
         implicitWidth: badgeLabel.implicitWidth + 16 * theme.textScale
         implicitHeight: badgeLabel.implicitHeight + 7 * theme.textScale
+        // Boards are always meant to be solvable by deduction, so nothing is
+        // said in the normal case; the note only appears when the generator
+        // had to give up and hand over an unproven layout.
+        visible: !game.noGuess
         radius: height / 2
-        color: game.noGuess ? theme.alpha(theme.green, 0.15) : theme.alpha(theme.foreground, 0.08)
+        color: theme.alpha(theme.foreground, 0.08)
         border.width: 1
-        border.color: game.noGuess ? theme.alpha(theme.green, 0.45) : theme.alpha(theme.foreground, 0.2)
+        border.color: theme.alpha(theme.foreground, 0.2)
 
         Text {
             id: badgeLabel
             anchors.centerIn: parent
-            text: game.noGuess ? qsTr("no guessing") : qsTr("may need a guess")
-            color: game.noGuess ? theme.green : theme.mix(theme.background, theme.foreground, 0.55)
+            text: qsTr("may need a guess")
+            color: theme.mix(theme.background, theme.foreground, 0.55)
             font.pixelSize: 11 * theme.textScale
-            font.bold: game.noGuess
         }
     }
 
