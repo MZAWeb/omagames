@@ -72,7 +72,7 @@ public:
     int combo() const { return m_game ? m_game->combo() : -1; }
     bool backToBack() const { return m_game && m_game->backToBack(); }
     // PieceType as a number, kPieceCount for an empty hold box.
-    int holdPiece() const;
+    int holdPiece() const { return m_game ? int(m_game->heldPiece()) : int(PieceType::None); }
     bool holdAvailable() const { return m_game && m_game->holdAvailable(); }
     QVariantList nextQueue() const;
     static int boardWidth() { return Board::kWidth; }
@@ -151,7 +151,7 @@ private:
         QVariantList queue;
     };
 
-    bool playing() const;
+    bool playing() const { return m_game && m_game->phase() == Phase::Playing && !m_game->paused(); }
     void press(int direction);
     void release(int direction);
     void turn(int quarters);
@@ -161,7 +161,8 @@ private:
     Snapshot snapshot() const;
     void publish(const Snapshot &before);
     void finishGame();
-    void syncTimer();
+    // The pacer runs while, and only while, a piece can fall.
+    void syncTimer() { m_pacer.setRunning(playing()); }
     void loadSettings();
 
     std::unique_ptr<Game> m_game;

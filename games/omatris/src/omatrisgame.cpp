@@ -49,14 +49,6 @@ QString OmatrisGame::phase() const {
     return kPlayingId;
 }
 
-bool OmatrisGame::playing() const {
-    return m_game && m_game->phase() == Phase::Playing && !m_game->paused();
-}
-
-int OmatrisGame::holdPiece() const {
-    return m_game ? int(m_game->heldPiece()) : int(PieceType::None);
-}
-
 QVariantList OmatrisGame::nextQueue() const {
     QVariantList list;
     if (!m_game)
@@ -83,10 +75,6 @@ void OmatrisGame::setStepInterval(int interval) {
         return;
     syncTimer();
     emit stepIntervalChanged();
-}
-
-void OmatrisGame::syncTimer() {
-    m_pacer.setRunning(playing());
 }
 
 void OmatrisGame::startGame(Mode mode, quint32 seed) {
