@@ -22,24 +22,30 @@ const auto kFillId = QStringLiteral("fill");
 QString techniqueName(SudokuGrader::Technique technique) {
     using SudokuGrader::Technique;
     switch (technique) {
+    case Technique::LastDigit:
+        return SudokuGame::tr("Last digit");
+    case Technique::HiddenSingleBox:
+        return SudokuGame::tr("Hidden single (box)");
     case Technique::NakedSingle:
         return SudokuGame::tr("Naked single");
-    case Technique::HiddenSingle:
-        return SudokuGame::tr("Hidden single");
+    case Technique::HiddenSingleLine:
+        return SudokuGame::tr("Hidden single (line)");
     case Technique::NakedPair:
         return SudokuGame::tr("Naked pair");
     case Technique::HiddenPair:
         return SudokuGame::tr("Hidden pair");
     case Technique::NakedTriple:
         return SudokuGame::tr("Naked triple");
+    case Technique::HiddenTriple:
+        return SudokuGame::tr("Hidden triple");
     case Technique::XWing:
         return SudokuGame::tr("X-wing");
-    case Technique::XYWing:
-        return SudokuGame::tr("XY-wing");
     case Technique::Swordfish:
+        return SudokuGame::tr("Swordfish");
+    case Technique::XYWing:
         break;
     }
-    return SudokuGame::tr("Swordfish");
+    return SudokuGame::tr("XY-wing");
 }
 
 // The rungs a level adds on top of the level below: everything between the

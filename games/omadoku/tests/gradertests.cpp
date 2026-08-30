@@ -31,8 +31,15 @@ const QString kXWingPuzzle = QStringLiteral(
     "63.94...55......4.7.4......46523871981.49..639.3..1..424.81..3.1.....4..3.67.4..1");
 const QString kXYWingPuzzle = QStringLiteral(
     "54928..1.37815.9.226179..85432578196785619234916342..88574.1.29693827..11249.58..");
+// The swordfish fixture goes on to need an XY-wing, so a generated Extra
+// hard whose top rung really is the swordfish stands in for it here.
 const QString kSwordfishPuzzle = QStringLiteral(
-    "6.287935..75.43..88.3.25.....8214.6..647589.35.7936.8.451362879..958..46.8649..3.");
+    "..45.3.9..578.........7..6.......32.3.178..5.....56..9..9.3...74..2......634.....");
+
+// Singles only, but stuck without a row or column scan (see the technique
+// fixture for the line hidden single).
+const QString kLineSinglePuzzle = QStringLiteral(
+    "78293615419385426756421798331542967847....532.285734..83..457...473..8.5.5.7..34.");
 
 // "AI Escargot" - a famously hard puzzle that needs chains no rung of the
 // ladder provides.
@@ -71,27 +78,27 @@ Grid minimalPuzzle(quint32 seed) {
 void GraderTests::completeGridNeedsNothing() {
     const SudokuGrader::Grading grading = SudokuGrader::grade(gridFromString(kSolution));
     QVERIFY(grading.solved);
-    QCOMPARE(grading.hardest, Technique::NakedSingle);
+    QCOMPARE(grading.hardest, Technique::LastDigit);
 }
 
 void GraderTests::stepTakesTheEasiestRungUnderTheCeiling() {
-    // Singles are available here, so even the full ladder starts at the bottom.
+    // Row 2 has a single gap here, so even the full ladder starts at the bottom.
     Grid easy = gridFromString(kSolution);
     for (int index : {0, 5, 13, 27, 40, 44, 58, 66, 71, 80})
         easy[size_t(index)] = 0;
     CandidateGrid singles(easy);
     const std::optional<Technique> first = SudokuGrader::step(singles, SudokuGrader::kHardestTechnique);
     QVERIFY(first.has_value());
-    QCOMPARE(*first, Technique::NakedSingle);
+    QCOMPARE(*first, Technique::LastDigit);
 
     // Only an X-wing moves this position, so the ceiling decides everything;
-    // and what the X-wing uncovers is an XY-wing, one rung too far for it.
+    // and what the X-wing uncovers is an XY-wing, two rungs too far for it.
     CandidateGrid grid(gridFromString(kXWingPuzzle));
-    QVERIFY(!SudokuGrader::step(grid, Technique::NakedTriple));
+    QVERIFY(!SudokuGrader::step(grid, Technique::HiddenTriple));
     const std::optional<Technique> used = SudokuGrader::step(grid, Technique::XWing);
     QVERIFY(used.has_value());
     QCOMPARE(*used, Technique::XWing);
-    QVERIFY(!SudokuGrader::step(grid, Technique::XWing));
+    QVERIFY(!SudokuGrader::step(grid, Technique::Swordfish));
     const std::optional<Technique> next = SudokuGrader::step(grid, SudokuGrader::kHardestTechnique);
     QVERIFY(next.has_value());
     QCOMPARE(*next, Technique::XYWing);
@@ -108,14 +115,28 @@ void GraderTests::gradeReportsTheHardestRungNeeded() {
 void GraderTests::ceilingDecidesWhatIsSolvable() {
     const Grid puzzle = gridFromString(kXYWingPuzzle);
     QVERIFY(SudokuGrader::solvableWith(puzzle, Technique::XYWing));
-    QVERIFY(SudokuGrader::solvableWith(puzzle, Technique::Swordfish));
+    QVERIFY(!SudokuGrader::solvableWith(puzzle, Technique::Swordfish));
     QVERIFY(!SudokuGrader::solvableWith(puzzle, Technique::XWing));
-    QVERIFY(!SudokuGrader::solvableWith(puzzle, Technique::HiddenSingle));
+    QVERIFY(!SudokuGrader::solvableWith(puzzle, Technique::HiddenSingleLine));
 
     Grid easy = gridFromString(kSolution);
     for (int index : {0, 5, 13, 27, 40, 44, 58, 66, 71, 80})
         easy[size_t(index)] = 0;
     QVERIFY(SudokuGrader::solvableWith(easy, Technique::NakedSingle));
+}
+
+// The two hidden-single rungs are what tell Easy from Medium, so the box
+// one must never quietly solve what only a row or column scan can.
+void GraderTests::boxAndLineHiddenSinglesAreSeparateRungs() {
+    const Grid puzzle = gridFromString(kLineSinglePuzzle);
+    CandidateGrid grid(puzzle);
+    QVERIFY(!SudokuGrader::hiddenSingleBox(grid));
+    QVERIFY(!SudokuGrader::nakedSingle(grid));
+    QVERIFY(SudokuGrader::hiddenSingleLine(grid));
+
+    QVERIFY(!SudokuGrader::solvableWith(puzzle, Technique::NakedSingle));
+    QVERIFY(SudokuGrader::solvableWith(puzzle, Technique::HiddenSingleLine));
+    QCOMPARE(SudokuGrader::grade(puzzle).hardest, Technique::HiddenSingleLine);
 }
 
 void GraderTests::neverGuessesOnAPuzzleBeyondTheLadder() {

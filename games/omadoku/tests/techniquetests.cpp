@@ -51,12 +51,18 @@ void TechniqueTests::firesOnItsOwnGridAndNothingEasierDoes_data() {
     QTest::addColumn<QString>("grid");
     QTest::addColumn<QString>("expected");
 
-    QTest::newRow("naked single") << int(Technique::NakedSingle)
+    QTest::newRow("last digit") << int(Technique::LastDigit)
         << ".34678912672195348198342567859761423426853791713924856961537284287419635345286179"
         << "r1c1=5";
-    QTest::newRow("hidden single") << int(Technique::HiddenSingle)
-        << "471953268869142375235867..9.8..25..7..647.823....8...435.296.816.8734..2...518.36"
-        << "r4c3=4";
+    QTest::newRow("hidden single (box)") << int(Technique::HiddenSingleBox)
+        << ".463.1.7..51.......379..8...8..123......5......9...7.6..8.7...2..2.......6.5...9."
+        << "r3c6=5";
+    QTest::newRow("naked single") << int(Technique::NakedSingle)
+        << ".4.3...7..5.2......3.9..8...85.123.9....59.....9...756.98.7...2..2.9.....6.52..9."
+        << "r4c8=4";
+    QTest::newRow("hidden single (line)") << int(Technique::HiddenSingleLine)
+        << "78293615419385426756421798331542967847....532.285734..83..457...473..8.5.5.7..34."
+        << "r5c3=9";
     QTest::newRow("naked pair") << int(Technique::NakedPair)
         << ".....12..85..4..63....6...4.8.7....93.......81.98347..498.....25.24.....7.3...4.."
         << "r1c2-6 r3c2-1 r5c2-6 r6c2-6";
@@ -66,15 +72,18 @@ void TechniqueTests::firesOnItsOwnGridAndNothingEasierDoes_data() {
     QTest::newRow("naked triple") << int(Technique::NakedTriple)
         << "7.13....89.8.5.21335.8..47.4..9...871.....3.28....2.4.2831759645946..7216172..835"
         << "r5c5-6 r5c6-6";
+    QTest::newRow("hidden triple") << int(Technique::HiddenTriple)
+        << ".9...38..2..8.....8.5741.924796325813..185974581974236.5.31.428..84.7.6......87.."
+        << "r8c2-1 r9c2-16 r9c3-6";
     QTest::newRow("x-wing") << int(Technique::XWing)
         << "63.94...55......4.7.4......46523871981.49..639.3..1..424.81..3.1.....4..3.67.4..1"
         << "r3c6-5 r6c7-5 r8c6-5 r9c7-5";
-    QTest::newRow("xy-wing") << int(Technique::XYWing)
-        << "54928..1.37815.9.226179..85432578196785619234916342..88574.1.29693827..11249.58.."
-        << "r1c7-6 r9c8-6";
     QTest::newRow("swordfish") << int(Technique::Swordfish)
         << "6.287935..75.43..88.3.25.....8214.6..647589.35.7936.8.451362879..958..46.8649..3."
         << "r2c7-1 r3c2-1 r3c7-1 r3c9-1";
+    QTest::newRow("xy-wing") << int(Technique::XYWing)
+        << "54928..1.37815.9.226179..85432578196785619234916342..88574.1.29693827..11249.58.."
+        << "r1c7-6 r9c8-6";
 }
 
 void TechniqueTests::firesOnItsOwnGridAndNothingEasierDoes() {

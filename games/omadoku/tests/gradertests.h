@@ -10,6 +10,7 @@ private slots:
     void stepTakesTheEasiestRungUnderTheCeiling();
     void gradeReportsTheHardestRungNeeded();
     void ceilingDecidesWhatIsSolvable();
+    void boxAndLineHiddenSinglesAreSeparateRungs();
     void neverGuessesOnAPuzzleBeyondTheLadder();
     void ladderAgreesWithBacktracking();
 };

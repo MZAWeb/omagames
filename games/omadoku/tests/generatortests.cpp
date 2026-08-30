@@ -30,8 +30,8 @@ int clueCount(const Sudoku::Grid &grid) {
 
 void GeneratorTests::ceilingsClimbTheLadder() {
     QCOMPARE(SudokuGenerator::ceiling(Difficulty::Easy), Technique::NakedSingle);
-    QCOMPARE(SudokuGenerator::ceiling(Difficulty::Medium), Technique::HiddenSingle);
-    QCOMPARE(SudokuGenerator::ceiling(Difficulty::Hard), Technique::NakedTriple);
+    QCOMPARE(SudokuGenerator::ceiling(Difficulty::Medium), Technique::NakedPair);
+    QCOMPARE(SudokuGenerator::ceiling(Difficulty::Hard), Technique::HiddenTriple);
     QCOMPARE(SudokuGenerator::ceiling(Difficulty::ExtraHard), SudokuGrader::kHardestTechnique);
     for (int level = 1; level < kDifficultyCount; ++level)
         QVERIFY(SudokuGenerator::ceiling(Difficulty(level)) > SudokuGenerator::ceiling(Difficulty(level - 1)));
@@ -75,12 +75,12 @@ void GeneratorTests::everyLevelNeedsExactlyItsTechniques() {
         QVERIFY(puzzle.hardest > below);
     }
     QVERIFY(puzzle.hardest <= ceiling);
-    // Easy and Medium never ask for more than singles; Medium is the one
-    // that makes the player hunt for hidden ones.
-    if (level == Difficulty::Easy || level == Difficulty::Medium)
-        QVERIFY(SudokuGrader::solvableWith(puzzle.givens, Technique::HiddenSingle));
+    // Easy never sends the player scanning rows and columns; Medium is
+    // still singles apart from the naked pair.
+    if (level == Difficulty::Easy)
+        QVERIFY(SudokuGrader::solvableWith(puzzle.givens, Technique::NakedSingle));
     if (level == Difficulty::Medium)
-        QVERIFY(!SudokuGrader::solvableWith(puzzle.givens, Technique::NakedSingle));
+        QVERIFY(puzzle.hardest == Technique::HiddenSingleLine || puzzle.hardest == Technique::NakedPair);
     QVERIFY(SudokuGenerator::meetsLevel(puzzle.givens, level));
     QCOMPARE(puzzle.hardest, SudokuGrader::grade(puzzle.givens).hardest);
 

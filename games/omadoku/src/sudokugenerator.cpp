@@ -88,13 +88,13 @@ Technique SudokuGenerator::ceiling(Difficulty difficulty) {
     case Difficulty::Easy:
         return Technique::NakedSingle;
     case Difficulty::Medium:
-        return Technique::HiddenSingle;
+        return Technique::NakedPair;
     case Difficulty::Hard:
-        return Technique::NakedTriple;
+        return Technique::HiddenTriple;
     case Difficulty::ExtraHard:
         break;
     }
-    return Technique::Swordfish;
+    return Technique::XYWing;
 }
 
 bool SudokuGenerator::meetsLevel(const Grid &givens, Difficulty difficulty) {

@@ -14,7 +14,7 @@ struct Grading {
     bool solved = false;
     // The hardest rung climbed; only meaningful when solved. A grid that is
     // already complete needed nothing, which reads as the lowest rung.
-    Technique hardest = Technique::NakedSingle;
+    Technique hardest = Technique::LastDigit;
 };
 
 // One step: the easiest technique up to `ceiling` (inclusive) that makes
