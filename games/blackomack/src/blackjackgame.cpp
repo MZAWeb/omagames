@@ -14,7 +14,6 @@ constexpr int kDefaultStepMs = 500;
 // The opening deal is a formality rather than a decision to follow, so the
 // cards are pitched faster than the bot and dealer steps.
 constexpr int kDealStepMs = 180;
-constexpr int kLogLength = 8;
 constexpr const char *kCoachEnabledKey = "coach/enabled";
 
 QString actionText(Action action) {
@@ -267,18 +266,9 @@ void BlackjackGame::newGame() {
     emit stateChanged();
 }
 
-// Most cards of the opening deal speak for themselves, so events without text
-// (they still drive the animation) leave the log alone.
 void BlackjackGame::record(const QVector<TableEvent> &events) {
-    const int before = m_log.size();
-    for (const TableEvent &e : events)
-        if (!e.text.isEmpty())
-            m_log.append(e.text);
-    if (m_log.size() == before)
-        return;
-    while (m_log.size() > kLogLength)
-        m_log.removeFirst();
-    emit messageChanged();
+    if (m_log.record(events))
+        emit messageChanged();
 }
 
 // Automatic steps run on the timer so people can follow the bots and dealer;

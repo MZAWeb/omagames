@@ -11,6 +11,7 @@
 
 #include "pacer.h"
 #include "table.h"
+#include "tablelog.h"
 
 // The only bridge between the engine and QML (`game` context property). Owns
 // the Table, paces automatic steps with a timer, mirrors state into plain
@@ -79,8 +80,8 @@ public:
     bool roundOver() const { return m_table.roundOver(); }
     bool waitingForHuman() const { return m_table.waitingForHuman(); }
     bool isBroke() const { return m_table.human().broke() && m_table.phase() == Table::Phase::Betting; }
-    QString message() const { return m_log.isEmpty() ? QString() : m_log.last(); }
-    QStringList log() const { return m_log; }
+    QString message() const { return m_log.message(); }
+    QStringList log() const { return m_log.lines(); }
     int handsPlayed() const { return m_handsPlayed; }
     int netResult() const { return m_netResult; }
     // The best bankroll ever held: kept across newGame(), so only clearing the
@@ -165,7 +166,7 @@ private:
     Table m_table;
     QRandomGenerator m_rng;
     OmaGames::Pacer m_pacer;
-    QStringList m_log;
+    TableLog m_log;
     int m_bet = 50;
     int m_handsPlayed = 0;
     int m_netResult = 0;

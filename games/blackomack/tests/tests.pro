@@ -12,6 +12,7 @@ HEADERS += \
     ../src/basicstrategy.h \
     ../src/botplayer.h \
     ../src/table.h \
+    ../src/tablelog.h \
     ../src/gamestate.h \
     ../src/seatlayout.h \
     ../src/blackjackgame.h
@@ -23,6 +24,7 @@ SOURCES += tst_blackomack.cpp \
     ../src/botplayer.cpp \
     ../src/table.cpp \
     ../src/tableround.cpp \
+    ../src/tablelog.cpp \
     ../src/gamestate.cpp \
     ../src/seatlayout.cpp \
     ../src/blackjackgame.cpp \
