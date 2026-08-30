@@ -9,6 +9,10 @@
 - [ ] Play-test the difficulty ramp (ball speed per level, chaser count) and tune the constants in `level.cpp`
 - [ ] Optional: reduced-motion setting for the sweep-fill/pulse animations
 
+## Omasweeper
+- [ ] Custom board sizes (width/height/mines) with the same no-guess guarantee
+- [ ] Optional "?" marks and a per-preset stats panel (games, wins, streak)
+
 ## Black Omack
 - [ ] **Speed setting.** The bridge already has `stepInterval` (500 ms between bot/dealer actions, 180 ms per dealt card); expose it as Slow / Normal / Fast / Instant in the header with a key, persisted. Small.
 - [ ] **Session stats screen.** A panel with hands played, net, best/worst streak, blackjacks, busts, biggest win — the bridge already tracks hands and net; the rest needs counting in `finishRound()` and persisting. Moderate.
@@ -23,5 +27,4 @@
 ## Future games
 - [ ] **Tetris** clone
 - [ ] **Solitaire** (Klondike) — reuses `PlayingCard`
-- [ ] **Minesweeper** clone
 - [ ] **Mahjong** solitaire (tile matching) clone
