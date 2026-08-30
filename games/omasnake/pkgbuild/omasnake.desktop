@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Omasnake
+Comment=Snake for Omarchy
+Exec=omasnake
+Icon=omasnake
+Terminal=false
+Categories=Game;ArcadeGame;
+StartupWMClass=omasnake

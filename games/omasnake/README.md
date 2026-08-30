@@ -89,7 +89,7 @@ The field is painted by one `FieldView` item at a whole number of pixels per
 cell, centred in the window; the header carries the score, the length, the
 current speed and the best score for this mode and difficulty. The window
 scales with the desktop text size; the minimum is 640×520 logical pixels at
-100% (16 pixels per cell).
+100%, which still leaves at least 16 pixels a cell.
 
 ## Build, test, run
 
