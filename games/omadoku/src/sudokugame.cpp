@@ -57,16 +57,12 @@ QString techniqueName(SudokuGrader::Technique technique) {
         return SudokuGame::tr("Naked pair");
     case Technique::HiddenPair:
         return SudokuGame::tr("Hidden pair");
-    case Technique::PointingPair:
-        return SudokuGame::tr("Pointing pair");
-    case Technique::Claiming:
-        return SudokuGame::tr("Claiming");
     case Technique::NakedTriple:
         return SudokuGame::tr("Naked triple");
     case Technique::XWing:
         return SudokuGame::tr("X-wing");
-    case Technique::YWing:
-        return SudokuGame::tr("Y-wing");
+    case Technique::XYWing:
+        return SudokuGame::tr("XY-wing");
     case Technique::Swordfish:
         break;
     }

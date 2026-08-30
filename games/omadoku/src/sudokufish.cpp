@@ -1,7 +1,7 @@
 #include "sudokutechniques.h"
 
 // The techniques that reach across the grid: fish (X-wing, swordfish) on one
-// digit's rows and columns, and the Y-wing on three bi-value cells.
+// digit's rows and columns, and the XY-wing on three bi-value cells.
 namespace SudokuGrader {
 namespace {
 
@@ -96,7 +96,7 @@ bool swordfish(CandidateGrid &grid) {
     return false;
 }
 
-bool yWing(CandidateGrid &grid) {
+bool xyWing(CandidateGrid &grid) {
     for (int pivot = 0; pivot < Sudoku::kCells; ++pivot) {
         const Mask ab = grid.candidates(pivot);
         if (popCount(ab) != 2)

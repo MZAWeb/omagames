@@ -7,20 +7,22 @@
 namespace SudokuGrader {
 
 // The ladder of human solving techniques, easiest first. The grader climbs it
-// in this order, so the order is also what "harder" means.
+// in this order, so the order is also what "harder" means. Only techniques a
+// casual player recognises are on it, named after the sudoku.coach lessons
+// (https://sudoku.coach/en/learn); locked candidates (pointing, claiming)
+// are deliberately absent, so a puzzle that would need them is beyond the
+// ladder rather than quietly graded harder.
 enum class Technique {
     NakedSingle,
     HiddenSingle,
     NakedPair,
     HiddenPair,
-    PointingPair,
-    Claiming,
     NakedTriple,
     XWing,
-    YWing,
+    XYWing,
     Swordfish,
 };
-constexpr int kTechniqueCount = 10;
+constexpr int kTechniqueCount = 8;
 constexpr Technique kHardestTechnique = Technique::Swordfish;
 
 // Stable ids for saved games; the names a player sees live in the bridge.
@@ -34,11 +36,9 @@ bool nakedSingle(CandidateGrid &grid);
 bool hiddenSingle(CandidateGrid &grid);
 bool nakedPair(CandidateGrid &grid);
 bool hiddenPair(CandidateGrid &grid);
-bool pointingPair(CandidateGrid &grid);
-bool claiming(CandidateGrid &grid);
 bool nakedTriple(CandidateGrid &grid);
 bool xWing(CandidateGrid &grid);
-bool yWing(CandidateGrid &grid);
+bool xyWing(CandidateGrid &grid);
 bool swordfish(CandidateGrid &grid);
 bool apply(Technique technique, CandidateGrid &grid);
 

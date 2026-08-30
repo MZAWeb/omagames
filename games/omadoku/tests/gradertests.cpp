@@ -29,7 +29,7 @@ const QString kHiddenPairPuzzle = QStringLiteral(
     "65193..2.4326.591.7891426..1635....25283...9.947......81....3..27..13.69396...2.1");
 const QString kXWingPuzzle = QStringLiteral(
     "63.94...55......4.7.4......46523871981.49..639.3..1..424.81..3.1.....4..3.67.4..1");
-const QString kYWingPuzzle = QStringLiteral(
+const QString kXYWingPuzzle = QStringLiteral(
     "54928..1.37815.9.226179..85432578196785619234916342..88574.1.29693827..11249.58..");
 const QString kSwordfishPuzzle = QStringLiteral(
     "6.287935..75.43..88.3.25.....8214.6..647589.35.7936.8.451362879..958..46.8649..3.");
@@ -85,7 +85,7 @@ void GraderTests::stepTakesTheEasiestRungUnderTheCeiling() {
     QCOMPARE(*first, Technique::NakedSingle);
 
     // Only an X-wing moves this position, so the ceiling decides everything;
-    // and what the X-wing uncovers is a Y-wing, one rung too far for it.
+    // and what the X-wing uncovers is an XY-wing, one rung too far for it.
     CandidateGrid grid(gridFromString(kXWingPuzzle));
     QVERIFY(!SudokuGrader::step(grid, Technique::NakedTriple));
     const std::optional<Technique> used = SudokuGrader::step(grid, Technique::XWing);
@@ -94,20 +94,20 @@ void GraderTests::stepTakesTheEasiestRungUnderTheCeiling() {
     QVERIFY(!SudokuGrader::step(grid, Technique::XWing));
     const std::optional<Technique> next = SudokuGrader::step(grid, SudokuGrader::kHardestTechnique);
     QVERIFY(next.has_value());
-    QCOMPARE(*next, Technique::YWing);
+    QCOMPARE(*next, Technique::XYWing);
 }
 
 void GraderTests::gradeReportsTheHardestRungNeeded() {
     QCOMPARE(SudokuGrader::grade(gridFromString(kHiddenPairPuzzle)).hardest, Technique::HiddenPair);
-    QCOMPARE(SudokuGrader::grade(gridFromString(kYWingPuzzle)).hardest, Technique::YWing);
+    QCOMPARE(SudokuGrader::grade(gridFromString(kXYWingPuzzle)).hardest, Technique::XYWing);
     QCOMPARE(SudokuGrader::grade(gridFromString(kSwordfishPuzzle)).hardest, Technique::Swordfish);
-    for (const QString &puzzle : {kHiddenPairPuzzle, kYWingPuzzle, kSwordfishPuzzle})
+    for (const QString &puzzle : {kHiddenPairPuzzle, kXYWingPuzzle, kSwordfishPuzzle})
         QVERIFY(SudokuGrader::grade(gridFromString(puzzle)).solved);
 }
 
 void GraderTests::ceilingDecidesWhatIsSolvable() {
-    const Grid puzzle = gridFromString(kYWingPuzzle);
-    QVERIFY(SudokuGrader::solvableWith(puzzle, Technique::YWing));
+    const Grid puzzle = gridFromString(kXYWingPuzzle);
+    QVERIFY(SudokuGrader::solvableWith(puzzle, Technique::XYWing));
     QVERIFY(SudokuGrader::solvableWith(puzzle, Technique::Swordfish));
     QVERIFY(!SudokuGrader::solvableWith(puzzle, Technique::XWing));
     QVERIFY(!SudokuGrader::solvableWith(puzzle, Technique::HiddenSingle));

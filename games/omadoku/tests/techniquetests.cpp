@@ -63,19 +63,13 @@ void TechniqueTests::firesOnItsOwnGridAndNothingEasierDoes_data() {
     QTest::newRow("hidden pair") << int(Technique::HiddenPair)
         << "65193..2.4326.591.7891426..1635....25283...9.947......81....3..27..13.69396...2.1"
         << "r7c5-257 r7c6-47";
-    QTest::newRow("pointing pair") << int(Technique::PointingPair)
-        << "439.61.5..2..583..5.8.34.......82...96..75....85693.7.89.547..1.5.826..9...319..."
-        << "r2c8-6 r2c9-6";
-    QTest::newRow("claiming") << int(Technique::Claiming)
-        << ".8...5.79....8.1.2....3..858....3.27...8.2...2.35..8..798..6..1.3.417298421..87.."
-        << "r4c4-9 r4c5-9 r5c5-9";
     QTest::newRow("naked triple") << int(Technique::NakedTriple)
         << "7.13....89.8.5.21335.8..47.4..9...871.....3.28....2.4.2831759645946..7216172..835"
         << "r5c5-6 r5c6-6";
     QTest::newRow("x-wing") << int(Technique::XWing)
         << "63.94...55......4.7.4......46523871981.49..639.3..1..424.81..3.1.....4..3.67.4..1"
         << "r3c6-5 r6c7-5 r8c6-5 r9c7-5";
-    QTest::newRow("y-wing") << int(Technique::YWing)
+    QTest::newRow("xy-wing") << int(Technique::XYWing)
         << "54928..1.37815.9.226179..85432578196785619234916342..88574.1.29693827..11249.58.."
         << "r1c7-6 r9c8-6";
     QTest::newRow("swordfish") << int(Technique::Swordfish)
@@ -122,7 +116,7 @@ void TechniqueTests::idsRoundTrip() {
         QVERIFY(SudokuGrader::techniqueFromId(id, &back));
         QCOMPARE(int(back), t);
     }
-    Technique unknown = Technique::YWing;
+    Technique unknown = Technique::XYWing;
     QVERIFY(!SudokuGrader::techniqueFromId(QStringLiteral("guessing"), &unknown));
-    QCOMPARE(unknown, Technique::YWing);  // left untouched
+    QCOMPARE(unknown, Technique::XYWing);  // left untouched
 }

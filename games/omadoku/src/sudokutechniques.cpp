@@ -1,6 +1,6 @@
 #include "sudokutechniques.h"
 
-// The techniques that live inside one unit or where a box meets a line. The
+// The techniques that live inside one unit. The
 // fish and wings, which reach across the grid, are in sudokufish.cpp.
 namespace SudokuGrader {
 namespace {
@@ -27,45 +27,6 @@ bool eliminateFromUnit(CandidateGrid &grid, const Unit &unit, Mask digits, Mask 
     return changed;
 }
 
-// Removes `digit` from the cells of `unit` that lie outside `other`.
-bool eliminateOutside(CandidateGrid &grid, const Unit &unit, const Unit &other, int digit) {
-    bool changed = false;
-    for (int index : unit) {
-        if (std::find(other.begin(), other.end(), index) == other.end())
-            changed |= grid.eliminate(index, digit);
-    }
-    return changed;
-}
-
-// The single line (row when `byRow`, else column) holding every cell of
-// `spots` in `unit`, or -1 when they spread over several.
-int commonLine(const Unit &unit, Mask spots, bool byRow) {
-    int line = -1;
-    for (int slot = 0; slot < 9; ++slot) {
-        if (!(spots & Mask(1u << slot)))
-            continue;
-        const int index = unit[size_t(slot)];
-        const int here = byRow ? Sudoku::rowOf(index) : Sudoku::colOf(index);
-        if (line >= 0 && here != line)
-            return -1;
-        line = here;
-    }
-    return line;
-}
-
-int commonBox(const Unit &unit, Mask spots) {
-    int box = -1;
-    for (int slot = 0; slot < 9; ++slot) {
-        if (!(spots & Mask(1u << slot)))
-            continue;
-        const int here = Sudoku::boxOf(unit[size_t(slot)]);
-        if (box >= 0 && here != box)
-            return -1;
-        box = here;
-    }
-    return box;
-}
-
 }  // namespace
 
 QString techniqueId(Technique technique) {
@@ -78,16 +39,12 @@ QString techniqueId(Technique technique) {
         return QStringLiteral("naked-pair");
     case Technique::HiddenPair:
         return QStringLiteral("hidden-pair");
-    case Technique::PointingPair:
-        return QStringLiteral("pointing-pair");
-    case Technique::Claiming:
-        return QStringLiteral("claiming");
     case Technique::NakedTriple:
         return QStringLiteral("naked-triple");
     case Technique::XWing:
         return QStringLiteral("x-wing");
-    case Technique::YWing:
-        return QStringLiteral("y-wing");
+    case Technique::XYWing:
+        return QStringLiteral("xy-wing");
     case Technique::Swordfish:
         break;
     }
@@ -172,43 +129,6 @@ bool hiddenPair(CandidateGrid &grid) {
     return false;
 }
 
-bool pointingPair(CandidateGrid &grid) {
-    for (int box = 0; box < 9; ++box) {
-        const Unit &unit = boxUnit(box);
-        for (int d = 1; d <= 9; ++d) {
-            const Mask spots = spotsIn(grid, unit, d);
-            if (popCount(spots) < 2)
-                continue;
-            // All of a box's spots for a digit on one line: the digit is in that
-            // line's slice of the box, so nowhere else on the line.
-            const int row = commonLine(unit, spots, true);
-            if (row >= 0 && eliminateOutside(grid, rowUnit(row), unit, d))
-                return true;
-            const int column = commonLine(unit, spots, false);
-            if (column >= 0 && eliminateOutside(grid, columnUnit(column), unit, d))
-                return true;
-        }
-    }
-    return false;
-}
-
-bool claiming(CandidateGrid &grid) {
-    for (int line = 0; line < 18; ++line) {
-        const Unit &unit = units()[size_t(line)];
-        for (int d = 1; d <= 9; ++d) {
-            const Mask spots = spotsIn(grid, unit, d);
-            if (popCount(spots) < 2)
-                continue;
-            // The mirror image: a line's spots all inside one box claim the
-            // digit for that box, so the box's other cells lose it.
-            const int box = commonBox(unit, spots);
-            if (box >= 0 && eliminateOutside(grid, boxUnit(box), unit, d))
-                return true;
-        }
-    }
-    return false;
-}
-
 bool nakedTriple(CandidateGrid &grid) {
     for (const Unit &unit : units()) {
         std::array<Mask, 9> cands {};
@@ -248,16 +168,12 @@ bool apply(Technique technique, CandidateGrid &grid) {
         return nakedPair(grid);
     case Technique::HiddenPair:
         return hiddenPair(grid);
-    case Technique::PointingPair:
-        return pointingPair(grid);
-    case Technique::Claiming:
-        return claiming(grid);
     case Technique::NakedTriple:
         return nakedTriple(grid);
     case Technique::XWing:
         return xWing(grid);
-    case Technique::YWing:
-        return yWing(grid);
+    case Technique::XYWing:
+        return xyWing(grid);
     case Technique::Swordfish:
         break;
     }
