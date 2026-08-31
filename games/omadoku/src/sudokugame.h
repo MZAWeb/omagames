@@ -116,7 +116,8 @@ public:
     // False means nothing was left to undo and the caller may leave the puzzle.
     Q_INVOKABLE bool backOut();
     // A digit from the number row. The mapping is fixed and owes nothing to
-    // the click mode: plain fills, Shift notes, Ctrl (or Alt) highlights.
+    // the click mode: plain fills, Shift notes, Ctrl (or Alt) highlights —
+    // except that over a multi-cell selection a plain digit notes too.
     Q_INVOKABLE void pressDigitKey(int digit, int modifiers);
     // A digit clicked on the keypad, which is the one place clickMode decides.
     Q_INVOKABLE void clickDigit(int digit);
@@ -157,7 +158,8 @@ signals:
 private:
     enum class Screen { Start, Playing, Won };
 
-    // The one place a digit turns into an act on the board.
+    // The one place a digit turns into an act on the board, and the one that
+    // knows how many cells are selected (see SudokuInput::actionFor).
     void applyDigit(SudokuInput::Action action, int digit);
     // Every way of picking cells lands here: where the cursor is and what the
     // digit keys will act on both moved, so both are announced together.

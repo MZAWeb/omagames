@@ -228,7 +228,8 @@ void SudokuGame::clickDigit(int digit) {
 }
 
 void SudokuGame::applyDigit(SudokuInput::Action action, int digit) {
-    switch (action) {
+    // Both ways in agree on this: over several cells a digit is a note.
+    switch (SudokuInput::actionFor(action, int(m_selection.indices().size()))) {
     case SudokuInput::Action::Highlight:
         toggleHighlight(digit);
         return;

@@ -11,6 +11,10 @@
 #include "sudokuinput.h"
 
 using TestSupport::cellInt;
+using TestSupport::emptyRow;
+using TestSupport::notesOf;
+using TestSupport::selectionOf;
+using TestSupport::valueOf;
 
 namespace {
 
@@ -74,6 +78,21 @@ void InputTests::theNumberRowIgnoresTheClickMode() {
     QCOMPARE(int(SudokuInput::keyAction(Qt::ControlModifier | Qt::ShiftModifier)),
              int(Action::Highlight));
     QCOMPARE(int(SudokuInput::keyAction(Qt::KeypadModifier)), int(Action::Fill));
+}
+
+void InputTests::aPlainDigitOverSeveralCellsMeansANote() {
+    using Action = SudokuInput::Action;
+    // One cell (or none yet) leaves every action as it was.
+    for (int cells : {0, 1}) {
+        QCOMPARE(int(SudokuInput::actionFor(Action::Fill, cells)), int(Action::Fill));
+        QCOMPARE(int(SudokuInput::actionFor(Action::Note, cells)), int(Action::Note));
+        QCOMPARE(int(SudokuInput::actionFor(Action::Highlight, cells)), int(Action::Highlight));
+    }
+    // Several cells can only mean pencil marks; the other two already say
+    // what they mean.
+    QCOMPARE(int(SudokuInput::actionFor(Action::Fill, 2)), int(Action::Note));
+    QCOMPARE(int(SudokuInput::actionFor(Action::Note, 2)), int(Action::Note));
+    QCOMPARE(int(SudokuInput::actionFor(Action::Highlight, 2)), int(Action::Highlight));
 }
 
 void InputTests::theHighlightTakesOneDigitAtATime() {
@@ -153,6 +172,42 @@ void InputTests::keyboardMappingIgnoresTheClickMode() {
         QCOMPARE(game.highlightDigit(), -1);
         QCOMPARE(cellInt(&game, cell, CellModel::ValueRole), 0);
     }
+}
+
+void InputTests::aPlainDigitNotesTheWholeSelection() {
+    SudokuGame game;
+    game.newGame(QStringLiteral("easy"));
+    const QList<int> empties = emptyRow(&game);
+    QVERIFY(empties.size() >= 3);
+
+    game.select(empties.at(0));
+    game.toggleSelection(empties.at(1));
+    game.toggleSelection(empties.at(2));
+
+    // A plain digit over the sweep pencils it in everywhere instead of
+    // filling one cell and throwing the selection away.
+    game.pressDigitKey(6, Qt::NoModifier);
+    for (int index : empties.mid(0, 3))
+        QCOMPARE(notesOf(&game, index), 1 << 5);
+    QCOMPARE(valueOf(&game, empties.at(2)), 0);
+    QCOMPARE(selectionOf(game), empties.mid(0, 3));
+
+    // Same digit again clears the lot, like any note.
+    game.pressDigitKey(6, Qt::NoModifier);
+    for (int index : empties.mid(0, 3))
+        QCOMPARE(notesOf(&game, index), 0);
+
+    // The keypad in Fill mode reads the selection the same way.
+    game.setClickMode(QStringLiteral("fill"));
+    game.clickDigit(4);
+    for (int index : empties.mid(0, 3))
+        QCOMPARE(notesOf(&game, index), 1 << 3);
+    QCOMPARE(valueOf(&game, empties.at(2)), 0);
+
+    // Back on one cell a plain digit fills again.
+    game.select(empties.at(2));
+    game.pressDigitKey(9, Qt::NoModifier);
+    QCOMPARE(valueOf(&game, empties.at(2)), 9);
 }
 
 void InputTests::clickModeCyclesAndPersists() {

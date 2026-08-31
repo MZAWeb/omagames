@@ -14,10 +14,12 @@ private slots:
 
     void theClickModeWalksTheThreeActions();
     void theNumberRowIgnoresTheClickMode();
+    void aPlainDigitOverSeveralCellsMeansANote();
     void theHighlightTakesOneDigitAtATime();
 
     void clickModeDecidesWhatAKeypadClickDoes();
     void keyboardMappingIgnoresTheClickMode();
+    void aPlainDigitNotesTheWholeSelection();
     void clickModeCyclesAndPersists();
     void highlightTogglesAndSwitchesDigits();
     void highlightWearsAFixedHighlighterYellow();
