@@ -8,6 +8,7 @@ RowLayout {
     id: root
 
     signal newGameRequested()
+    signal scoresRequested()
 
     spacing: 12 * theme.textScale
 
@@ -39,6 +40,12 @@ RowLayout {
         hint: qsTr("N")
         focusPolicy: Qt.NoFocus
         onClicked: root.newGameRequested()
+    }
+    OmaHintButton {
+        text: qsTr("Scores")
+        hint: qsTr("S")
+        focusPolicy: Qt.NoFocus
+        onClicked: root.scoresRequested()
     }
 
     Item { Layout.fillWidth: true }

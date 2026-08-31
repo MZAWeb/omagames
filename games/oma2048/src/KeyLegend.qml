@@ -6,6 +6,7 @@ OmaKeyLegend {
         { key: qsTr("←↑↓→"), label: qsTr("or hjkl to slide") },
         { key: qsTr("U"), label: qsTr("undo") },
         { key: qsTr("N"), label: qsTr("new game") },
+        { key: qsTr("S"), label: qsTr("high scores") },
         { key: qsTr("Ctrl+Q"), label: qsTr("quit") }
     ]
 }

@@ -10,6 +10,7 @@ FocusScope {
     // Off while an overlay or dialog is up, so the board underneath holds still.
     property bool inputEnabled: true
     signal newGameRequested()
+    signal scoresRequested()
 
     Keys.onPressed: function(event) {
         if (!root.inputEnabled)
@@ -21,6 +22,7 @@ FocusScope {
         case Qt.Key_Down: case Qt.Key_J: game.moveDown(); break;
         case Qt.Key_U: game.undo(); break;
         case Qt.Key_N: root.newGameRequested(); break;
+        case Qt.Key_S: root.scoresRequested(); break;
         default: return;
         }
         event.accepted = true;
@@ -34,6 +36,7 @@ FocusScope {
         PlayHeader {
             Layout.fillWidth: true
             onNewGameRequested: root.newGameRequested()
+            onScoresRequested: root.scoresRequested()
         }
 
         BoardView {
