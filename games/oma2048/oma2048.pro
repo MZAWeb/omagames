@@ -6,9 +6,12 @@ TEMPLATE = app
 
 HEADERS += \
     src/board.h \
-    src/game.h
+    src/game.h \
+    src/oma2048game.h
 SOURCES += \
     src/main.cpp \
     src/board.cpp \
-    src/game.cpp
+    src/game.cpp \
+    src/oma2048game.cpp \
+    src/oma2048gamemodel.cpp
 RESOURCES += src/resources.qrc
