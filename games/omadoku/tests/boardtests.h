@@ -21,7 +21,7 @@ private slots:
     void undoRestoresValuesAndNotes();
     void undoKeepsAtLeastAHundredLevels();
     void autoNotesShowTheDigitsAPeerHasNotTaken();
-    void autoNotesBorrowThePencilRatherThanSpendIt();
+    void autoNotesFreezeWhatWasOnScreenWhenTheyGoOff();
     void autoNotesFollowEveryEntryAndUndo();
     void validateAsYouGoFlagsWrongEntries();
     void checkWhenFullDefersFlagging();

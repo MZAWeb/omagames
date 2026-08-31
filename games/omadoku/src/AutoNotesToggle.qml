@@ -3,7 +3,7 @@ import OmaGames
 
 // The second setting beside the board, drawn exactly like the validation one:
 // filled while on, outlined while off. On, the board pencils every empty cell
-// with the digits it still allows and the marks you made wait underneath.
+// with the digits it still allows; off, those marks stay put and become yours.
 OmaHintButton {
     id: toggle
 

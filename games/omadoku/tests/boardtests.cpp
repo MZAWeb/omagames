@@ -248,28 +248,36 @@ void BoardTests::autoNotesShowTheDigitsAPeerHasNotTaken() {
     QCOMPARE(m_board.notes(cell), quint16(0));
 }
 
-void BoardTests::autoNotesBorrowThePencilRatherThanSpendIt() {
+void BoardTests::autoNotesFreezeWhatWasOnScreenWhenTheyGoOff() {
     const int cell = emptyCell();
     m_board.toggleNote(cell, 3);
-    const quint16 own = m_board.notes(cell);
-    QCOMPARE(own, quint16(1u << 2));
+    QCOMPARE(m_board.notes(cell), quint16(1u << 2));
 
     m_board.setAutoNotes(true);
-    QCOMPARE(m_board.notes(cell), m_board.candidates(cell));
-    QVERIFY(m_board.notes(cell) != own);
+    const quint16 shown = m_board.candidates(cell);
+    QCOMPARE(m_board.notes(cell), shown);
+    QVERIFY(m_board.toggleNote(cell, 7).empty());  // the board holds the pencil
 
-    // Nothing to pencil while the board holds the pencil, and the mark
-    // underneath is untouched.
-    QVERIFY(m_board.toggleNote(cell, 7).empty());
-    QVERIFY(m_board.entryCount() > 0);  // the player's own mark still counts
+    // Off: what the player was reading is what they keep.
+    QVERIFY(!m_board.setAutoNotes(false).empty());
+    QCOMPARE(m_board.notes(cell), shown);
 
-    m_board.setAutoNotes(false);
-    QCOMPARE(m_board.notes(cell), own);
-    // The refused toggle left no undo step behind: one undo is still all it
-    // takes to get back to the untouched cell.
+    // And it has stopped following the grid: a digit placed where the cell can
+    // see it would have been pruned a moment ago, and now is not.
+    int digit = 0;
+    for (int d = 1; d <= 9 && digit == 0; ++d) {
+        if (shown & quint16(1u << (d - 1)))
+            digit = d;
+    }
+    QVERIFY(digit > 0);
+    m_board.setValue(emptyPeerOf(cell), digit);
+    QCOMPARE(m_board.notes(cell), shown);
     m_board.undo();
-    QCOMPARE(m_board.notes(cell), quint16(0));
-    QVERIFY(!m_board.canUndo());
+
+    // Writing them down was one undo step, so the mark made by hand is still
+    // reachable: nothing was destroyed by flipping a toggle.
+    m_board.undo();
+    QCOMPARE(m_board.notes(cell), quint16(1u << 2));
 }
 
 void BoardTests::autoNotesFollowEveryEntryAndUndo() {

@@ -227,23 +227,16 @@ void InputTests::autoNotesTakeThePencilFromTheDigits() {
     const int own = notesOf(&game, cell);
     QCOMPARE(own, 1 << 2);
 
-    // The board takes over: the cell shows what it still allows, and the mark
-    // the player left is set aside rather than lost.
+    // The board takes over: the cell shows what it still allows, and no digit
+    // can pencil over it.
     game.setAutoNotes(true);
     const int shown = notesOf(&game, cell);
     QVERIFY(shown != 0);
-    QVERIFY(shown != own);  // the grid's answer, not the mark that was there
+    QVERIFY(shown != own);
     game.pressDigitKey(9, Qt::ShiftModifier);
-    QCOMPARE(notesOf(&game, cell), shown);  // nothing to pencil
+    QCOMPARE(notesOf(&game, cell), shown);
 
-    // A keypad left on Note would click into that same held pencil, so
-    // switching Auto-notes on hands it back to Fill.
-    game.setAutoNotes(false);
-    game.setClickMode(QStringLiteral("note"));
-    game.setAutoNotes(true);
-    QCOMPARE(game.clickMode(), QStringLiteral("fill"));
-
-    // And a plain digit over a sweep fills the cursor cell again: the note it
+    // A plain digit over a sweep fills the cursor cell again: the note it
     // would otherwise have become cannot be written.
     game.select(empties.at(1));
     game.toggleSelection(empties.at(2));
@@ -251,9 +244,21 @@ void InputTests::autoNotesTakeThePencilFromTheDigits() {
     QCOMPARE(valueOf(&game, empties.at(2)), 4);
     QCOMPARE(valueOf(&game, empties.at(1)), 0);
     QCOMPARE(selectionOf(game), QList<int>({empties.at(2)}));
+    // ...and every cell in that row felt it: 4 is no longer open to them.
+    QVERIFY(!(notesOf(&game, cell) & (1 << 3)));
 
+    // Switching off keeps what is on screen rather than clearing it: the
+    // board's marks become the player's, and stop following the grid.
+    const int frozen = notesOf(&game, cell);
     game.setAutoNotes(false);
-    QCOMPARE(notesOf(&game, cell), own);  // the player's mark, back untouched
+    QCOMPARE(notesOf(&game, cell), frozen);
+    QVERIFY(frozen != own);
+
+    // A keypad left on Note would click into a pencil the board is holding,
+    // so switching Auto-notes on hands it back to Fill.
+    game.setClickMode(QStringLiteral("note"));
+    game.setAutoNotes(true);
+    QCOMPARE(game.clickMode(), QStringLiteral("fill"));
 }
 
 void InputTests::clickModeCyclesAndPersists() {

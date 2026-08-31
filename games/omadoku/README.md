@@ -23,11 +23,13 @@ current Omarchy theme.
   still leave open, and every entry, erase and undo is reflected at once —
   there is nothing to tidy and nothing to forget. It is deliberately not a
   hint: it repeats what is on the grid and never looks at the solution.
-  Your own marks are set aside, not thrown away, and come back the moment you
-  switch it off. While it is on nothing can pencil: `Shift`+a digit does
-  nothing, the keypad's *Note* mode is greyed out (switching Auto-notes on
-  hands a keypad set to it back to *Fill*), and a plain digit fills the cursor
-  cell even with several cells selected.
+  Switching it off changes nothing on screen: the marks it worked out stay
+  exactly as they are and simply stop following the grid — they are yours now,
+  to keep or to tidy. Whatever you had pencilled before is what one `Ctrl+Z`
+  brings back, so nothing is lost either way. While it is on nothing can
+  pencil: `Shift`+a digit does nothing, the keypad's *Note* mode is greyed out
+  (switching Auto-notes on hands a keypad set to it back to *Fill*), and a
+  plain digit fills the cursor cell even with several cells selected.
 - **The keyboard mapping is fixed** and never depends on anything on screen:
   `1`-`9` fill, `Shift+1`-`9` note, `Ctrl+1`-`9` (or `Alt+1`-`9`) highlight. The
   line under the keypad says so at all times, and says it differently in the

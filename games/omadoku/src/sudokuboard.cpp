@@ -115,6 +115,29 @@ void SudokuBoard::setValidateAsYouGo(bool validateAsYouGo) {
     refreshWrong();
 }
 
+std::vector<int> SudokuBoard::setAutoNotes(bool autoNotes) {
+    if (m_autoNotes == autoNotes)
+        return {};
+    m_autoNotes = autoNotes;
+    if (autoNotes)
+        return {};  // nothing stored changes; the marks underneath stop showing
+
+    // Off: the marks the player has been reading are the ones they keep. They
+    // are written down as they stand — cells whose own notes already say the
+    // same thing have nothing to write — and stop following the grid.
+    std::vector<int> changed;
+    for (int i = 0; i < Sudoku::kCells; ++i) {
+        if (m_values[size_t(i)] == 0 && m_notes[size_t(i)] != candidates(i))
+            changed.push_back(i);
+    }
+    if (changed.empty())
+        return {};
+    pushUndo(changed);
+    for (int index : changed)
+        m_notes[size_t(index)] = candidates(index);
+    return changed;
+}
+
 std::vector<int> SudokuBoard::setValue(int index, int value) {
     if (!inRange(index) || isGiven(index) || value < 1 || value > 9)
         return {};

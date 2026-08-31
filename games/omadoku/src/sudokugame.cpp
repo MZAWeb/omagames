@@ -108,7 +108,9 @@ void SudokuGame::setValidateAsYouGo(bool validateAsYouGo) {
 void SudokuGame::setAutoNotes(bool autoNotes) {
     if (m_board.autoNotes() == autoNotes)
         return;
-    m_board.setAutoNotes(autoNotes);
+    // Switching off writes the marks it was showing into the cells, which is
+    // an act on the board like any other and worth keeping.
+    const bool wrote = !m_board.setAutoNotes(autoNotes).empty();
     m_store.setAutoNotes(autoNotes);
     // A keypad set to Note would click into a pencil the board is holding, so
     // it falls back to what a player wants next anyway.
@@ -117,6 +119,8 @@ void SudokuGame::setAutoNotes(bool autoNotes) {
     m_cells.refreshAll();  // every empty cell's marks are different now
     emit autoNotesChanged();
     emit boardChanged();
+    if (wrote)
+        m_saveTimer.start();
 }
 
 int SudokuGame::digitForKey(int key, int modifiers, const QString &text) const {

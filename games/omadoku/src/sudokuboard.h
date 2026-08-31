@@ -39,13 +39,16 @@ public:
 
     // With Auto-notes on the pencil marks stop being the player's: every empty
     // cell shows the digits its row, column and box still leave open, worked
-    // out from the grid on every read so they can never fall out of date. The
-    // marks the player made are kept untouched underneath and come back the
-    // moment it goes off — turning it on borrows the notes, it never spends
-    // them. While it is on toggleNotes() does nothing: there is no pencil to
-    // pick up.
+    // out from the grid on every read so they can never fall out of date.
+    // While it is on toggleNotes() does nothing: there is no pencil to pick up.
+    //
+    // Switching it off keeps what is on screen and stops it moving: the marks
+    // the board worked out become the player's own, exactly as they were being
+    // shown. Nothing vanishes at the flip of a toggle, which is why this
+    // returns the cells it wrote and takes one undo step like any other act —
+    // whatever was pencilled before is what that undo brings back.
     bool autoNotes() const { return m_autoNotes; }
-    void setAutoNotes(bool autoNotes) { m_autoNotes = autoNotes; }
+    std::vector<int> setAutoNotes(bool autoNotes);
     // The digits `index` still allows, given every value on the board. Empty
     // cells only; a contradiction leaves nothing open, and says so.
     quint16 candidates(int index) const;

@@ -71,9 +71,9 @@ public:
     void setClickMode(const QString &clickMode);
     bool validateAsYouGo() const { return m_board.validateAsYouGo(); }
     void setValidateAsYouGo(bool validateAsYouGo);
-    // While on, every empty cell shows the digits still open to it and the
-    // player's own marks are set aside until it goes off. Notes stop being
-    // something a digit can write, so the keypad leaves Note mode with it.
+    // While on, every empty cell shows the digits still open to it; switching
+    // off leaves those marks in place and stops updating them. Notes stop
+    // being something a digit can write, so the keypad leaves Note mode too.
     bool autoNotes() const { return m_board.autoNotes(); }
     void setAutoNotes(bool autoNotes);
     // The cell the keyboard acts on (-1 = none). It is always one of
