@@ -9,6 +9,7 @@ const auto kStateKey = QStringLiteral("state/v1");
 // Still the key it was first stored under, so an existing preference survives
 // the control's rename.
 const auto kValidateKey = QStringLiteral("play/checkAsYouGo");
+const auto kAutoNotesKey = QStringLiteral("play/autoNotes");
 // A new key: the old one stored what *every* digit did, which is not what the
 // selector means any more.
 const auto kClickModeKey = QStringLiteral("play/clickMode");
@@ -24,6 +25,14 @@ bool SudokuStore::validateAsYouGo(bool fallback) const {
 
 void SudokuStore::setValidateAsYouGo(bool validateAsYouGo) const {
     QSettings().setValue(kValidateKey, validateAsYouGo);
+}
+
+bool SudokuStore::autoNotes(bool fallback) const {
+    return QSettings().value(kAutoNotesKey, fallback).toBool();
+}
+
+void SudokuStore::setAutoNotes(bool autoNotes) const {
+    QSettings().setValue(kAutoNotesKey, autoNotes);
 }
 
 QString SudokuStore::clickMode() const {

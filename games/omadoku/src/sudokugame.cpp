@@ -105,6 +105,20 @@ void SudokuGame::setValidateAsYouGo(bool validateAsYouGo) {
     emit boardChanged();
 }
 
+void SudokuGame::setAutoNotes(bool autoNotes) {
+    if (m_board.autoNotes() == autoNotes)
+        return;
+    m_board.setAutoNotes(autoNotes);
+    m_store.setAutoNotes(autoNotes);
+    // A keypad set to Note would click into a pencil the board is holding, so
+    // it falls back to what a player wants next anyway.
+    if (autoNotes && m_input.clickAction() == SudokuInput::Action::Note)
+        setClickMode(QStringLiteral("fill"));
+    m_cells.refreshAll();  // every empty cell's marks are different now
+    emit autoNotesChanged();
+    emit boardChanged();
+}
+
 int SudokuGame::digitForKey(int key, int modifiers, const QString &text) const {
     return SudokuKeys::digitFor(key, Qt::KeyboardModifiers(modifiers), text);
 }
@@ -228,8 +242,10 @@ void SudokuGame::clickDigit(int digit) {
 }
 
 void SudokuGame::applyDigit(SudokuInput::Action action, int digit) {
-    // Both ways in agree on this: over several cells a digit is a note.
-    switch (SudokuInput::actionFor(action, int(m_selection.indices().size()))) {
+    // Both ways in agree on this: over several cells a digit is a note, unless
+    // Auto-notes is keeping them, where a digit has nothing to pencil.
+    switch (SudokuInput::actionFor(action, int(m_selection.indices().size()),
+                                   !m_board.autoNotes())) {
     case SudokuInput::Action::Highlight:
         toggleHighlight(digit);
         return;
@@ -296,9 +312,10 @@ void SudokuGame::backToStart() {
 void SudokuGame::applyChange(const std::vector<int> &changed) {
     if (changed.empty())
         return;
-    // Deferred validation can light up cells far from the edited one, so repaint
-    // everything unless we know only these cells changed.
-    if (m_board.validateAsYouGo())
+    // Deferred validation can light up cells far from the edited one, and
+    // Auto-notes rewrites the marks of every cell that could see it, so
+    // repaint everything unless we know only these cells changed.
+    if (m_board.validateAsYouGo() && !m_board.autoNotes())
         m_cells.refresh(changed);
     else
         m_cells.refreshAll();
@@ -388,6 +405,9 @@ void SudokuGame::loadSettings() {
     // before you have finished thinking. A choice already stored still wins,
     // and anything unrecognised falls back to the default.
     m_board.setValidateAsYouGo(m_store.validateAsYouGo(false));
+    // Auto-notes is off by default too: working out what fits is most of the
+    // puzzle, and a game should not do it for you until you ask.
+    m_board.setAutoNotes(m_store.autoNotes(false));
     m_input.setClickMode(m_store.clickMode());
 
     const SudokuStore::SavedGame saved = m_store.savedGame();

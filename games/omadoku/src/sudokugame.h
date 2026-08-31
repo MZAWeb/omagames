@@ -31,6 +31,7 @@ class SudokuGame : public QObject {
     Q_PROPERTY(QVariantList difficulties READ difficulties CONSTANT)
     Q_PROPERTY(QString clickMode READ clickMode WRITE setClickMode NOTIFY clickModeChanged)
     Q_PROPERTY(bool validateAsYouGo READ validateAsYouGo WRITE setValidateAsYouGo NOTIFY validateAsYouGoChanged)
+    Q_PROPERTY(bool autoNotes READ autoNotes WRITE setAutoNotes NOTIFY autoNotesChanged)
     Q_PROPERTY(int cursorIndex READ cursorIndex NOTIFY selectionChanged)
     Q_PROPERTY(QVariantList selectedIndices READ selectedIndices NOTIFY selectionChanged)
     Q_PROPERTY(int cursorValue READ cursorValue NOTIFY cursorValueChanged)
@@ -70,6 +71,11 @@ public:
     void setClickMode(const QString &clickMode);
     bool validateAsYouGo() const { return m_board.validateAsYouGo(); }
     void setValidateAsYouGo(bool validateAsYouGo);
+    // While on, every empty cell shows the digits still open to it and the
+    // player's own marks are set aside until it goes off. Notes stop being
+    // something a digit can write, so the keypad leaves Note mode with it.
+    bool autoNotes() const { return m_board.autoNotes(); }
+    void setAutoNotes(bool autoNotes);
     // The cell the keyboard acts on (-1 = none). It is always one of
     // `selectedIndices`, which holds the whole multi-cell selection in the
     // order the cells joined it — a single cell most of the time.
@@ -147,6 +153,7 @@ signals:
     void boardChanged();
     void clickModeChanged();
     void validateAsYouGoChanged();
+    void autoNotesChanged();
     void selectionChanged();
     void cursorValueChanged();
     void highlightDigitChanged();

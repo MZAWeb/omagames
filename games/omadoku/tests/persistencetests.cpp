@@ -71,6 +71,19 @@ void PersistenceTests::validateAsYouGoIsRemembered() {
     QVERIFY(game.validateAsYouGo());  // the stored choice beats the default
 }
 
+void PersistenceTests::autoNotesIsRemembered() {
+    {
+        SudokuGame game;
+        game.newGame(QStringLiteral("easy"));
+        QVERIFY(!game.autoNotes());  // off for a new install: working out what
+                                     // fits is most of the puzzle
+        game.setAutoNotes(true);
+        game.backToStart();
+    }
+    SudokuGame game;
+    QVERIFY(game.autoNotes());
+}
+
 void PersistenceTests::savedGameSurvivesRestart() {
     int cell = -1;
     QString technique;
