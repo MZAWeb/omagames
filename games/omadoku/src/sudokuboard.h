@@ -37,6 +37,19 @@ public:
     bool validateAsYouGo() const { return m_validateAsYouGo; }
     void setValidateAsYouGo(bool validateAsYouGo);
 
+    // With Auto-notes on the pencil marks stop being the player's: every empty
+    // cell shows the digits its row, column and box still leave open, worked
+    // out from the grid on every read so they can never fall out of date. The
+    // marks the player made are kept untouched underneath and come back the
+    // moment it goes off — turning it on borrows the notes, it never spends
+    // them. While it is on toggleNotes() does nothing: there is no pencil to
+    // pick up.
+    bool autoNotes() const { return m_autoNotes; }
+    void setAutoNotes(bool autoNotes) { m_autoNotes = autoNotes; }
+    // The digits `index` still allows, given every value on the board. Empty
+    // cells only; a contradiction leaves nothing open, and says so.
+    quint16 candidates(int index) const;
+
     // Mutations return the cells they touched so the QML model can refresh
     // exactly those rows. Givens and out-of-range indices are ignored.
     std::vector<int> setValue(int index, int value);
@@ -72,4 +85,5 @@ private:
     std::array<bool, Sudoku::kCells> m_wrong {};
     std::deque<std::vector<CellState>> m_undo;
     bool m_validateAsYouGo = true;
+    bool m_autoNotes = false;
 };

@@ -20,6 +20,9 @@ private slots:
     void eraseClearsValueAndNotes();
     void undoRestoresValuesAndNotes();
     void undoKeepsAtLeastAHundredLevels();
+    void autoNotesShowTheDigitsAPeerHasNotTaken();
+    void autoNotesBorrowThePencilRatherThanSpendIt();
+    void autoNotesFollowEveryEntryAndUndo();
     void validateAsYouGoFlagsWrongEntries();
     void checkWhenFullDefersFlagging();
     void solvedWhenEveryCellMatches();
