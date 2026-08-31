@@ -99,12 +99,25 @@ std::vector<Event> Game::tick() {
         --m_freezeTicks;
         return events;
     }
-    if (m_ticks % m_params.playerPeriod == 0)
+    if (m_ticks % m_params.playerPeriod == 0) {
+        const QPoint before = m_player.pos;
+        const bool wasOnTrail = m_player.onTrail;
         movePlayer(events);
-    if (m_phase == Phase::Playing && m_ticks % m_params.ballPeriod == 0)
+        if (m_player.pos != before || m_player.onTrail != wasOnTrail)
+            ++m_frame;
+    }
+    if (m_phase == Phase::Playing && m_ticks % m_params.ballPeriod == 0) {
         moveBalls(events);
-    if (m_phase == Phase::Playing && m_ticks % m_params.chaserPeriod == 0)
+        if (!m_balls.empty())
+            ++m_frame;
+    }
+    if (m_phase == Phase::Playing && m_ticks % m_params.chaserPeriod == 0) {
         moveChasers(events);
+        if (!m_chasers.empty())
+            ++m_frame;
+    }
+    if (!events.empty())
+        ++m_frame;
     return events;
 }
 
@@ -147,8 +160,7 @@ void Game::movePlayer(std::vector<Event> &events) {
 }
 
 void Game::closeTrail(std::vector<Event> &events) {
-    const std::vector<int> trail = m_field.trailCells();
-    const bool closeCall = ballNearTrail(trail);
+    const bool closeCall = anyBallNearTrail();
 
     std::vector<QPoint> ballPositions;
     for (const Ball &b : m_balls)
@@ -181,16 +193,15 @@ void Game::closeTrail(std::vector<Event> &events) {
 }
 
 bool Game::trailThreatened() const {
-    return m_player.onTrail && ballNearTrail(m_field.trailCells());
+    return m_player.onTrail && anyBallNearTrail();
 }
 
-bool Game::ballNearTrail(const std::vector<int> &trail) const {
+// The same predicate as scanning the trail for each ball, from the other
+// end: the box around a ball is at most 49 cells whatever the trail's length.
+bool Game::anyBallNearTrail() const {
     for (const Ball &b : m_balls) {
-        for (int i : trail) {
-            const QPoint p = m_field.point(i);
-            if (std::max(std::abs(p.x() - b.pos.x()), std::abs(p.y() - b.pos.y())) <= kCloseCallDistance)
-                return true;
-        }
+        if (m_field.trailNear(b.pos, kCloseCallDistance))
+            return true;
     }
     return false;
 }

@@ -11,4 +11,5 @@ private slots:
     void claimTakesTrailAndBallFreeRegions();
     void claimKeepsEveryRegionWithABall();
     void claimMergesWithExistingGround();
+    void trailNearMatchesTheChebyshevBall();
 };

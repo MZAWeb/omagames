@@ -1,6 +1,6 @@
 # TODO
 
-**Suggested order for the next session:** 1) Shared Omabucks wallet (small, unblocks the poker games), 2) Omaflow, 3) the three Black Omack small items, 4) the Omanix perf redo (carefully, on-screen verification per commit). Process for briefing agents: `docs/PARALLEL-AGENTS.md`.
+**Suggested order for the next session:** 1) Shared Omabucks wallet (small, unblocks the poker games), 2) Omaflow, 3) the three Black Omack small items. Process for briefing agents: `docs/PARALLEL-AGENTS.md`.
 
 ## Omadoku
 - [ ] Layout-aware digit keys (AZERTY: unshifted row is symbols) — digits resolve only from Key_1-9 and the US shifted symbols since the keycode fallback was removed
@@ -9,7 +9,6 @@
 - [ ] Extra hard almost always lands on Y-wing (swordfish 1/80); add XY-chain / uniqueness to widen the top band
 
 ## Omanix
-- [ ] Redo the slowdown fix (reverted in #32): the close-call scan and repaint caching from #29 broke rendering/movement on the real desktop while headless tests stayed green — redo incrementally on a clean base, verifying each commit visually on screen, and add a rendering test that catches misplaced geometry (e.g. compare a FieldView grab against the engine state)
 - [ ] Optional: reduced-motion setting for the sweep-fill/pulse animations
 
 ## Omasweeper

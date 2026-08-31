@@ -135,4 +135,5 @@ private:
     Difficulty m_difficulty = Difficulty::Normal;
     int m_newHighScoreRank = -1;
     bool m_trailThreatened = false;
+    quint64 m_lastFrame = 0;
 };

@@ -100,7 +100,10 @@ void BridgeTests::directionsAndPauseGoThroughTheBridge() {
     QSignalSpy frames(&game, &OmanixGame::frameChanged);
     hold(game, QStringLiteral("left"), 2);
     QCOMPARE(game.engine()->player().pos, start + QPoint(-2, 0));
-    QCOMPARE(frames.count(), 2 * game.engine()->params().playerPeriod);
+    // Only the two ticks that moved the marker redrew; the ticks in between
+    // changed nothing and stayed silent (the fenced ball bounces in place).
+    QVERIFY(frames.count() >= 2);
+    QVERIFY(frames.count() < 2 * game.engine()->params().playerPeriod);
 
     game.setDirection(QStringLiteral("up"));
     for (int i = 0; i < 3 * game.engine()->params().playerPeriod; ++i)
@@ -294,4 +297,23 @@ void BridgeTests::windowGeometryRoundTrips() {
     QCOMPARE(geometry.value(QStringLiteral("x")).toInt(), -20);
     QCOMPARE(geometry.value(QStringLiteral("width")).toInt(), 1000);
     QVERIFY(geometry.value(QStringLiteral("maximized")).toBool());
+}
+
+// The whole point of Game::frame(): a tick on which nothing moved emits no
+// frameChanged, so the view is not rasterised 60 times a second for a still
+// picture.
+void BridgeTests::silentTicksDoNotWakeTheRenderer() {
+    OmanixGame game;
+    quietStart(game);
+    game.engineForTests()->placeBalls({});
+    game.engineForTests()->placeChasers({});
+    QSignalSpy frames(&game, &OmanixGame::frameChanged);
+    for (int i = 0; i < 60; ++i)
+        game.step();
+    QCOMPARE(frames.count(), 0);
+
+    game.setDirection(QStringLiteral("left"));
+    for (int i = 0; i < game.engine()->params().playerPeriod; ++i)
+        game.step();
+    QCOMPARE(frames.count(), 1);
 }

@@ -86,6 +86,7 @@ void OmanixGame::startGame(Difficulty difficulty, quint32 seed) {
     emit pausedChanged();
     emit levelIntroChanged();
     syncDerivedState();
+    m_lastFrame = m_game ? m_game->frame() : 0;
     emit frameChanged();
     syncTimer();
 }
@@ -151,6 +152,7 @@ void OmanixGame::restartLevel() {
     emit levelSecondsChanged();
     emit levelIntroChanged();
     syncDerivedState();
+    m_lastFrame = m_game ? m_game->frame() : 0;
     emit frameChanged();
     syncTimer();
 }
@@ -165,6 +167,7 @@ void OmanixGame::nextLevel() {
     emit phaseChanged();
     emit levelIntroChanged();
     syncDerivedState();
+    m_lastFrame = m_game ? m_game->frame() : 0;
     emit frameChanged();
     syncTimer();
 }
@@ -178,6 +181,7 @@ void OmanixGame::backToStart() {
     emit pausedChanged();
     emit levelIntroChanged();
     syncDerivedState();
+    m_lastFrame = 0;
     emit frameChanged();
 }
 
@@ -200,7 +204,13 @@ void OmanixGame::step() {
     if (m_game->inLevelIntro() != intro)
         emit levelIntroChanged();
     syncDerivedState();
-    emit frameChanged();
+    // A tick between movement periods changes nothing on screen; skipping the
+    // signal is what keeps the renderer from rasterising 60 identical frames
+    // a second.
+    if (m_game->frame() != m_lastFrame) {
+        m_lastFrame = m_game->frame();
+        emit frameChanged();
+    }
 }
 
 // State the engine derives on demand, sampled once per tick so QML only

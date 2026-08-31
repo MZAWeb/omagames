@@ -86,6 +86,17 @@ double Field::claimedPercent() const {
     return 100.0 * claimedInterior() / interiorCells();
 }
 
+bool Field::trailNear(QPoint p, int radius) const {
+    for (int dy = -radius; dy <= radius; ++dy) {
+        for (int dx = -radius; dx <= radius; ++dx) {
+            const QPoint n {p.x() + dx, p.y() + dy};
+            if (contains(n) && at(n) == Cell::Trail)
+                return true;
+        }
+    }
+    return false;
+}
+
 std::vector<int> Field::trailCells() const {
     std::vector<int> trail;
     for (int i = 0; i < cellCount(); ++i) {
