@@ -2,9 +2,9 @@ import QtQuick
 import QtQuick.Layouts
 
 // The rail beside the board: the digits, the keyboard contract, what a click
-// on them does, validation, the secondary actions and a one-line key reminder —
-// always in that order, so nothing a hand has learned moves when the puzzle or
-// the window changes.
+// on them does, the two play settings, the secondary actions and a one-line
+// key reminder — always in that order, so nothing a hand has learned moves
+// when the puzzle or the window changes.
 ColumnLayout {
     id: rail
 
@@ -17,7 +17,8 @@ ColumnLayout {
     // it that way keeps the keypad's own spacing out of the binding and avoids
     // a loop. The rail's height is anchored, never asked of its children.
     readonly property real keyBudget: height - keys.implicitHeight - modes.implicitHeight
-        - validate.implicitHeight - actions.implicitHeight - reminder.implicitHeight - 6 * spacing
+        - validate.implicitHeight - autoNotes.implicitHeight - actions.implicitHeight
+        - reminder.implicitHeight - 7 * spacing
 
     DigitPad {
         Layout.alignment: Qt.AlignHCenter
@@ -37,6 +38,11 @@ ColumnLayout {
 
     ValidateToggle {
         id: validate
+        Layout.fillWidth: true
+    }
+
+    AutoNotesToggle {
+        id: autoNotes
         Layout.fillWidth: true
     }
 

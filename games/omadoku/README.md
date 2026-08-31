@@ -17,10 +17,22 @@ current Omarchy theme.
   digit clears that cell's own notes and nothing else: the marks you left in the
   rest of the row, column and box are your bookkeeping to keep or tidy. Notes
   are never checked.
+- **Auto-notes** (the `Auto-notes` toggle beside `Validate`, `A`, remembered
+  between sessions and off by default): while it is on the board keeps the
+  pencil. Every empty cell shows exactly the digits its row, column and box
+  still leave open, and every entry, erase and undo is reflected at once —
+  there is nothing to tidy and nothing to forget. It is deliberately not a
+  hint: it repeats what is on the grid and never looks at the solution.
+  Your own marks are set aside, not thrown away, and come back the moment you
+  switch it off. While it is on nothing can pencil: `Shift`+a digit does
+  nothing, the keypad's *Note* mode is greyed out (switching Auto-notes on
+  hands a keypad set to it back to *Fill*), and a plain digit fills the cursor
+  cell even with several cells selected.
 - **The keyboard mapping is fixed** and never depends on anything on screen:
   `1`-`9` fill, `Shift+1`-`9` note, `Ctrl+1`-`9` (or `Alt+1`-`9`) highlight. The
-  line under the keypad says so at all times. The one thing that bends it is a
-  multi-cell selection, where a plain digit notes too (see below).
+  line under the keypad says so at all times, and says it differently in the
+  two cases that bend it: a multi-cell selection, where a plain digit notes
+  too, and Auto-notes, where nothing pencils at all.
 - **Mouse clicks** (the segmented control under that line) is the one thing the
   *Highlight* / *Note* / *Fill* selector decides: what clicking a key on the
   keypad does. It changes nothing about the keyboard. `N` cycles it and it is
@@ -60,7 +72,7 @@ current Omarchy theme.
 | Arrows or `h` `j` `k` `l` | move the cursor, collapsing any multi-cell selection |
 | `Shift`+arrows or `Shift+h` `j` `k` `l` | extend the selection along the way |
 | `Ctrl`+click | add a cell to the selection, or take it out |
-| `1`–`9` | fill the digit into the cursor cell — over a multi-cell selection it notes instead |
+| `1`–`9` | fill the digit into the cursor cell — over a multi-cell selection it notes instead, unless Auto-notes is on |
 | `Shift+1`–`Shift+9` | note the digit in every selected empty cell — clearing it from all only when all of them have it |
 | `Ctrl+1`–`Ctrl+9` (or `Alt+1`–`Alt+9`) | highlight every cell holding that digit |
 | `N` | cycle what a keypad click does: Highlight → Note → Fill |
@@ -68,6 +80,7 @@ current Omarchy theme.
 | `Ctrl+Z` | undo |
 | `R` | restart the puzzle: clears every entry and note (confirms once you have any) |
 | `V` | toggle *Validate as I go* |
+| `A` | toggle *Auto-notes*: the board pencils every empty cell with what still fits |
 | `Escape` | collapse the selection, else clear the highlight, else back to the start screen (confirms mid-puzzle) |
 | `Ctrl+Q` | quit |
 
@@ -80,8 +93,8 @@ Every button shows its key, so nothing above needs memorising.
 The board is the hero: square, centred, and given every pixel the controls do
 not need. Everything else lives in one rail, always in the same order — the
 3×3 keypad, the line stating the keyboard mapping, the *Mouse clicks*
-selector, *Validate as I go*, then Erase, Undo, Restart and New game, with a
-line of keyboard reminders at the foot.
+selector, *Validate as I go* and *Auto-notes*, then Erase, Undo, Restart and
+New game, with a line of keyboard reminders at the foot.
 
 The rail sits beside the board on the right, and folds into a bottom sheet
 under it when that leaves the board bigger — which is what a tall, narrow

@@ -12,6 +12,7 @@
         <file alias="KeyboardMap.qml">KeyboardMap.qml</file>
         <file alias="ClickModeSelector.qml">ClickModeSelector.qml</file>
         <file alias="ValidateToggle.qml">ValidateToggle.qml</file>
+        <file alias="AutoNotesToggle.qml">AutoNotesToggle.qml</file>
         <file alias="SecondaryActions.qml">SecondaryActions.qml</file>
         <file alias="KeyReminder.qml">KeyReminder.qml</file>
         <file alias="WonOverlay.qml">WonOverlay.qml</file>

@@ -36,6 +36,7 @@ RowLayout {
 
             ClickModeSelector { Layout.fillWidth: true }
             ValidateToggle { Layout.alignment: Qt.AlignBottom; compact: true }
+            AutoNotesToggle { Layout.alignment: Qt.AlignBottom }
         }
 
         SecondaryActions {

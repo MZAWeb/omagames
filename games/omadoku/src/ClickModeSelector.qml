@@ -81,6 +81,9 @@ ColumnLayout {
                     required property var modelData
                     required property int index
                     readonly property bool selected: game.clickMode === modelData.mode
+                    // Auto-notes holds the pencil, so a click set to Note
+                    // would do nothing: the segment says so and refuses.
+                    readonly property bool available: !(game.autoNotes && modelData.mode === "note")
                     readonly property real firstRadius:
                         index === 0 ? group.radius - group.border.width : 0
                     readonly property real lastRadius:
@@ -96,7 +99,8 @@ ColumnLayout {
                         topRightRadius: parent.lastRadius
                         bottomRightRadius: parent.lastRadius
                         color: parent.selected ? theme.accent
-                             : mouse.containsMouse ? theme.alpha(theme.foreground, 0.10)
+                             : mouse.containsMouse && parent.available
+                                 ? theme.alpha(theme.foreground, 0.10)
                              : "transparent"
                         Behavior on color { ColorAnimation { duration: 90 } }
                     }
@@ -111,7 +115,9 @@ ColumnLayout {
                     Text {
                         anchors.centerIn: parent
                         text: modelData.label
-                        color: selected ? theme.background : theme.foreground
+                        color: selected ? theme.background
+                             : available ? theme.foreground
+                             : theme.mix(theme.background, theme.foreground, 0.35)
                         font.pixelSize: 12 * theme.textScale * root.fit
                         font.bold: selected
                     }
@@ -120,6 +126,7 @@ ColumnLayout {
                         id: mouse
                         anchors.fill: parent
                         hoverEnabled: true
+                        enabled: parent.available
                         onClicked: game.clickMode = modelData.mode
                     }
                 }

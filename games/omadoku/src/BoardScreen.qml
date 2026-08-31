@@ -43,6 +43,8 @@ FocusScope {
             game.cycleClickMode();
         } else if (event.key === Qt.Key_V) {
             game.validateAsYouGo = !game.validateAsYouGo;
+        } else if (event.key === Qt.Key_A) {
+            game.autoNotes = !game.autoNotes;
         } else if (event.key === Qt.Key_R) {
             game.requestRestart();
         } else if (event.key === Qt.Key_Backspace || event.key === Qt.Key_Delete
