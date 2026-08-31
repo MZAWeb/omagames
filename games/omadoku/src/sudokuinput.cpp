@@ -56,6 +56,10 @@ SudokuInput::Action SudokuInput::keyAction(Qt::KeyboardModifiers modifiers) {
     return Action::Fill;
 }
 
+SudokuInput::Action SudokuInput::actionFor(Action action, int selectedCells) {
+    return action == Action::Fill && selectedCells > 1 ? Action::Note : action;
+}
+
 bool SudokuInput::toggleHighlight(int digit) {
     return setHighlightDigit(digit >= 1 && digit <= 9 && digit != m_highlightDigit ? digit : -1);
 }

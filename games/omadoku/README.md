@@ -19,23 +19,25 @@ current Omarchy theme.
   are never checked.
 - **The keyboard mapping is fixed** and never depends on anything on screen:
   `1`-`9` fill, `Shift+1`-`9` note, `Ctrl+1`-`9` (or `Alt+1`-`9`) highlight. The
-  line under the keypad says so at all times.
+  line under the keypad says so at all times. The one thing that bends it is a
+  multi-cell selection, where a plain digit notes too (see below).
 - **Mouse clicks** (the segmented control under that line) is the one thing the
   *Highlight* / *Note* / *Fill* selector decides: what clicking a key on the
   keypad does. It changes nothing about the keyboard. `N` cycles it and it is
   remembered between sessions; Fill is the default.
 - **Selecting several cells** is for pencilling: `Ctrl+click` picks cells out
   one at a time, `Shift`+arrows (or `Shift+h` `j` `k` `l`) sweeps a run, taking
-  every cell the cursor crosses. `Shift`+a digit then pencils it into all of
-  them at once — cells that already hold a value are skipped — and one `Ctrl+Z`
-  takes the whole lot back. The selection answers as one: as long as an empty
-  cell in it is missing that note the digit goes into all of them, and only
-  once every one carries it does the next press take it out everywhere — so a
-  half-pencilled selection converges instead of flipping cell by cell. Over a
-  single cell it is the plain toggle it always was. A plain digit still fills
-  the cursor cell only, and folds the selection back onto it; so does a plain
-  arrow or a plain click. The cursor is outlined more strongly than the rest of
-  the selection.
+  every cell the cursor crosses. A digit then pencils it into all of them at
+  once — with or without `Shift`, since a value belongs to one cell and cannot
+  be what you meant across a sweep — cells that already hold a value are
+  skipped, and one `Ctrl+Z` takes the whole lot back. The selection answers as
+  one: as long as an empty cell in it is missing that note the digit goes into
+  all of them, and only once every one carries it does the next press take it
+  out everywhere — so a half-pencilled selection converges instead of flipping
+  cell by cell. Over a single cell it is the plain toggle it always was, and a
+  plain digit fills the cursor cell and folds the selection back onto it; so
+  does a plain arrow or a plain click. The cursor is outlined more strongly
+  than the rest of the selection.
 - **Highlighting** lights up every cell holding that digit, givens included,
   and the key on the keypad with it. The same digit again (or `Escape`) clears
   it, another digit switches it. The cursor and the selection do not put it
@@ -58,7 +60,7 @@ current Omarchy theme.
 | Arrows or `h` `j` `k` `l` | move the cursor, collapsing any multi-cell selection |
 | `Shift`+arrows or `Shift+h` `j` `k` `l` | extend the selection along the way |
 | `Ctrl`+click | add a cell to the selection, or take it out |
-| `1`–`9` | fill the digit into the cursor cell |
+| `1`–`9` | fill the digit into the cursor cell — over a multi-cell selection it notes instead |
 | `Shift+1`–`Shift+9` | note the digit in every selected empty cell — clearing it from all only when all of them have it |
 | `Ctrl+1`–`Ctrl+9` (or `Alt+1`–`Alt+9`) | highlight every cell holding that digit |
 | `N` | cycle what a keypad click does: Highlight → Note → Fill |
