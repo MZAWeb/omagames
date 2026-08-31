@@ -15,6 +15,7 @@ size.
 | **Omasweeper** | `games/omasweeper` | Minesweeper with Beginner, Intermediate and Expert boards and best times |
 | **Omasnake** | `games/omasnake` | Snake: eat the dots, grow longer and faster, and never touch the wall or your own tail; Classic or Wrap edges, three speeds and high scores |
 | **Omatris** | `games/omatris` | Tetris: stack the falling blocks, clear lines, chase the level; marathon, a 40-line sprint and an endless calm mode |
+| **Oma2048** | `games/oma2048` | 2048: slide the tiles, merge equal pairs into bigger ones, reach 2048 and keep going; one-level undo and high scores |
 
 Each game has its own README with rules and keyboard shortcuts.
 
