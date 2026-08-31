@@ -20,6 +20,9 @@ public:
     bool validateAsYouGo(bool fallback) const;
     void setValidateAsYouGo(bool validateAsYouGo) const;
 
+    bool autoNotes(bool fallback) const;
+    void setAutoNotes(bool autoNotes) const;
+
     // Empty when nothing is stored, so the caller picks the default.
     QString clickMode() const;
     void setClickMode(const QString &clickMode) const;

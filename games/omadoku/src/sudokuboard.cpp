@@ -2,6 +2,7 @@
 
 #include <QJsonArray>
 
+#include "candidategrid.h"
 #include "sudokugrader.h"
 
 #include <algorithm>
@@ -52,7 +53,26 @@ int SudokuBoard::value(int index) const {
 }
 
 quint16 SudokuBoard::notes(int index) const {
-    return inRange(index) ? m_notes[size_t(index)] : quint16(0);
+    if (!inRange(index))
+        return 0;
+    // Auto-notes answers from the grid rather than from what was pencilled, so
+    // the marks are right by construction: there is no cached copy to update
+    // and none to forget to update.
+    if (m_autoNotes && m_values[size_t(index)] == 0)
+        return candidates(index);
+    return m_notes[size_t(index)];
+}
+
+quint16 SudokuBoard::candidates(int index) const {
+    if (!inRange(index) || m_values[size_t(index)] != 0)
+        return 0;
+    quint16 open = SudokuGrader::kAllDigits;
+    for (int peer : Sudoku::peers(index)) {
+        const int taken = m_values[size_t(peer)];
+        if (taken != 0)
+            open &= quint16(~SudokuGrader::bitOf(taken));
+    }
+    return open;
 }
 
 bool SudokuBoard::isWrong(int index) const {
@@ -111,7 +131,10 @@ std::vector<int> SudokuBoard::setValue(int index, int value) {
 }
 
 std::vector<int> SudokuBoard::toggleNotes(const std::vector<int> &indices, int digit) {
-    if (digit < 1 || digit > 9)
+    // The board holds the pencil while Auto-notes is on, and the marks under
+    // it are the ones waiting to be handed back: writing there would change
+    // nothing on screen and lose what the player left.
+    if (digit < 1 || digit > 9 || m_autoNotes)
         return {};
     // Notes only make sense in an empty cell, so anything else in the list is
     // quietly passed over: pencilling across a selection should not care that

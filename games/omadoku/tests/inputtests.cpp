@@ -84,15 +84,20 @@ void InputTests::aPlainDigitOverSeveralCellsMeansANote() {
     using Action = SudokuInput::Action;
     // One cell (or none yet) leaves every action as it was.
     for (int cells : {0, 1}) {
-        QCOMPARE(int(SudokuInput::actionFor(Action::Fill, cells)), int(Action::Fill));
-        QCOMPARE(int(SudokuInput::actionFor(Action::Note, cells)), int(Action::Note));
-        QCOMPARE(int(SudokuInput::actionFor(Action::Highlight, cells)), int(Action::Highlight));
+        QCOMPARE(int(SudokuInput::actionFor(Action::Fill, cells, true)), int(Action::Fill));
+        QCOMPARE(int(SudokuInput::actionFor(Action::Note, cells, true)), int(Action::Note));
+        QCOMPARE(int(SudokuInput::actionFor(Action::Highlight, cells, true)),
+                 int(Action::Highlight));
     }
     // Several cells can only mean pencil marks; the other two already say
     // what they mean.
-    QCOMPARE(int(SudokuInput::actionFor(Action::Fill, 2)), int(Action::Note));
-    QCOMPARE(int(SudokuInput::actionFor(Action::Note, 2)), int(Action::Note));
-    QCOMPARE(int(SudokuInput::actionFor(Action::Highlight, 2)), int(Action::Highlight));
+    QCOMPARE(int(SudokuInput::actionFor(Action::Fill, 2, true)), int(Action::Note));
+    QCOMPARE(int(SudokuInput::actionFor(Action::Note, 2, true)), int(Action::Note));
+    QCOMPARE(int(SudokuInput::actionFor(Action::Highlight, 2, true)), int(Action::Highlight));
+
+    // With the notes out of the player's hands there is nothing to redirect a
+    // digit into, so it fills the cursor cell as it always did.
+    QCOMPARE(int(SudokuInput::actionFor(Action::Fill, 2, false)), int(Action::Fill));
 }
 
 void InputTests::theHighlightTakesOneDigitAtATime() {
@@ -208,6 +213,47 @@ void InputTests::aPlainDigitNotesTheWholeSelection() {
     game.select(empties.at(2));
     game.pressDigitKey(9, Qt::NoModifier);
     QCOMPARE(valueOf(&game, empties.at(2)), 9);
+}
+
+void InputTests::autoNotesTakeThePencilFromTheDigits() {
+    SudokuGame game;
+    game.newGame(QStringLiteral("easy"));
+    const QList<int> empties = emptyRow(&game);
+    QVERIFY(empties.size() >= 3);
+    const int cell = empties.at(0);
+
+    game.select(cell);
+    game.pressDigitKey(3, Qt::ShiftModifier);
+    const int own = notesOf(&game, cell);
+    QCOMPARE(own, 1 << 2);
+
+    // The board takes over: the cell shows what it still allows, and the mark
+    // the player left is set aside rather than lost.
+    game.setAutoNotes(true);
+    const int shown = notesOf(&game, cell);
+    QVERIFY(shown != 0);
+    QVERIFY(shown != own);  // the grid's answer, not the mark that was there
+    game.pressDigitKey(9, Qt::ShiftModifier);
+    QCOMPARE(notesOf(&game, cell), shown);  // nothing to pencil
+
+    // A keypad left on Note would click into that same held pencil, so
+    // switching Auto-notes on hands it back to Fill.
+    game.setAutoNotes(false);
+    game.setClickMode(QStringLiteral("note"));
+    game.setAutoNotes(true);
+    QCOMPARE(game.clickMode(), QStringLiteral("fill"));
+
+    // And a plain digit over a sweep fills the cursor cell again: the note it
+    // would otherwise have become cannot be written.
+    game.select(empties.at(1));
+    game.toggleSelection(empties.at(2));
+    game.pressDigitKey(4, Qt::NoModifier);
+    QCOMPARE(valueOf(&game, empties.at(2)), 4);
+    QCOMPARE(valueOf(&game, empties.at(1)), 0);
+    QCOMPARE(selectionOf(game), QList<int>({empties.at(2)}));
+
+    game.setAutoNotes(false);
+    QCOMPARE(notesOf(&game, cell), own);  // the player's mark, back untouched
 }
 
 void InputTests::clickModeCyclesAndPersists() {

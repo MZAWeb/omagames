@@ -20,6 +20,7 @@ private slots:
     void clickModeDecidesWhatAKeypadClickDoes();
     void keyboardMappingIgnoresTheClickMode();
     void aPlainDigitNotesTheWholeSelection();
+    void autoNotesTakeThePencilFromTheDigits();
     void clickModeCyclesAndPersists();
     void highlightTogglesAndSwitchesDigits();
     void highlightWearsAFixedHighlighterYellow();

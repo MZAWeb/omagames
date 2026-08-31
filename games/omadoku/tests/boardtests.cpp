@@ -226,6 +226,72 @@ void BoardTests::undoKeepsAtLeastAHundredLevels() {
     QVERIFY(!m_board.canUndo());
 }
 
+void BoardTests::autoNotesShowTheDigitsAPeerHasNotTaken() {
+    const int cell = emptyCell();
+    m_board.setAutoNotes(true);
+
+    // What the row, column and box still leave open, straight from the grid.
+    quint16 expected = 0x1ff;
+    for (int peer : Sudoku::peers(cell)) {
+        if (const int taken = m_board.value(peer))
+            expected &= quint16(~(1u << (taken - 1)));
+    }
+    QVERIFY(expected != 0);
+    QCOMPARE(m_board.notes(cell), expected);
+    QCOMPARE(m_board.notes(cell), m_board.candidates(cell));
+
+    // The answer is always among them, and a cell holding a value shows none.
+    const int answer = m_board.puzzle().solution[size_t(cell)];
+    QVERIFY(m_board.notes(cell) & quint16(1u << (answer - 1)));
+    QCOMPARE(m_board.notes(givenCell()), quint16(0));
+    m_board.setValue(cell, answer);
+    QCOMPARE(m_board.notes(cell), quint16(0));
+}
+
+void BoardTests::autoNotesBorrowThePencilRatherThanSpendIt() {
+    const int cell = emptyCell();
+    m_board.toggleNote(cell, 3);
+    const quint16 own = m_board.notes(cell);
+    QCOMPARE(own, quint16(1u << 2));
+
+    m_board.setAutoNotes(true);
+    QCOMPARE(m_board.notes(cell), m_board.candidates(cell));
+    QVERIFY(m_board.notes(cell) != own);
+
+    // Nothing to pencil while the board holds the pencil, and the mark
+    // underneath is untouched.
+    QVERIFY(m_board.toggleNote(cell, 7).empty());
+    QVERIFY(m_board.entryCount() > 0);  // the player's own mark still counts
+
+    m_board.setAutoNotes(false);
+    QCOMPARE(m_board.notes(cell), own);
+    // The refused toggle left no undo step behind: one undo is still all it
+    // takes to get back to the untouched cell.
+    m_board.undo();
+    QCOMPARE(m_board.notes(cell), quint16(0));
+    QVERIFY(!m_board.canUndo());
+}
+
+void BoardTests::autoNotesFollowEveryEntryAndUndo() {
+    const int cell = emptyCell();
+    const int peer = emptyPeerOf(cell);
+    const int answer = m_board.puzzle().solution[size_t(cell)];
+    const quint16 bit = quint16(1u << (answer - 1));
+    m_board.setAutoNotes(true);
+    QVERIFY(m_board.notes(peer) & bit);
+
+    // Placing a digit takes it out of every cell that can see it, and undoing
+    // hands it straight back: nothing had to be recomputed to keep up.
+    m_board.setValue(cell, answer);
+    QVERIFY(!(m_board.notes(peer) & bit));
+    m_board.undo();
+    QVERIFY(m_board.notes(peer) & bit);
+
+    m_board.setValue(cell, answer);
+    m_board.erase(cell);
+    QVERIFY(m_board.notes(peer) & bit);
+}
+
 void BoardTests::validateAsYouGoFlagsWrongEntries() {
     const int cell = emptyCell();
     const Sudoku::Grid &solution = m_board.puzzle().solution;

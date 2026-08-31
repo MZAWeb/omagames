@@ -32,12 +32,14 @@ public:
     // plain fills.
     static Action keyAction(Qt::KeyboardModifiers modifiers);
 
-    // What that action means over `selectedCells` cells. A value belongs to
-    // one cell, so a plain digit over a multi-cell selection was meant as a
-    // pencil mark: filling would write one cell, throw the selection away and
-    // waste the sweep that picked it. Note and Highlight already say what they
-    // mean, whatever is selected.
-    static Action actionFor(Action action, int selectedCells);
+    // What that action means over `selectedCells` cells, when `ownNotes` says
+    // the pencil marks are still the player's to make. A value belongs to one
+    // cell, so a plain digit over a multi-cell selection was meant as a pencil
+    // mark: filling would write one cell, throw the selection away and waste
+    // the sweep that picked it. Note and Highlight already say what they mean,
+    // whatever is selected — and with Auto-notes holding the pencil there is
+    // no mark to redirect a digit into, so it fills as it always did.
+    static Action actionFor(Action action, int selectedCells, bool ownNotes);
 
     // The digit shown everywhere on the board, -1 for none. The same digit
     // again clears it, and anything that is not a digit clears it too.
