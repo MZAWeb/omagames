@@ -12,6 +12,7 @@ HEADERS += \
     src/difficulties.h \
     src/game.h \
     src/omanixgame.h \
+    src/fieldpainter.h \
     src/fieldview.h
 SOURCES += \
     src/main.cpp \
@@ -23,5 +24,6 @@ SOURCES += \
     src/game.cpp \
     src/omanixgame.cpp \
     src/omanixgamemodel.cpp \
+    src/fieldpainter.cpp \
     src/fieldview.cpp
 RESOURCES += src/resources.qrc

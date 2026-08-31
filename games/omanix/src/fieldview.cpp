@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdlib>
 
+#include "fieldpainter.h"
 #include "omanixgame.h"
 #include "omarchytheme.h"
 
@@ -148,10 +149,13 @@ QColor FieldView::trailColorNow(qint64 now) const {
 }
 
 void FieldView::paint(QPainter *painter) {
-    painter->fillRect(boundingRect(), m_openColor);
     const Game *game = engine();
-    if (!game)
+    if (!game) {
+        painter->fillRect(boundingRect(), m_openColor);
         return;
+    }
+    FieldPaint::paintGround(painter, game->field(),
+                            {m_cellSize, boundingRect().size(), m_openColor, m_claimedColor});
     const qint64 now = m_clock.elapsed();
     paintCells(painter, *game, now);
     paintMovers(painter, *game, now);
@@ -160,17 +164,7 @@ void FieldView::paint(QPainter *painter) {
 void FieldView::paintCells(QPainter *painter, const Game &game, qint64 now) {
     const Field &field = game.field();
     const int c = m_cellSize;
-    const QColor trail = trailColorNow(now);
-    painter->setPen(Qt::NoPen);
-    for (int y = 0; y < field.height(); ++y) {
-        for (int x = 0; x < field.width(); ++x) {
-            const Cell cell = field.at({x, y});
-            if (cell == Cell::Claimed)
-                painter->fillRect(x * c, y * c, c, c, m_claimedColor);
-            else if (cell == Cell::Trail)
-                painter->fillRect(x * c, y * c, c, c, trail);
-        }
-    }
+    FieldPaint::paintTrail(painter, field, c, trailColorNow(now));
     for (const SweepCell &sweep : m_sweep) {
         const double t = progress(now - m_sweepStart - sweep.delayMs, kFadeMs);
         if (t >= 1.0)

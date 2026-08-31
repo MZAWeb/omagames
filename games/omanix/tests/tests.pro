@@ -16,6 +16,7 @@ HEADERS += \
     ../src/omanixgame.h \
     scenario.h \
     fieldtests.h \
+    painttests.h \
     movertests.h \
     playtests.h \
     scoringtests.h \
@@ -23,6 +24,7 @@ HEADERS += \
 
 SOURCES += \
     ../src/field.cpp \
+    ../src/fieldpainter.cpp \
     ../src/entities.cpp \
     ../src/level.cpp \
     ../src/spawn.cpp \
@@ -32,6 +34,7 @@ SOURCES += \
     ../src/omanixgamemodel.cpp \
     scenario.cpp \
     fieldtests.cpp \
+    painttests.cpp \
     movertests.cpp \
     playtests.cpp \
     scoringtests.cpp \
