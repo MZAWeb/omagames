@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Oma2048
+Comment=2048 for Omarchy
+Exec=oma2048
+Icon=oma2048
+Terminal=false
+Categories=Game;LogicGame;
+StartupWMClass=oma2048

@@ -15,6 +15,7 @@ size.
 | **Omasweeper** | `games/omasweeper` | Minesweeper with Beginner, Intermediate and Expert boards and best times |
 | **Omasnake** | `games/omasnake` | Snake: eat the dots, grow longer and faster, and never touch the wall or your own tail; Classic or Wrap edges, three speeds and high scores |
 | **Omatris** | `games/omatris` | Tetris: stack the falling blocks, clear lines, chase the level; marathon, a 40-line sprint and an endless calm mode |
+| **Oma2048** | `games/oma2048` | 2048: slide the tiles, merge equal pairs into bigger ones, reach 2048 and keep going; one-level undo and high scores |
 
 Each game has its own README with rules and keyboard shortcuts.
 
@@ -29,6 +30,10 @@ Each game has its own README with rules and keyboard shortcuts.
 | Omasnake | Omatris |
 |---|---|
 | <img src="screenshots/omasnake.png" alt="Omasnake, the snake winding towards a dot" width="100%"> | <img src="screenshots/omatris.png" alt="Omatris, a Marathon game with the hold box and next queue" width="100%"> |
+
+| Oma2048 | |
+|---|---|
+| <img src="screenshots/oma2048.png" alt="Oma2048 mid-run, merged tiles gathering along the bottom with the score ahead of the best" width="100%"> | |
 
 This is a monorepo: games live under `games/`, everything shared (theming,
 fonts, app bootstrap, common QML controls) lives under `common/` and is compiled

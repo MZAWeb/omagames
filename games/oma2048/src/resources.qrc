@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="Main.qml">Main.qml</file>
+        <file alias="PlayScreen.qml">PlayScreen.qml</file>
+        <file alias="PlayHeader.qml">PlayHeader.qml</file>
+        <file alias="BoardView.qml">BoardView.qml</file>
+        <file alias="TileDelegate.qml">TileDelegate.qml</file>
+        <file alias="KeyLegend.qml">KeyLegend.qml</file>
+        <file alias="WinOverlay.qml">WinOverlay.qml</file>
+        <file alias="GameOverOverlay.qml">GameOverOverlay.qml</file>
+        <file alias="HighScoresPanel.qml">HighScoresPanel.qml</file>
+        <file alias="ScoresOverlay.qml">ScoresOverlay.qml</file>
+    </qresource>
+</RCC>
