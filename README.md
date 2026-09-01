@@ -31,6 +31,10 @@ Each game has its own README with rules and keyboard shortcuts.
 |---|---|
 | <img src="screenshots/omasnake.png" alt="Omasnake, the snake winding towards a dot" width="100%"> | <img src="screenshots/omatris.png" alt="Omatris, a Marathon game with the hold box and next queue" width="100%"> |
 
+| Oma2048 | |
+|---|---|
+| <img src="screenshots/oma2048.png" alt="Oma2048 mid-run, merged tiles gathering along the bottom with the score ahead of the best" width="100%"> | |
+
 This is a monorepo: games live under `games/`, everything shared (theming,
 fonts, app bootstrap, common QML controls) lives under `common/` and is compiled
 into each game. Each game ships as its own Arch package.
