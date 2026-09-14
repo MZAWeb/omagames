@@ -57,6 +57,7 @@ public:
     bool launch();
     void setAimAngle(double angle);
     void nudgeAim(int direction);
+    QVector<QPointF> guide() const;
     QVector<DropEvent> tick(double seconds = kStepSeconds);
 
     // Deterministic scenario hooks used by the headless tests.

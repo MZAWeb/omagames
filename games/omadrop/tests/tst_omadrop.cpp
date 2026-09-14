@@ -21,7 +21,9 @@ private slots:
     void hitCountsDownAndScores();
     void zeroPegIsRemoved();
     void pegsStayStillUntilTheShotEnds();
-    void finishedShotAddsOneToThreePegs();
+    void finishedShotAddsTwoToFourPegs();
+    void guideCurvesUnderGravity();
+    void lobLeavesAndReentersThroughOpenTop();
     void shotDoesNotBounceForever();
     void pegCrossingTopEndsRun();
     void pauseFreezesSimulation();
@@ -50,10 +52,10 @@ void OmadropTests::aimIsPlayerControlledAndClamped() {
     game.setAimAngle(0.5);
     game.tick(0.05);
     QCOMPARE(game.aimAngle(), 0.5);
-    game.setAimAngle(2.0);
-    QCOMPARE(game.aimAngle(), 1.08);
+    game.setAimAngle(3.0);
+    QCOMPARE(game.aimAngle(), 2.1);
     game.nudgeAim(-1);
-    QVERIFY(game.aimAngle() < 1.08);
+    QVERIFY(game.aimAngle() < 2.1);
 }
 
 void OmadropTests::launchFollowsTheGuide() {
@@ -113,21 +115,47 @@ void OmadropTests::pegsStayStillUntilTheShotEnds() {
     QVERIFY(game.pegs().first().position.y() < before.y());
 }
 
-void OmadropTests::finishedShotAddsOneToThreePegs() {
+void OmadropTests::finishedShotAddsTwoToFourPegs() {
     DropEngine game(2);
     game.clearPegsForTests();
     game.setBallForTests({0.5, 1.05}, {0.0, 0.5});
     const QVector<DropEvent> events = game.tick();
     QVERIFY(game.ready());
-    QVERIFY(game.pegs().size() >= 1);
-    QVERIFY(game.pegs().size() <= 3);
+    QVERIFY(game.pegs().size() >= 2);
+    QVERIFY(game.pegs().size() <= 4);
     QVERIFY(std::any_of(events.begin(), events.end(), [](const DropEvent &event) {
         return event.type == DropEvent::ShotFinished;
     }));
 }
 
+void OmadropTests::guideCurvesUnderGravity() {
+    DropEngine game(1);
+    game.setAimAngleForTests(0.5);
+    const QVector<QPointF> arc = game.guide();
+    QVERIFY(arc.size() >= 3);
+    for (int i = 1; i < arc.size(); ++i)
+        QVERIFY(arc[i].x() > arc[i - 1].x());
+    for (int i = 2; i < arc.size(); ++i)
+        QVERIFY(arc[i].y() - arc[i - 1].y() > arc[i - 1].y() - arc[i - 2].y());
+}
+
+void OmadropTests::lobLeavesAndReentersThroughOpenTop() {
+    DropEngine game(1);
+    game.clearPegsForTests();
+    game.setBallForTests({0.31, 0.05}, {0.0, -0.8});
+    bool wentAbove = false;
+    for (int tick = 0; tick < 120 && !wentAbove; ++tick) {
+        game.tick();
+        wentAbove = game.ball().position.y() < -DropEngine::kBallRadius;
+    }
+    QVERIFY2(wentAbove, "the ball bounced off a ceiling instead of leaving through the top");
+    for (int tick = 0; tick < 120 && game.ball().position.y() < 0.1; ++tick)
+        game.tick();
+    QVERIFY(game.ball().position.y() >= 0.1);
+}
+
 void OmadropTests::shotDoesNotBounceForever() {
-    for (double angle : {-0.9, -0.45, 0.0, 0.45, 0.9}) {
+    for (double angle : {-1.8, -0.9, 0.0, 0.9, 1.8}) {
         DropEngine game(4);
         game.setAimAngle(angle);
         QVERIFY(game.launch());

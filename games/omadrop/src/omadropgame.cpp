@@ -79,10 +79,13 @@ void OmadropGame::restart() {
 }
 
 void OmadropGame::aimAt(double x, double y) {
-    if (!m_engine || y <= DropEngine::kLauncherY)
+    if (!m_engine)
         return;
-    m_engine->setAimAngle(std::atan2(x * DropEngine::kWidth - DropEngine::kLauncherX,
-                                    y * DropEngine::kHeight - DropEngine::kLauncherY));
+    const double dx = x * DropEngine::kWidth - DropEngine::kLauncherX;
+    const double dy = y * DropEngine::kHeight - DropEngine::kLauncherY;
+    if (std::hypot(dx, dy) < DropEngine::kBallRadius)
+        return;
+    m_engine->setAimAngle(std::atan2(dx, dy));
     emit frameChanged();
 }
 

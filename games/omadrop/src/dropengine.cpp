@@ -5,16 +5,20 @@
 
 namespace {
 
-constexpr double kAimLimit = 1.08;
+// Tuned against the original recording: gravity 2.75 and launch speed 1.5 in
+// field-width units, no air drag, near-elastic rebounds, an open top edge.
+constexpr double kAimLimit = 2.1;
 constexpr double kAimStep = 0.07;
-constexpr double kLaunchSpeed = 0.76;
-constexpr double kGravity = 0.56;
-constexpr double kWallRestitution = 0.48;
-constexpr double kPegRestitution = 0.32;
-constexpr double kBallDamping = 0.992;
-constexpr double kRisePerShot = 0.073;
-constexpr double kRiseSpeed = 0.34;
+constexpr double kLaunchSpeed = 0.92;
+constexpr double kGravity = 1.7;
+constexpr double kWallRestitution = 0.88;
+constexpr double kPegRestitution = 0.95;
+constexpr double kRisePerShot = 0.09;
+constexpr double kRiseSpeed = 0.5;
 constexpr double kMinDistance = 0.000001;
+constexpr double kMaxSubstepTravel = 0.012;
+constexpr double kGuideSeconds = 0.045;
+constexpr int kGuidePoints = 14;
 constexpr int kMaxTrail = 15;
 
 double length(QPointF value) {
@@ -56,6 +60,18 @@ void DropEngine::setAimAngle(double angle) {
         m_aimAngle = std::clamp(angle, -kAimLimit, kAimLimit);
 }
 
+QVector<QPointF> DropEngine::guide() const {
+    QVector<QPointF> points;
+    QPointF at(kLauncherX, kLauncherY + kBallRadius);
+    QPointF velocity(std::sin(m_aimAngle) * kLaunchSpeed, std::cos(m_aimAngle) * kLaunchSpeed);
+    for (int i = 0; i < kGuidePoints && at.y() <= kHeight; ++i) {
+        velocity.ry() += kGravity * kGuideSeconds;
+        at += velocity * kGuideSeconds;
+        points.append(at);
+    }
+    return points;
+}
+
 void DropEngine::nudgeAim(int direction) {
     if (direction != 0)
         setAimAngle(m_aimAngle + (direction < 0 ? -kAimStep : kAimStep));
@@ -87,28 +103,32 @@ void DropEngine::updateRise(double seconds) {
 }
 
 void DropEngine::updateBall(double seconds, QVector<DropEvent> *events) {
-    m_ball.velocity.ry() += kGravity * seconds;
-    m_ball.position += m_ball.velocity * seconds;
-    m_ball.velocity *= kBallDamping;
+    // Substep so a fast ball cannot tunnel through a peg between frames.
+    const double travel = length(m_ball.velocity) * seconds;
+    const int steps = std::clamp(int(std::ceil(travel / kMaxSubstepTravel)), 1, 12);
+    const double dt = seconds / steps;
+    for (int step = 0; step < steps && m_ball.active; ++step) {
+        m_ball.velocity.ry() += kGravity * dt;
+        m_ball.position += m_ball.velocity * dt;
 
-    if (m_ball.position.x() < kBallRadius) {
-        m_ball.position.setX(kBallRadius);
-        m_ball.velocity.setX(std::abs(m_ball.velocity.x()) * kWallRestitution);
-    } else if (m_ball.position.x() > kWidth - kBallRadius) {
-        m_ball.position.setX(kWidth - kBallRadius);
-        m_ball.velocity.setX(-std::abs(m_ball.velocity.x()) * kWallRestitution);
-    }
-    if (m_ball.position.y() < kBallRadius) {
-        m_ball.position.setY(kBallRadius);
-        m_ball.velocity.setY(std::abs(m_ball.velocity.y()) * kWallRestitution);
-    }
+        if (m_ball.position.x() < kBallRadius) {
+            m_ball.position.setX(kBallRadius);
+            m_ball.velocity.setX(std::abs(m_ball.velocity.x()) * kWallRestitution);
+        } else if (m_ball.position.x() > kWidth - kBallRadius) {
+            m_ball.position.setX(kWidth - kBallRadius);
+            m_ball.velocity.setX(-std::abs(m_ball.velocity.x()) * kWallRestitution);
+        }
+        // No ceiling: a lobbed ball leaves through the open top and falls back.
 
-    hitPegs(events);
+        hitPegs(events);
+        if (m_ball.position.y() - kBallRadius > kHeight) {
+            finishShot(events);
+            return;
+        }
+    }
     m_trail.prepend(m_ball.position);
     while (m_trail.size() > kMaxTrail)
         m_trail.removeLast();
-    if (m_ball.position.y() - kBallRadius > kHeight)
-        finishShot(events);
 }
 
 void DropEngine::hitPegs(QVector<DropEvent> *events) {
@@ -153,7 +173,7 @@ void DropEngine::finishShot(QVector<DropEvent> *events) {
 }
 
 int DropEngine::randomHits() {
-    const int ceiling = std::clamp(1 + m_score / 24, 1, 7);
+    const int ceiling = std::clamp(1 + m_score / 13, 1, 7);
     if (ceiling == 1)
         return 1;
     return 1 + int(std::min(m_random.bounded(ceiling), m_random.bounded(ceiling)));
@@ -161,7 +181,7 @@ int DropEngine::randomHits() {
 
 void DropEngine::spawnPegs() {
     const int roll = m_random.bounded(100);
-    const int count = roll < 55 ? 1 : (roll < 85 ? 2 : 3);
+    const int count = roll < 40 ? 2 : (roll < 80 ? 3 : 4);
     for (int i = 0; i < count; ++i)
         spawnPeg(i, count);
 }

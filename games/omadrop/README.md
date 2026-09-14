@@ -5,14 +5,14 @@ field and clear numbered pegs before they reach the top.
 
 ## Rules
 
-- Move the dotted guide to aim, then launch. The ball falls under gravity and
-  rebounds from the walls and the pile.
+- Move the dotted guide to aim, then launch. The guide previews the gravity
+  arc; the ball follows it, rebounding hard from the walls and the pile. The
+  top edge is open, so a lobbed ball sails over the rim and drops back in.
 - A hit removes one point from a peg and adds one point to the score. A peg
   disappears when its number reaches zero.
 - Circles and squares obey the same rules and stay put during the shot.
 - After the ball leaves the bottom, every remaining peg moves one step upward
-  and one, two or three new pegs enter along the bottom. Single-peg turns are
-  most common.
+  and two to four new pegs enter along the bottom.
 - The run ends when that upward step carries a peg through the top edge.
 
 ## Keys

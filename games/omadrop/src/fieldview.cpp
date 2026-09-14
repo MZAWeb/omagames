@@ -87,21 +87,23 @@ void DropFieldView::paint(QPainter *painter) {
 
 void DropFieldView::paintGuide(QPainter *painter, const DropEngine &game) {
     const QPointF launcher = point({DropEngine::kLauncherX, DropEngine::kLauncherY});
-    const double guideLength = scale() * 0.18;
-    const QPointF end = launcher + QPointF(std::sin(game.aimAngle()) * guideLength,
-                                           std::cos(game.aimAngle()) * guideLength);
-    QPen pen(m_guideColor, std::max(1.5, scale() * 0.005), Qt::DotLine, Qt::RoundCap);
-    painter->setPen(pen);
-    painter->drawLine(launcher, end);
-
-    const QPointF direction = end - launcher;
-    const double size = scale() * 0.014;
-    const double angle = std::atan2(direction.y(), direction.x());
-    const QPointF left = end - QPointF(std::cos(angle - 0.55), std::sin(angle - 0.55)) * size;
-    const QPointF right = end - QPointF(std::cos(angle + 0.55), std::sin(angle + 0.55)) * size;
-    painter->setBrush(m_guideColor);
+    const QVector<QPointF> arc = game.guide();
     painter->setPen(Qt::NoPen);
-    painter->drawPolygon(QPolygonF({end, left, right}));
+    const double dotSize = std::max(1.5, scale() * 0.0045);
+    for (const QPointF &sample : arc) {
+        painter->setBrush(m_guideColor);
+        painter->drawEllipse(point(sample), dotSize, dotSize);
+    }
+    if (arc.size() >= 2) {
+        const QPointF end = point(arc.last());
+        const QPointF direction = end - point(arc[arc.size() - 2]);
+        const double size = scale() * 0.014;
+        const double angle = std::atan2(direction.y(), direction.x());
+        const QPointF left = end - QPointF(std::cos(angle - 0.55), std::sin(angle - 0.55)) * size;
+        const QPointF right = end - QPointF(std::cos(angle + 0.55), std::sin(angle + 0.55)) * size;
+        painter->setBrush(m_guideColor);
+        painter->drawPolygon(QPolygonF({end, left, right}));
+    }
 
     const double radius = scale() * DropEngine::kBallRadius;
     painter->setPen(QPen(m_ballColor, std::max(1.5, scale() * 0.005)));
