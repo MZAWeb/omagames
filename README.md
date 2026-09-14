@@ -76,7 +76,7 @@ Omarchy theme.
 ```
 common/        shared C++ (OmarchyTheme, SystemTheme, OmaGames::setupApplication), QML module `OmaGames`, fonts, tests/
 games/<name>/  <name>.pro, src/ (engine + QML), tests/, pkgbuild/, README.md
-docs/          ARCHITECTURE.md, NEW-GAME.md, PARALLEL-AGENTS.md, RELEASING.md
+docs/          ARCHITECTURE.md, NEW-GAME.md, PARALLEL-AGENTS.md
 bin/           build / run / test / install
 install.sh     the one-line installer above
 screenshots/   images used by this README
@@ -88,7 +88,6 @@ screenshots/   images used by this README
 - `docs/NEW-GAME.md` — step-by-step guide to add a game.
 - `CLAUDE.md` — the rules every change must follow (humans and agents alike).
 - `docs/PARALLEL-AGENTS.md` — running several coding agents at once with git worktrees.
-- `docs/RELEASING.md` — cutting a release and publishing to the Omarchy Package Repository.
 
 The iA Writer Mono font is bundled under the SIL Open Font License 1.1; see
 `common/fonts/OFL.txt`. MIT licensed, see `LICENSE`.
