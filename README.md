@@ -77,9 +77,8 @@ Omarchy theme.
 common/        shared C++ (OmarchyTheme, SystemTheme, OmaGames::setupApplication), QML module `OmaGames`, fonts, tests/
 games/<name>/  <name>.pro, src/ (engine + QML), tests/, pkgbuild/, README.md
 docs/          ARCHITECTURE.md, NEW-GAME.md, PARALLEL-AGENTS.md, RELEASING.md
-bin/           build / run / test / install / opr-pkgbuilds / release
+bin/           build / run / test / install
 install.sh     the one-line installer above
-packaging/     OPR (omarchy-pkgs) directories generated at release time
 screenshots/   images used by this README
 ```
 

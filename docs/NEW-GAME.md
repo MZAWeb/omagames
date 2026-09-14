@@ -105,5 +105,5 @@ shortcuts, install line. Decide the rules before writing code.
 - `pkgbuild/PKGBUILD`: only paths/names change; verify with `makepkg -f` in `pkgbuild/`.
 - Add the game to the table in the root `README.md` (and a screenshot).
 - From a clean state: `rm -rf build build-tests && bin/build && bin/test`.
-- Nothing else to register: CI, `bin/test`, `install.sh` and `bin/opr-pkgbuilds`
-  discover games from `games/*`.
+- Nothing else to register: CI, `bin/test`, and `install.sh` discover games
+  from `games/*`.
