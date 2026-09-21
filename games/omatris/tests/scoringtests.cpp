@@ -48,7 +48,8 @@ void ScoringTests::scoringPaysTheGuidelineTable() {
 
 void ScoringTests::backToBackAndComboStack() {
     Game game(Mode::Zen, kSeed);
-    const Event *first = find(tetrisAtTheLeftWall(game), Event::LinesCleared);
+    const std::vector<Event> firstDrop = tetrisAtTheLeftWall(game);
+    const Event *first = find(firstDrop, Event::LinesCleared);
     QVERIFY(first);
     QVERIFY(!first->clear.backToBack);
     QCOMPARE(first->clear.combo, 0);
@@ -57,7 +58,8 @@ void ScoringTests::backToBackAndComboStack() {
     waitOutTheFlash(game);
 
     // A second Tetris straight after: half again for the chain, plus the combo.
-    const Event *second = find(tetrisAtTheLeftWall(game), Event::LinesCleared);
+    const std::vector<Event> secondDrop = tetrisAtTheLeftWall(game);
+    const Event *second = find(secondDrop, Event::LinesCleared);
     QVERIFY(second);
     QVERIFY(second->clear.backToBack);
     QCOMPARE(second->clear.combo, 1);
@@ -67,7 +69,8 @@ void ScoringTests::backToBackAndComboStack() {
     // A plain single keeps the combo going but breaks the chain.
     fillRow(game.mutableBoard(), kBottom, {0});
     game.placePiece({PieceType::I, 1, {-2, 0}});
-    const Event *third = find(game.hardDrop(), Event::LinesCleared);
+    const std::vector<Event> thirdDrop = game.hardDrop();
+    const Event *third = find(thirdDrop, Event::LinesCleared);
     QVERIFY(third);
     QVERIFY(!third->clear.backToBack);
     QCOMPARE(third->clear.combo, 2);
@@ -77,7 +80,8 @@ void ScoringTests::backToBackAndComboStack() {
 
     // Locking a piece with no clear ends the combo.
     game.placePiece({PieceType::O, 0, {3, 0}});
-    const Event *locked = find(game.hardDrop(), Event::Locked);
+    const std::vector<Event> lockedDrop = game.hardDrop();
+    const Event *locked = find(lockedDrop, Event::Locked);
     QVERIFY(locked);
     QCOMPARE(locked->clear.lines, 0);
     QCOMPARE(game.combo(), -1);
@@ -113,7 +117,8 @@ void ScoringTests::tSpinMiniIsToldFromAFullOne() {
     game.placePiece({PieceType::T, 0, {7, 21}});
     QVERIFY(game.rotate(-1));
     QCOMPARE(game.piece().origin, QPoint(8, 21));
-    const Event *locked = find(game.hardDrop(), Event::Locked);
+    const std::vector<Event> miniDrop = game.hardDrop();
+    const Event *locked = find(miniDrop, Event::Locked);
     QVERIFY(locked);
     QCOMPARE(locked->clear.spin, Spin::Mini);
     QCOMPARE(locked->clear.lines, 0);
@@ -124,7 +129,8 @@ void ScoringTests::tSpinMiniIsToldFromAFullOne() {
     fillRow(single.mutableBoard(), 23, {9});
     single.placePiece({PieceType::T, 0, {7, 21}});
     QVERIFY(single.rotate(-1));
-    const Event *cleared = find(single.hardDrop(), Event::LinesCleared);
+    const std::vector<Event> singleDrop = single.hardDrop();
+    const Event *cleared = find(singleDrop, Event::LinesCleared);
     QVERIFY(cleared);
     QCOMPARE(cleared->clear.spin, Spin::Mini);
     QCOMPARE(cleared->clear.points, Rules::kTSpinMiniSingle);
@@ -133,7 +139,8 @@ void ScoringTests::tSpinMiniIsToldFromAFullOne() {
     Game dropped(Mode::Zen, kSeed);
     dropped.mutableBoard().set({8, 23}, PieceType::S);
     dropped.placePiece({PieceType::T, 3, {8, 21}});
-    const Event *plain = find(dropped.hardDrop(), Event::Locked);
+    const std::vector<Event> plainDrop = dropped.hardDrop();
+    const Event *plain = find(plainDrop, Event::Locked);
     QVERIFY(plain);
     QCOMPARE(plain->clear.spin, Spin::None);
     QCOMPARE(plain->clear.points, 0);

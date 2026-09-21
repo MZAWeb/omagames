@@ -15,6 +15,8 @@ inline int count(const std::vector<Event> &events, Event::Type type) {
     return int(std::count_if(events.begin(), events.end(), [type](const Event &e) { return e.type == type; }));
 }
 
+// The result points into `events`, so callers must keep the vector alive: pass
+// a named local, never the temporary a hardDrop() returns.
 inline const Event *find(const std::vector<Event> &events, Event::Type type) {
     for (const Event &event : events) {
         if (event.type == type)
