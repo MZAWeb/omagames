@@ -304,7 +304,9 @@ void BridgeTests::bridgeBetPresetsCollapseOnAThinBankroll() {
     playRound(g);
     g.nextRound();
     QCOMPARE(g.bankroll(), 10);
-    QCOMPARE(g.betPresets(), QVariantList({10}));
+    // Braces holding a single number would pick QList's size constructor, so
+    // the one preset is spelled as a variant.
+    QCOMPARE(g.betPresets(), QVariantList{QVariant(10)});
     g.setBetPreset(1);
     QCOMPARE(g.bet(), 10);   // clamped to the only legal bet, not to Ø 20
 }
