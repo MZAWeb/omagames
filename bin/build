@@ -5,15 +5,23 @@ ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 if command -v qmake6 >/dev/null 2>&1; then QMAKE=qmake6
 elif command -v qmake >/dev/null 2>&1; then QMAKE=qmake
 else echo "qmake6 or qmake is required." >&2; exit 1; fi
-JOBS="$(nproc 2>/dev/null || echo 1)"
+JOBS="$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 1)"
+# On macOS qmake would wrap the app in a .app bundle and hide the binary in
+# Contents/MacOS; everything here (bin/run, bin/test, packaging) wants a bare
+# executable next to the Makefile. The SDK check only warns about Xcode being
+# newer than the Qt build, which is normal on Homebrew.
+QMAKE_ARGS=""
+if [ "$(uname -s)" = "Darwin" ]; then
+  QMAKE_ARGS="CONFIG-=app_bundle CONFIG+=sdk_no_version_check"
+fi
 if [ $# -ge 1 ]; then
   GAME="$1"; BUILD_DIR="$ROOT/build/games/$GAME"
   mkdir -p "$BUILD_DIR" && cd "$BUILD_DIR"
-  "$QMAKE" "$ROOT/games/$GAME/$GAME.pro" && make -j"$JOBS"
+  "$QMAKE" "$ROOT/games/$GAME/$GAME.pro" $QMAKE_ARGS && make -j"$JOBS"
   echo "Built $BUILD_DIR/$GAME"
 else
   BUILD_DIR="$ROOT/build"
   mkdir -p "$BUILD_DIR" && cd "$BUILD_DIR"
-  "$QMAKE" "$ROOT/omagames.pro" && make -j"$JOBS"
+  "$QMAKE" "$ROOT/omagames.pro" $QMAKE_ARGS && make -j"$JOBS"
   echo "Built games under $BUILD_DIR/games/"
 fi

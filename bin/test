@@ -4,7 +4,12 @@
 set -eu
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 if command -v qmake6 >/dev/null 2>&1; then QMAKE=qmake6; else QMAKE=qmake; fi
-JOBS="$(nproc 2>/dev/null || echo 1)"
+JOBS="$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 1)"
+# See bin/build: macOS needs the test binaries unbundled to be run by name.
+QMAKE_ARGS=""
+if [ "$(uname -s)" = "Darwin" ]; then
+  QMAKE_ARGS="CONFIG-=app_bundle CONFIG+=sdk_no_version_check"
+fi
 if [ $# -ge 1 ]; then SUITES="$1"; else SUITES="common $(ls "$ROOT/games")"; fi
 STATUS=0
 for SUITE in $SUITES; do
@@ -12,7 +17,7 @@ for SUITE in $SUITES; do
   [ -f "$SRC/tests/tests.pro" ] || { echo "== $SUITE: no tests"; continue; }
   BUILD_DIR="$ROOT/build-tests/$SUITE"
   mkdir -p "$BUILD_DIR" && cd "$BUILD_DIR"
-  "$QMAKE" "$SRC/tests/tests.pro" && make -j"$JOBS"
+  "$QMAKE" "$SRC/tests/tests.pro" $QMAKE_ARGS && make -j"$JOBS"
   echo "== $SUITE"
   QT_QPA_PLATFORM=offscreen "./tst_$SUITE" || STATUS=1
 done
