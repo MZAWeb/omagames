@@ -8,6 +8,7 @@
 
 #include "autoshift.h"
 #include "game.h"
+#include "handling.h"
 #include "modes.h"
 #include "pacer.h"
 #include "scoretable.h"
@@ -45,6 +46,8 @@ class OmatrisGame : public QObject {
     Q_PROPERTY(QVariantList highScores READ highScores NOTIFY highScoresChanged)
     Q_PROPERTY(QVariantMap bests READ bests NOTIFY highScoresChanged)
     Q_PROPERTY(int newHighScoreRank READ newHighScoreRank NOTIFY phaseChanged)
+    Q_PROPERTY(QVariantList handling READ handlingRows NOTIFY handlingChanged)
+    Q_PROPERTY(bool handlingIsDefault READ handlingIsDefault NOTIFY handlingChanged)
     Q_PROPERTY(int stepInterval READ stepInterval WRITE setStepInterval NOTIFY stepIntervalChanged)
 
 public:
@@ -82,6 +85,11 @@ public:
     QVariantList highScores() const { return Modes::scoreRows(m_scores); }
     QVariantMap bests() const { return Modes::bests(m_scores); }
     int newHighScoreRank() const { return m_newHighScoreRank; }
+    const Handling &handling() const { return m_handling; }
+    // {id, label, description, value, canLower, canRaise, isDefault} for the
+    // handling panel.
+    QVariantList handlingRows() const { return m_handling.rows(); }
+    bool handlingIsDefault() const { return m_handling.isDefault(); }
     int stepInterval() const { return m_pacer.interval(); }
     void setStepInterval(int interval);
 
@@ -107,6 +115,10 @@ public:
     Q_INVOKABLE void resume();
     Q_INVOKABLE void togglePause();
     Q_INVOKABLE void toggleGhost();
+    // One step of a handling setting ("das" | "arr" | "softDrop"), +1 or -1;
+    // false at the end of its range. Takes effect at once, mid-run included.
+    Q_INVOKABLE bool adjustHandling(const QString &setting, int delta);
+    Q_INVOKABLE void resetHandling();
     Q_INVOKABLE void step();
     // {cells: [{x, y}], width, height} of a piece in its spawn orientation,
     // for the hold box and the next queue.
@@ -129,6 +141,7 @@ signals:
     void queueChanged();
     void highScoresChanged();
     void stepIntervalChanged();
+    void handlingChanged();
     // After anything that moved a piece, for the renderer.
     void frameChanged();
     // Animation cues. Cells and rows are board coordinates.
@@ -164,12 +177,15 @@ private:
     // The pacer runs while, and only while, a piece can fall.
     void syncTimer() { m_pacer.setRunning(playing()); }
     void loadSettings();
+    void setHandling(const Handling &handling);
+    void applyHandling();
 
     std::unique_ptr<Game> m_game;
     OmaGames::ScoreTable m_scores;
     OmaGames::Pacer m_pacer;
     Mode m_mode = Mode::Marathon;
     AutoShift m_shift;
+    Handling m_handling = Handling::defaults();
     int m_newHighScoreRank = -1;
     bool m_ghostEnabled = true;
 };

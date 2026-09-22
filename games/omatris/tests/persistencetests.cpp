@@ -190,6 +190,50 @@ void PersistenceTests::ghostToggleIsRemembered() {
     QVERIFY(game.ghostEnabled());
 }
 
+void PersistenceTests::handlingIsRememberedUntilReset() {
+    const auto key = QStringLiteral("handling/v1");
+    {
+        OmatrisGame game;
+        QVERIFY(game.handlingIsDefault());
+        QSignalSpy spy(&game, &OmatrisGame::handlingChanged);
+        QVERIFY(game.adjustHandling(QStringLiteral("das"), -3));
+        QVERIFY(game.adjustHandling(QStringLiteral("arr"), -2));
+        QVERIFY(game.adjustHandling(QStringLiteral("softDrop"), 1));
+        // The end of a range and a setting that does not exist change nothing.
+        QVERIFY(!game.adjustHandling(QStringLiteral("arr"), -1));
+        QVERIFY(!game.adjustHandling(QStringLiteral("gravity"), 1));
+        QCOMPARE(spy.count(), 3);
+        QVERIFY(!game.handlingIsDefault());
+    }
+    {
+        OmatrisGame game;
+        QCOMPARE(game.handling().dasTicks, AutoShift::kDelayTicks - 3);
+        QCOMPARE(game.handling().arrTicks, 0);
+        QCOMPARE(game.handling().softDropFactor, 40);
+        QSignalSpy spy(&game, &OmatrisGame::handlingChanged);
+        game.resetHandling();
+        QVERIFY(game.handlingIsDefault());
+        QCOMPARE(spy.count(), 1);
+        // Back at the defaults, nothing is kept: the player follows them.
+        QVERIFY(!QSettings().contains(key));
+        game.resetHandling();
+        QCOMPARE(spy.count(), 1);
+    }
+    {
+        OmatrisGame game;
+        QVERIFY(game.handlingIsDefault());
+        // Stepping back onto a default by hand forgets the setting too.
+        QVERIFY(game.adjustHandling(QStringLiteral("das"), 1));
+        QVERIFY(QSettings().contains(key));
+        QVERIFY(game.adjustHandling(QStringLiteral("das"), -1));
+        QVERIFY(!QSettings().contains(key));
+    }
+    // A broken config is the defaults, never an unplayable game.
+    QSettings().setValue(key, QStringLiteral("{not json"));
+    OmatrisGame game;
+    QVERIFY(game.handlingIsDefault());
+}
+
 void PersistenceTests::windowGeometryRoundTrips() {
     OmatrisGame game;
     QVERIFY(!game.windowGeometry().value(QStringLiteral("valid")).toBool());

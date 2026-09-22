@@ -32,7 +32,40 @@ void OmatrisGame::loadSettings() {
     QSettings settings;
     Modes::fromId(settings.value(kModeKey).toString(), &m_mode);
     m_ghostEnabled = settings.value(kGhostKey, true).toBool();
+    m_handling = Handling::load();
+    applyHandling();
     m_scores.load();
+}
+
+// Handling is a preference like the ghost: it outlives the run and the window.
+void OmatrisGame::setHandling(const Handling &handling) {
+    if (handling == m_handling)
+        return;
+    m_handling = handling;
+    m_handling.save();
+    applyHandling();
+    emit handlingChanged();
+}
+
+void OmatrisGame::applyHandling() {
+    m_shift.setTiming(m_handling.dasTicks, m_handling.arrTicks);
+    if (m_game)
+        m_game->setSoftDropFactor(m_handling.softDropFactor);
+}
+
+bool OmatrisGame::adjustHandling(const QString &setting, int delta) {
+    Handling::Setting which;
+    if (!Handling::fromId(setting, &which))
+        return false;
+    Handling changed = m_handling;
+    if (!changed.step(which, delta))
+        return false;
+    setHandling(changed);
+    return true;
+}
+
+void OmatrisGame::resetHandling() {
+    setHandling(Handling::defaults());
 }
 
 QString OmatrisGame::phase() const {
@@ -83,6 +116,7 @@ void OmatrisGame::startGame(Mode mode, quint32 seed) {
     m_game = std::make_unique<Game>(mode, seed);
     m_newHighScoreRank = -1;
     m_shift.clear();
+    applyHandling();
     emit modeChanged();
     emit scoreChanged();
     emit levelChanged();
@@ -201,10 +235,14 @@ void OmatrisGame::step() {
     if (!playing())
         return;
     const Snapshot before = snapshot();
-    if (const int shift = m_shift.tick(); shift < 0)
-        m_game->moveLeft();
-    else if (shift > 0)
-        m_game->moveRight();
+    if (const int shift = m_shift.tick(); shift != 0) {
+        if (m_shift.instant())
+            m_game->slide(shift);
+        else if (shift < 0)
+            m_game->moveLeft();
+        else
+            m_game->moveRight();
+    }
     apply(m_game->tick());
     publish(before);
     emit frameChanged();

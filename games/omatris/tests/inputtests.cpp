@@ -100,6 +100,42 @@ void InputTests::autoShiftWaitsThenRepeats() {
     game.releaseRight();
 }
 
+void InputTests::tunedHandlingDrivesTheKeys() {
+    OmatrisGame game;
+    quietStart(game, Mode::Zen);
+    // A shorter delay and an instant repeat: one cell on the press, then the
+    // wall as soon as the delay is up.
+    for (int i = 0; i < 4; ++i)
+        QVERIFY(game.adjustHandling(QStringLiteral("das"), -1));
+    while (game.adjustHandling(QStringLiteral("arr"), -1)) {
+    }
+    const int delay = AutoShift::kDelayTicks - 4;
+    Game *engine = game.engineForTests();
+    const int start = engine->piece().origin.x();
+    game.pressLeft();
+    QCOMPARE(engine->piece().origin.x(), start - 1);
+    for (int i = 0; i < delay - 1; ++i)
+        game.step();
+    QCOMPARE(engine->piece().origin.x(), start - 1);
+    game.step();
+    QVERIFY(engine->piece().origin.x() < start - 2);
+    QVERIFY(!engine->moveLeft());
+    game.releaseLeft();
+
+    // Soft drop picks up the chosen speed mid-run, and a new run keeps it.
+    while (game.adjustHandling(QStringLiteral("softDrop"), 1)) {
+    }
+    QCOMPARE(engine->softDropFactor(), Handling::kInstantSoftDrop);
+    game.setSoftDrop(true);
+    game.step();
+    QCOMPARE(engine->piece().origin.y(), engine->ghost().origin.y());
+    game.setSoftDrop(false);
+    game.restart();
+    QCOMPARE(game.engine()->softDropFactor(), Handling::kInstantSoftDrop);
+    game.resetHandling();
+    QCOMPARE(game.engine()->softDropFactor(), Rules::kSoftDropFactor);
+}
+
 void InputTests::rotationHoldAndDropsGoThroughTheBridge() {
     OmatrisGame game;
     quietStart(game, Mode::Zen);

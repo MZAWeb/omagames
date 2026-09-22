@@ -102,3 +102,31 @@ void AutoShiftTests::clearingForgetsTheHeldKey() {
     QCOMPARE(shifts(shift, AutoShift::kDelayTicks, &firstAt), 1);
     QCOMPARE(firstAt, AutoShift::kDelayTicks);
 }
+
+void AutoShiftTests::aTimingOfTheirOwnSetsTheDelayAndTheRate() {
+    AutoShift shift;
+    shift.setTiming(4, 3);
+    QCOMPARE(shift.delayTicks(), 4);
+    QCOMPARE(shift.repeatTicks(), 3);
+    QVERIFY(!shift.instant());
+    shift.press(1);
+    int firstAt = 0;
+    QCOMPARE(shifts(shift, 4 + 2 * 3, &firstAt), 3);
+    QCOMPARE(firstAt, 4);
+    // A key already down picks the new rate up without starting over.
+    shift.setTiming(4, 1);
+    QCOMPARE(shifts(shift, 5), 5);
+}
+
+void AutoShiftTests::anInstantRateAsksEveryTickPastTheDelay() {
+    AutoShift shift;
+    shift.setTiming(5, 0);
+    QVERIFY(shift.instant());
+    shift.press(-1);
+    QCOMPARE(shifts(shift, 4), 0);
+    for (int i = 0; i < 5; ++i)
+        QCOMPARE(shift.tick(), -1);
+    // A delay of nothing would turn every tap into a slide, so it is one tick.
+    shift.setTiming(0, 0);
+    QCOMPARE(shift.delayTicks(), 1);
+}

@@ -6,10 +6,18 @@
 // tick at a time so it can be tested without a bridge or a board.
 class AutoShift {
 public:
-    // The wait before a held key starts repeating, and the gap between
-    // repeats, in ticks of the sixty-a-second clock: ~167 ms, then ~33 ms.
+    // The default wait before a held key starts repeating, and the gap
+    // between repeats, in ticks of the sixty-a-second clock: ~167 ms, then
+    // ~33 ms. The player can change both (see Handling).
     static constexpr int kDelayTicks = 10;
     static constexpr int kRepeatTicks = 2;
+
+    // A repeat of zero ticks means every tick past the delay asks for a
+    // repeat, and instant() tells the caller to take it all the way.
+    void setTiming(int delayTicks, int repeatTicks);
+    int delayTicks() const { return m_delayTicks; }
+    int repeatTicks() const { return m_repeatTicks; }
+    bool instant() const { return m_repeatTicks == 0; }
 
     // -1 left, +1 right, 0 nothing held.
     int direction() const { return m_direction; }
@@ -26,6 +34,8 @@ public:
     int tick();
 
 private:
+    int m_delayTicks = kDelayTicks;
+    int m_repeatTicks = kRepeatTicks;
     int m_direction = 0;
     int m_ticks = 0;
 };

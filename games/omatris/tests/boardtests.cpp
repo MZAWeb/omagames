@@ -69,6 +69,35 @@ void BoardTests::softDropIsTwentyTimesGravityAndPaysACell() {
     QCOMPARE(game.score(), Rules::kSoftDropPoints);
 }
 
+void BoardTests::softDropFollowsTheChosenFactor() {
+    Game game(Mode::Marathon, kSeed);
+    QCOMPARE(game.softDropFactor(), Rules::kSoftDropFactor);
+    game.setSoftDropFactor(40);
+    game.setSoftDrop(true);
+    const int row = game.piece().origin.y();
+    // Forty rows a second is two rows every three ticks.
+    for (int i = 0; i < 3; ++i)
+        game.tick();
+    QCOMPARE(game.piece().origin.y(), row + 2);
+    QCOMPARE(game.score(), 2 * Rules::kSoftDropPoints);
+}
+
+void BoardTests::instantSoftDropReachesTheFloorWithoutLocking() {
+    Game game(Mode::Marathon, kSeed);
+    game.setSoftDropFactor(0);
+    game.setSoftDrop(true);
+    const int row = game.piece().origin.y();
+    const int floor = game.ghost().origin.y();
+    const std::vector<Event> events = game.tick();
+    QCOMPARE(game.piece().origin.y(), floor);
+    QCOMPARE(game.score(), (floor - row) * Rules::kSoftDropPoints);
+    // Unlike a hard drop the piece is still in play, its lock delay running.
+    QCOMPARE(count(events, Event::Locked), 0);
+    QVERIFY(game.hasPiece());
+    QCOMPARE(game.lockTicks(), 1);
+    QVERIFY(game.moveLeft());
+}
+
 void BoardTests::hardDropPaysTwoACellAndLocksAtOnce() {
     Game game(Mode::Marathon, kSeed);
     game.placePiece({PieceType::O, 0, {3, Game::kSpawnRow}});
@@ -179,6 +208,21 @@ void BoardTests::fallingToANewLowestRowRenewsTheAllowance() {
         QCOMPARE(game.lockResets(), reset + 1);
         QCOMPARE(game.lockTicks(), 0);
     }
+}
+
+void BoardTests::aSlideToTheWallIsChargedAsOneMove() {
+    Game game(Mode::Zen, kSeed);
+    game.placePiece({PieceType::O, 0, {3, Board::kHeight - 2}});
+    QVERIFY(game.tick().empty());
+    QVERIFY(game.slide(-1));
+    QCOMPARE(game.piece().origin.x(), -1);
+    QCOMPARE(game.lockResets(), 1);
+    // Already at the wall there is nowhere to go, and nothing is spent.
+    QVERIFY(!game.slide(-1));
+    QCOMPARE(game.lockResets(), 1);
+    QVERIFY(game.slide(1));
+    QCOMPARE(game.piece().origin.x(), Board::kWidth - 3);
+    QCOMPARE(game.lockResets(), 2);
 }
 
 void BoardTests::holdSwapsOncePerPiece() {

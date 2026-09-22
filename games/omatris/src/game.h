@@ -79,9 +79,17 @@ public:
     void setPaused(bool paused) { m_paused = paused; }
     bool moveLeft() { return shift(-1); }
     bool moveRight() { return shift(1); }
+    // As far as the piece goes towards dx, charged as a single move: an
+    // instant auto-repeat is one slide, not a cell-by-cell spend of the
+    // lock-delay allowance.
+    bool slide(int dx);
     // +1 clockwise, -1 counter-clockwise.
     bool rotate(int quarters);
     void setSoftDrop(bool on) { m_softDrop = on; }
+    // A multiple of gravity, or Handling::kInstantSoftDrop (0) for straight
+    // to the floor.
+    int softDropFactor() const { return m_softDropFactor; }
+    void setSoftDropFactor(int factor) { m_softDropFactor = factor; }
     std::vector<Event> hardDrop();
     std::vector<Event> hold();
     std::vector<Event> tick();
@@ -93,6 +101,7 @@ public:
 private:
     bool playable() const { return m_phase == Phase::Playing && !m_paused; }
     bool shift(int dx);
+    qint64 gravityThisTick() const;
     bool grounded() const;
     // Charges a lock-delay reset against a move made once the piece has landed.
     void noteMove();
@@ -125,6 +134,7 @@ private:
     // bounces it down and back up cannot pass for falling.
     int m_lowestRow = 0;
     int m_clearTicks = 0;
+    int m_softDropFactor = Rules::kSoftDropFactor;
     Spin m_spin = Spin::None;
     // Set once the piece has rested on something since it last fell to a new
     // lowest row: only then does a move spend part of the allowance.

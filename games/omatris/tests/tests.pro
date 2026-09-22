@@ -15,12 +15,14 @@ HEADERS += \
     ../src/bonuses.h \
     ../src/game.h \
     ../src/autoshift.h \
+    ../src/handling.h \
     ../src/omatrisgame.h \
     enginefixture.h \
     piecetests.h \
     boardtests.h \
     scoringtests.h \
     autoshifttests.h \
+    handlingtests.h \
     bridgefixture.h \
     inputtests.h \
     persistencetests.h
@@ -34,11 +36,13 @@ SOURCES += \
     ../src/bonuses.cpp \
     ../src/game.cpp \
     ../src/autoshift.cpp \
+    ../src/handling.cpp \
     ../src/omatrisgame.cpp \
     piecetests.cpp \
     boardtests.cpp \
     scoringtests.cpp \
     autoshifttests.cpp \
+    handlingtests.cpp \
     inputtests.cpp \
     persistencetests.cpp \
     tst_omatris.cpp

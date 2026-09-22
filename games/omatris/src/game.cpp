@@ -80,6 +80,20 @@ bool Game::shift(int dx) {
     return true;
 }
 
+bool Game::slide(int dx) {
+    if (!playable() || !m_hasPiece)
+        return false;
+    Placement moved = m_piece;
+    while (m_board.fits(moved.moved(dx, 0)))
+        moved = moved.moved(dx, 0);
+    if (moved.origin == m_piece.origin)
+        return false;
+    m_piece = moved;
+    m_spin = Spin::None;
+    noteMove();
+    return true;
+}
+
 bool Game::rotate(int quarters) {
     if (!playable() || !m_hasPiece)
         return false;
@@ -119,9 +133,18 @@ Spin Game::detectSpin(int kickIndex) const {
     return kickIndex == Piece::kSpinKick ? Spin::Full : Spin::Mini;
 }
 
+qint64 Game::gravityThisTick() const {
+    const qint64 base = Rules::gravityPerTick(gravityLevel());
+    if (!m_softDrop)
+        return base;
+    // Instant is the whole well in one tick; the loop below stops at the floor.
+    if (m_softDropFactor <= 0)
+        return qint64(Rules::kGravityUnit) * Board::kHeight;
+    return base * m_softDropFactor;
+}
+
 void Game::applyGravity() {
-    const int base = Rules::gravityPerTick(gravityLevel());
-    m_gravity += m_softDrop ? qint64(base) * Rules::kSoftDropFactor : base;
+    m_gravity += gravityThisTick();
     int dropped = 0;
     while (m_gravity >= Rules::kGravityUnit) {
         m_gravity -= Rules::kGravityUnit;

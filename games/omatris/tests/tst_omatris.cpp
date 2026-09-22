@@ -3,6 +3,7 @@
 
 #include "autoshifttests.h"
 #include "boardtests.h"
+#include "handlingtests.h"
 #include "inputtests.h"
 #include "persistencetests.h"
 #include "piecetests.h"
@@ -23,6 +24,8 @@ int main(int argc, char *argv[]) {
     status |= QTest::qExec(&scoring, argc, argv);
     AutoShiftTests autoShift;
     status |= QTest::qExec(&autoShift, argc, argv);
+    HandlingTests handling;
+    status |= QTest::qExec(&handling, argc, argv);
     InputTests input;
     status |= QTest::qExec(&input, argc, argv);
     PersistenceTests persistence;

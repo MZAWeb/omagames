@@ -16,5 +16,6 @@ private slots:
     void savedHighScoresReachQml();
     void lastModeIsRemembered();
     void ghostToggleIsRemembered();
+    void handlingIsRememberedUntilReset();
     void windowGeometryRoundTrips();
 };
