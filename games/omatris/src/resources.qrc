@@ -10,5 +10,6 @@
         <file alias="TimeFormat.qml">TimeFormat.qml</file>
         <file alias="PauseOverlay.qml">PauseOverlay.qml</file>
         <file alias="ResultOverlay.qml">ResultOverlay.qml</file>
+        <file alias="HandlingPanel.qml">HandlingPanel.qml</file>
     </qresource>
 </RCC>

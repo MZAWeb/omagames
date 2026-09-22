@@ -21,6 +21,9 @@ ApplicationWindow {
     // Whether the player had paused before asking to leave, so cancelling
     // returns to the pause overlay rather than straight into a falling piece.
     property bool pausedBeforeLeaving: false
+    // The handling panel opens over the start screen or the pause overlay,
+    // and hands the focus back to whichever of them it covered.
+    property bool showingHandling: false
 
     // Leaving mid-game throws the run away, so it is confirmed; the game
     // holds still while the question is up.
@@ -52,7 +55,10 @@ ApplicationWindow {
         onLoaded: win.refocus()
     }
 
-    Component { id: startScreen; StartScreen {} }
+    Component {
+        id: startScreen
+        StartScreen { onHandlingRequested: win.showingHandling = true }
+    }
     Component {
         id: playScreen
         PlayScreen { onLeaveRequested: win.leaveGame() }
@@ -60,12 +66,14 @@ ApplicationWindow {
 
     Loader {
         anchors.fill: parent
-        active: game.paused && !confirmLoader.active
+        active: game.paused && !confirmLoader.active && !win.showingHandling
         sourceComponent: PauseOverlay {
             onLeaveRequested: win.leaveGame()
+            onHandlingRequested: win.showingHandling = true
         }
         onLoaded: (item as Item).forceActiveFocus()
-        onActiveChanged: if (!active) win.refocus()
+        // Giving way to the handling panel, which has already taken the focus.
+        onActiveChanged: if (!active && !win.showingHandling) win.refocus()
     }
 
     Loader {
@@ -74,6 +82,17 @@ ApplicationWindow {
         sourceComponent: ResultOverlay {}
         onLoaded: (item as Item).forceActiveFocus()
         onActiveChanged: if (!active) win.refocus()
+    }
+
+    Loader {
+        anchors.fill: parent
+        active: win.showingHandling
+        sourceComponent: HandlingPanel {
+            onCloseRequested: win.showingHandling = false
+        }
+        onLoaded: (item as Item).forceActiveFocus()
+        // Paused, the pause overlay comes back and takes the focus itself.
+        onActiveChanged: if (!active && !game.paused) win.refocus()
     }
 
     Loader {

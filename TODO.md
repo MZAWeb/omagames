@@ -19,7 +19,7 @@
 - [ ] Play-test the three speeds and the bonus timing
 
 ## Omatris
-- [ ] Play-test DAS/ARR and lock-delay feel; consider a settings panel for them
+- [ ] Play-test lock-delay feel (DAS, ARR and soft drop are now the player's to tune in Handling)
 - [ ] Sprint leaderboard shows time only — add lines/min
 
 ## Black Omack

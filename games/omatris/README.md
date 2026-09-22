@@ -23,7 +23,8 @@ guideline scoring with back-to-back, combos and T-spins.
 - Gravity follows the guideline curve: one row per second at level 1, and one
   row per `(0.8 − 0.007 × (level − 1)) ^ (level − 1)` seconds after that. It
   stops getting faster at level 20.
-- **Soft drop** (`↓`) falls twenty times as fast and pays a point a row.
+- **Soft drop** (`↓`) falls twenty times as fast by default (see Handling)
+  and pays a point a row.
   **Hard drop** (`Space`) drops the piece to the floor and locks it at once,
   for two points a row.
 - **Lock delay**: a piece that lands has half a second before it locks. That
@@ -83,6 +84,33 @@ marked. The top ten per mode (with lines, level and date) are kept in
 `~/.config/Omacom/omatris.conf`, and the header shows the best for the mode in
 play.
 
+## Handling
+
+How the keys feel is the player's to tune, from the start screen or the pause
+overlay (`S`). `↑` `↓` pick a setting, `←` `→` change it, and changes apply at
+once, mid-run included:
+
+| Setting | Default | Range |
+|---|---|---|
+| **Auto-shift delay** (DAS): how long `←` / `→` is held before the piece starts sliding | 167 ms | 17–333 ms |
+| **Auto-repeat rate** (ARR): the gap between cells once it slides | 33 ms | Instant, 17–167 ms |
+| **Soft drop speed**: how much faster `↓` falls than gravity | 20× | 5×, 10×, 20×, 40×, Instant |
+
+Times move in steps of one tick (1/60 s), the only unit the game counts in.
+An **instant** repeat takes the piece straight to the wall once the delay is
+up, and that slide spends one lock-delay reset, not one per cell. An
+**instant** soft drop reaches the floor in a single tick without locking, so
+the piece can still be slid or turned there; it pays a point a row like any
+soft drop.
+
+The choice is kept between launches (under `handling/v1`), and a value moved
+off its default is shown in the accent color. **Reset to defaults** (`D`)
+puts all three back to the values above and forgets the stored choice, so a
+player who resets follows the defaults from then on. The lock delay and its
+two resets are rules, not handling, and are not in the panel: they shape how
+hard the game is, and every run on the high-score tables is played under the
+same ones.
+
 ## Keyboard
 
 Everything is reachable without a mouse; each button shows its key as a badge.
@@ -90,7 +118,7 @@ There is nothing to click during play.
 
 | Key | Action |
 |---|---|
-| `←` `→` | Move. Held down, the piece waits ~167 ms and then steps every ~33 ms (delayed auto shift) |
+| `←` `→` | Move. Held down, the piece waits ~167 ms and then steps every ~33 ms (delayed auto shift; see Handling) |
 | `↓` | Soft drop |
 | `Space` | Hard drop |
 | `↑` or `X` | Rotate clockwise |
@@ -101,6 +129,7 @@ There is nothing to click during play.
 | `R` | Restart the run at once (no prompt — it is the retry key) |
 | `1` `2` `3` | Start Marathon / Sprint / Zen (start screen) |
 | `H` | High scores (start screen) |
+| `S` | Handling (start screen, pause overlay); inside it `↑` `↓` choose, `←` `→` change, `D` resets to defaults, `Esc` / `Enter` / `S` close |
 | `Enter` / `Space` | Play again after a run ends |
 | `Esc` | Leave the game (confirmed mid-game), close the high scores |
 | `Y` / `Enter`, `N` / `Esc` | Confirm / cancel a dialog |

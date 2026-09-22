@@ -6,6 +6,7 @@ OmaPauseOverlay {
     id: root
 
     signal leaveRequested()
+    signal handlingRequested()
 
     TimeFormat { id: clock }
 
@@ -20,6 +21,8 @@ OmaPauseOverlay {
             game.restart();
         else if (event.key === Qt.Key_G)
             game.toggleGhost();
+        else if (event.key === Qt.Key_S)
+            root.handlingRequested();
         else if (event.key === Qt.Key_Escape)
             root.leaveRequested();
         else
@@ -46,6 +49,12 @@ OmaPauseOverlay {
         text: game.ghostEnabled ? qsTr("Ghost on") : qsTr("Ghost off")
         hint: qsTr("G")
         onClicked: game.toggleGhost()
+    }
+    OmaHintButton {
+        Layout.fillWidth: true
+        text: qsTr("Handling")
+        hint: qsTr("S")
+        onClicked: root.handlingRequested()
     }
     OmaHintButton {
         Layout.fillWidth: true

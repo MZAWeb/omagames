@@ -2,12 +2,15 @@ import QtQuick
 import QtQuick.Layouts
 import OmaGames
 
-// Mode picker with each mode's best result, the high-score tables and a
-// legend of the keys that matter once the well is up.
+// Mode picker with each mode's best result, the high-score tables, the way
+// into the handling settings and a legend of the keys that matter once the
+// well is up.
 FocusScope {
     id: root
 
     property bool showingScores: false
+
+    signal handlingRequested()
 
     focus: true
 
@@ -29,6 +32,8 @@ FocusScope {
             game.newGame(game.modes[mode].id);
         } else if (event.key === Qt.Key_H) {
             root.showingScores = !root.showingScores;
+        } else if (event.key === Qt.Key_S && !root.showingScores) {
+            root.handlingRequested();
         } else if (event.key === Qt.Key_Escape && root.showingScores) {
             root.showingScores = false;
         } else {
@@ -112,6 +117,12 @@ FocusScope {
             text: qsTr("High scores")
             hint: qsTr("H")
             onClicked: root.showingScores = true
+        }
+        OmaHintButton {
+            Layout.fillWidth: true
+            text: qsTr("Handling")
+            hint: qsTr("S")
+            onClicked: root.handlingRequested()
         }
 
         KeyLegend {
