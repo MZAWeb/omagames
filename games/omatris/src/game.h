@@ -8,6 +8,7 @@
 #include "bag.h"
 #include "board.h"
 #include "dealtstack.h"
+#include "lockdelay.h"
 #include "rules.h"
 #include "scoring.h"
 
@@ -75,8 +76,8 @@ public:
     std::vector<PieceType> nextQueue() const;
     // Rows waiting out the clear flash; empty the rest of the time.
     const std::vector<int> &clearingRows() const { return m_clearingRows; }
-    int lockTicks() const { return m_lockTicks; }
-    int lockResets() const { return m_lockResets; }
+    int lockTicks() const { return m_lockDelay.ticks(); }
+    int lockResets() const { return m_lockDelay.resets(); }
 
     void setPaused(bool paused) { m_paused = paused; }
     bool moveLeft() { return shift(-1); }
@@ -107,8 +108,6 @@ private:
     bool shift(int dx);
     qint64 gravityThisTick() const;
     bool grounded() const;
-    // Charges a lock-delay reset against a move made once the piece has landed.
-    void noteMove();
     Spin detectSpin(int kickIndex) const;
     void applyGravity();
     void lockPiece(std::vector<Event> &events);
@@ -122,6 +121,7 @@ private:
     Bag m_bag;
     Board m_board;
     Placement m_piece;
+    LockDelay m_lockDelay;
     PieceType m_hold = PieceType::None;
     Phase m_phase = Phase::Playing;
     std::vector<int> m_clearingRows;
@@ -130,17 +130,9 @@ private:
     qint64 m_gravity = 0;
     Scoring m_scoring;
     int m_ticks = 0;
-    int m_lockTicks = 0;
-    int m_lockResets = 0;
-    // The deepest row the piece's origin has ever reached, so a kick that
-    // bounces it down and back up cannot pass for falling.
-    int m_lowestRow = 0;
     int m_clearTicks = 0;
     int m_softDropFactor = Rules::kSoftDropFactor;
     Spin m_spin = Spin::None;
-    // Set once the piece has rested on something since it last fell to a new
-    // lowest row: only then does a move spend part of the allowance.
-    bool m_lockPending = false;
     bool m_hasPiece = false;
     bool m_holdUsed = false;
     bool m_softDrop = false;

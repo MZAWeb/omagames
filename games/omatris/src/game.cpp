@@ -47,10 +47,7 @@ void Game::placePiece(const Placement &placement) {
     m_hasPiece = true;
     m_spin = Spin::None;
     m_gravity = 0;
-    m_lockTicks = 0;
-    m_lockResets = 0;
-    m_lockPending = false;
-    m_lowestRow = placement.origin.y();
+    m_lockDelay.start(placement.origin.y());
 }
 
 const std::vector<int> &Game::dealtStack() const {
@@ -70,21 +67,6 @@ bool Game::grounded() const {
     return m_hasPiece && !m_board.fits(m_piece.moved(0, 1));
 }
 
-void Game::noteMove() {
-    // A kick that pushes the piece below anywhere it has been only raises the
-    // mark: falling is what earns a fresh allowance, not turning.
-    m_lowestRow = std::max(m_lowestRow, m_piece.origin.y());
-    // Once the piece has landed, every move spends one of the allowance, and
-    // only an unspent one restarts the timer. After that the timer runs out
-    // however hard the keys are hammered.
-    if (m_lockPending && m_lockResets < Rules::kMaxLockResets) {
-        ++m_lockResets;
-        m_lockTicks = 0;
-    }
-    if (grounded())
-        m_lockPending = true;
-}
-
 bool Game::shift(int dx) {
     if (!playable() || !m_hasPiece)
         return false;
@@ -93,7 +75,7 @@ bool Game::shift(int dx) {
         return false;
     m_piece = moved;
     m_spin = Spin::None;
-    noteMove();
+    m_lockDelay.moved(m_piece.origin.y(), grounded());
     return true;
 }
 
@@ -107,7 +89,7 @@ bool Game::slide(int dx) {
         return false;
     m_piece = moved;
     m_spin = Spin::None;
-    noteMove();
+    m_lockDelay.moved(m_piece.origin.y(), grounded());
     return true;
 }
 
@@ -127,7 +109,7 @@ bool Game::rotate(int quarters) {
             continue;
         m_piece = candidate;
         m_spin = m_piece.type == PieceType::T ? detectSpin(i) : Spin::None;
-        noteMove();
+        m_lockDelay.moved(m_piece.origin.y(), grounded());
         return true;
     }
     return false;
@@ -177,14 +159,7 @@ void Game::applyGravity() {
     if (m_softDrop)
         m_scoring.addSoftDrop(dropped);
     m_spin = Spin::None;
-    // Reaching a row it has never been on before hands the piece a whole
-    // fresh allowance; falling back onto one it has already visited does not.
-    if (m_piece.origin.y() > m_lowestRow) {
-        m_lowestRow = m_piece.origin.y();
-        m_lockResets = 0;
-        m_lockTicks = 0;
-        m_lockPending = false;
-    }
+    m_lockDelay.fell(m_piece.origin.y());
 }
 
 std::vector<Event> Game::hardDrop() {
@@ -229,14 +204,8 @@ std::vector<Event> Game::tick() {
     if (!m_hasPiece)
         return events;
     applyGravity();
-    // The timer only runs while the piece rests on something, and in mid-air
-    // it pauses rather than rewinds: a rotation that lifts the piece off the
-    // stack for a moment buys it no time it has not paid a reset for.
-    if (grounded()) {
-        m_lockPending = true;
-        if (++m_lockTicks >= Rules::kLockDelayTicks)
-            lockPiece(events);
-    }
+    if (grounded() && m_lockDelay.rest())
+        lockPiece(events);
     return events;
 }
 

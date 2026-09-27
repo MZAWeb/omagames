@@ -6,6 +6,7 @@
 #include "challengetests.h"
 #include "difficultytests.h"
 #include "handlingtests.h"
+#include "lockdelaytests.h"
 #include "inputtests.h"
 #include "persistencetests.h"
 #include "piecetests.h"
@@ -22,6 +23,8 @@ int main(int argc, char *argv[]) {
     status |= QTest::qExec(&pieces, argc, argv);
     BoardTests board;
     status |= QTest::qExec(&board, argc, argv);
+    LockDelayTests lockDelay;
+    status |= QTest::qExec(&lockDelay, argc, argv);
     ScoringTests scoring;
     status |= QTest::qExec(&scoring, argc, argv);
     ChallengeTests challenge;

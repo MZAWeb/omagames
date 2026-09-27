@@ -15,6 +15,7 @@ HEADERS += \
     src/challenge.h \
     src/difficulty.h \
     src/dealtstack.h \
+    src/lockdelay.h \
     src/game.h \
     src/autoshift.h \
     src/handling.h \
@@ -32,6 +33,7 @@ SOURCES += \
     src/challenge.cpp \
     src/difficulty.cpp \
     src/dealtstack.cpp \
+    src/lockdelay.cpp \
     src/game.cpp \
     src/autoshift.cpp \
     src/handling.cpp \
