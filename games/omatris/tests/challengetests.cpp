@@ -3,6 +3,7 @@
 #include <QtTest>
 
 #include "challenge.h"
+#include "dealtstack.h"
 #include "enginefixture.h"
 
 using namespace EngineFixture;
@@ -89,6 +90,20 @@ void ChallengeTests::clearedRowsLeaveAndTheRestFall() {
     // A row cleared above them all moves none of them.
     QCOMPARE(Challenge::afterClear(tracked, {10}), tracked);
     QCOMPARE(Challenge::afterClear(tracked, tracked), std::vector<int> {});
+}
+
+void ChallengeTests::theStackCountsFlashingRowsAsGone() {
+    Board board;
+    DealtStack stack(board, kSeed);
+    const int dealt = stack.dealt();
+    QCOMPARE(stack.rowsLeft({}), dealt);
+    QCOMPARE(stack.rowsLeft({kBottom, 0}), dealt - 1);
+    QVERIFY(stack.difficulty() > 1);
+    // Cleared for real, the bottom row goes and the rest fall onto the floor.
+    stack.clear({kBottom});
+    QCOMPARE(stack.rowsLeft({}), dealt - 1);
+    QCOMPARE(stack.rows().back(), kBottom);
+    QCOMPARE(stack.dealt(), dealt);
 }
 
 void ChallengeTests::clearingEveryDealtRowFinishesAtZenPace() {

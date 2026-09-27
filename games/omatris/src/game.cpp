@@ -1,10 +1,5 @@
 #include "game.h"
 
-#include <algorithm>
-
-#include "challenge.h"
-#include "difficulty.h"
-
 namespace {
 
 // The four corners of a T's box, and which two of them the T points between
@@ -24,12 +19,10 @@ QPoint middleOf(const PieceCells &cells) {
 
 Game::Game(Mode mode, quint32 seed)
     : m_mode(mode), m_params(Rules::params(mode)), m_bag(seed) {
-    if (m_params.dealtStack) {
-        // Its own stream, so the mess and the pieces dealt to fix it are not
-        // the same shuffle read twice.
-        m_dealtStack = Challenge::build(m_board, ~seed);
-        m_dealtRows = dealtRowsLeft();
-    }
+    // Its own stream, so the mess and the pieces dealt to fix it are not the
+    // same shuffle read twice.
+    if (m_params.dealtStack)
+        m_stack.emplace(m_board, ~seed);
     std::vector<Event> ignored;
     spawnNext(ignored);
 }
@@ -60,16 +53,15 @@ void Game::placePiece(const Placement &placement) {
     m_lowestRow = placement.origin.y();
 }
 
-// Rows that are flashing are as good as gone, so the header and the finish
-// agree with the lock that cleared them.
-int Game::dealtRowsLeft() const {
-    return int(std::count_if(m_dealtStack.begin(), m_dealtStack.end(), [this](int y) {
-        return std::find(m_clearingRows.begin(), m_clearingRows.end(), y) == m_clearingRows.end();
-    }));
+const std::vector<int> &Game::dealtStack() const {
+    static const std::vector<int> none;
+    return m_stack ? m_stack->rows() : none;
 }
 
 bool Game::goalReached() const {
-    if (m_params.dealtStack)
+    // Rows that are flashing are as good as gone, so the finish agrees with
+    // the lock that cleared them.
+    if (m_stack)
         return dealtRowsLeft() == 0;
     return m_params.lineGoal > 0 && lines() >= m_params.lineGoal;
 }
@@ -294,12 +286,14 @@ void Game::lockPiece(std::vector<Event> &events) {
 }
 
 void Game::finishClear(std::vector<Event> &events) {
-    m_dealtStack = Challenge::afterClear(m_dealtStack, m_clearingRows);
+    if (m_stack)
+        m_stack->clear(m_clearingRows);
     m_board.clearRows(m_clearingRows);
     m_clearingRows.clear();
     m_clearTicks = 0;
     if (goalReached()) {
-        rateDifficulty();
+        if (m_stack)
+            m_stack->rate(m_board);
         m_phase = Phase::Finished;
         events.push_back(Event {Event::Finished});
         return;
@@ -307,15 +301,11 @@ void Game::finishClear(std::vector<Event> &events) {
     spawnNext(events);
 }
 
-// Rated when the board is at rest: every piece that settles comes through
-// spawnNext, after its lines have cleared, and so does the opening deal.
-void Game::rateDifficulty() {
-    if (m_params.dealtStack)
-        m_difficulty = Difficulty::rate(m_board, m_dealtStack);
-}
-
 void Game::spawnNext(std::vector<Event> &events) {
-    rateDifficulty();
+    // Rated when the board is at rest: every piece that settles comes
+    // through here, after its lines have cleared.
+    if (m_stack)
+        m_stack->rate(m_board);
     m_holdUsed = false;
     spawnPiece(m_bag.take(), events);
 }

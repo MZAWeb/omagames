@@ -2,10 +2,12 @@
 
 #include <QPoint>
 #include <algorithm>
+#include <optional>
 #include <vector>
 
 #include "bag.h"
 #include "board.h"
+#include "dealtstack.h"
 #include "rules.h"
 #include "scoring.h"
 
@@ -50,14 +52,14 @@ public:
     int linesLeft() const { return m_params.lineGoal > 0 ? std::max(0, m_params.lineGoal - lines()) : 0; }
     // Challenge: how many rows the dealt stack covered, and how many of them
     // are still on the board. Both 0 in every other mode.
-    int dealtRows() const { return m_dealtRows; }
-    int dealtRowsLeft() const;
+    int dealtRows() const { return m_stack ? m_stack->dealt() : 0; }
+    int dealtRowsLeft() const { return m_stack ? m_stack->rowsLeft(m_clearingRows) : 0; }
     // The board rows that still belong to it, rows mid-clear included, so a
     // renderer can mark them.
-    const std::vector<int> &dealtStack() const { return m_dealtStack; }
+    const std::vector<int> &dealtStack() const;
     // Difficulty::rate() of the board as it stood after the last piece
     // settled, lines cleared; 0 outside Challenge.
-    int difficulty() const { return m_difficulty; }
+    int difficulty() const { return m_stack ? m_stack->difficulty() : 0; }
     int ticks() const { return m_ticks; }
     int elapsedMs() const { return m_ticks * 1000 / Rules::kTicksPerSecond; }
     int combo() const { return m_scoring.combo(); }
@@ -112,7 +114,6 @@ private:
     void lockPiece(std::vector<Event> &events);
     void finishClear(std::vector<Event> &events);
     void spawnNext(std::vector<Event> &events);
-    void rateDifficulty();
     void spawnPiece(PieceType type, std::vector<Event> &events);
     void topOut(std::vector<Event> &events);
 
@@ -124,10 +125,8 @@ private:
     PieceType m_hold = PieceType::None;
     Phase m_phase = Phase::Playing;
     std::vector<int> m_clearingRows;
-    // Where the rows of a Challenge's dealt stack that are still there sit.
-    std::vector<int> m_dealtStack;
-    int m_dealtRows = 0;
-    int m_difficulty = 0;
+    // Challenge's mess; empty in every other mode.
+    std::optional<DealtStack> m_stack;
     qint64 m_gravity = 0;
     Scoring m_scoring;
     int m_ticks = 0;

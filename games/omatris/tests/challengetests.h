@@ -11,6 +11,7 @@ private slots:
     void dealtStackLooksPlayed();
     void theSameSeedDealsTheSameMess();
     void clearedRowsLeaveAndTheRestFall();
+    void theStackCountsFlashingRowsAsGone();
     void clearingEveryDealtRowFinishesAtZenPace();
     void aClearAboveTheStackDoesNotCount();
 };
