@@ -42,92 +42,105 @@ FocusScope {
         event.accepted = true;
     }
 
-    ColumnLayout {
-        anchors.centerIn: parent
-        width: Math.min(parent.width - 48 * theme.textScale, 380 * theme.textScale)
-        spacing: 10 * theme.textScale
+    // Four modes and the legend are taller than the smallest window, so the
+    // menu scrolls there instead of losing its title and its legend off the
+    // edges; every entry has a key, so nothing is out of reach meanwhile.
+    Flickable {
+        id: menu
+        anchors.fill: parent
         visible: !root.showingScores
+        contentWidth: width
+        contentHeight: Math.max(height, column.implicitHeight + 32 * theme.textScale)
+        boundsBehavior: Flickable.StopAtBounds
+        clip: true
 
-        Text {
-            Layout.alignment: Qt.AlignHCenter
-            text: qsTr("Omatris")
-            color: theme.foreground
-            font.pixelSize: 40 * theme.textScale
-            font.bold: true
-        }
-        Text {
-            Layout.alignment: Qt.AlignHCenter
-            Layout.bottomMargin: 10 * theme.textScale
-            text: qsTr("Tetris for Omarchy")
-            color: theme.mix(theme.background, theme.foreground, 0.6)
-            font.pixelSize: 15 * theme.textScale
-        }
+        ColumnLayout {
+            id: column
+            anchors.centerIn: parent
+            width: Math.min(menu.width - 48 * theme.textScale, 380 * theme.textScale)
+            spacing: 10 * theme.textScale
 
-        Repeater {
-            model: game.modes
+            Text {
+                Layout.alignment: Qt.AlignHCenter
+                text: qsTr("Omatris")
+                color: theme.foreground
+                font.pixelSize: 40 * theme.textScale
+                font.bold: true
+            }
+            Text {
+                Layout.alignment: Qt.AlignHCenter
+                Layout.bottomMargin: 10 * theme.textScale
+                text: qsTr("Tetris for Omarchy")
+                color: theme.mix(theme.background, theme.foreground, 0.6)
+                font.pixelSize: 15 * theme.textScale
+            }
 
-            ColumnLayout {
-                id: entry
-                required property var modelData
-                required property int index
+            Repeater {
+                model: game.modes
 
-                Layout.fillWidth: true
-                spacing: 3 * theme.textScale
+                ColumnLayout {
+                    id: entry
+                    required property var modelData
+                    required property int index
 
-                // Plain, every one of them: no key starts "the" mode, so
-                // nothing here may look like what Enter would press.
-                OmaHintButton {
                     Layout.fillWidth: true
-                    text: entry.modelData.label
-                    hint: (entry.index + 1).toString()
-                    onClicked: game.newGame(entry.modelData.id)
-                }
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.leftMargin: 12 * theme.textScale
-                    Layout.rightMargin: 12 * theme.textScale
-                    Layout.bottomMargin: 4 * theme.textScale
-                    Text {
+                    spacing: 3 * theme.textScale
+
+                    // Plain, every one of them: no key starts "the" mode, so
+                    // nothing here may look like what Enter would press.
+                    OmaHintButton {
                         Layout.fillWidth: true
-                        text: entry.modelData.description
-                        color: theme.mix(theme.background, theme.foreground, 0.55)
-                        font.pixelSize: 11 * theme.textScale
-                        wrapMode: Text.WordWrap
+                        text: entry.modelData.label
+                        hint: (entry.index + 1).toString()
+                        onClicked: game.newGame(entry.modelData.id)
                     }
-                    Text {
-                        visible: entry.modelData.id === game.mode
-                        text: qsTr("Last played")
-                        color: theme.mix(theme.background, theme.foreground, 0.45)
-                        font.pixelSize: 11 * theme.textScale
-                        font.italic: true
-                    }
-                    Text {
-                        text: root.bestText(entry.modelData)
-                        color: theme.mix(theme.background, theme.foreground, 0.55)
-                        font.pixelSize: 11 * theme.textScale
-                        font.bold: true
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.leftMargin: 12 * theme.textScale
+                        Layout.rightMargin: 12 * theme.textScale
+                        Layout.bottomMargin: 4 * theme.textScale
+                        Text {
+                            Layout.fillWidth: true
+                            text: entry.modelData.description
+                            color: theme.mix(theme.background, theme.foreground, 0.55)
+                            font.pixelSize: 11 * theme.textScale
+                            wrapMode: Text.WordWrap
+                        }
+                        Text {
+                            visible: entry.modelData.id === game.mode
+                            text: qsTr("Last played")
+                            color: theme.mix(theme.background, theme.foreground, 0.45)
+                            font.pixelSize: 11 * theme.textScale
+                            font.italic: true
+                        }
+                        Text {
+                            text: root.bestText(entry.modelData)
+                            color: theme.mix(theme.background, theme.foreground, 0.55)
+                            font.pixelSize: 11 * theme.textScale
+                            font.bold: true
+                        }
                     }
                 }
             }
-        }
 
-        OmaHintButton {
-            Layout.fillWidth: true
-            Layout.topMargin: 10 * theme.textScale
-            text: qsTr("High scores")
-            hint: qsTr("H")
-            onClicked: root.showingScores = true
-        }
-        OmaHintButton {
-            Layout.fillWidth: true
-            text: qsTr("Handling")
-            hint: qsTr("S")
-            onClicked: root.handlingRequested()
-        }
+            OmaHintButton {
+                Layout.fillWidth: true
+                Layout.topMargin: 10 * theme.textScale
+                text: qsTr("High scores")
+                hint: qsTr("H")
+                onClicked: root.showingScores = true
+            }
+            OmaHintButton {
+                Layout.fillWidth: true
+                text: qsTr("Handling")
+                hint: qsTr("S")
+                onClicked: root.handlingRequested()
+            }
 
-        KeyLegend {
-            Layout.fillWidth: true
-            Layout.topMargin: 14 * theme.textScale
+            KeyLegend {
+                Layout.fillWidth: true
+                Layout.topMargin: 14 * theme.textScale
+            }
         }
     }
 

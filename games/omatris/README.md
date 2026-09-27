@@ -72,15 +72,29 @@ placement that clears nothing. Every constant is named in `src/rules.h`.
 | **Marathon** | endless | ramps with the level | score |
 | **Sprint** | 40 lines | stays at level 1 | the clock |
 | **Zen** | endless | stays at level 1 | score |
+| **Challenge** | clear the dealt stack | stays at level 1 | not ranked |
 
 Sprint and Zen still gain a level every ten lines — the level pays out in the
 score — but neither speeds up: Sprint is a race the stack should not win, and
 Zen is somewhere to stack for as long as you like. A Sprint that tops out
 never crossed the line, so it leaves no time behind.
 
+**Challenge** is Zen with a mess to clean up first. The run opens on a stack
+covering 4 to 10 of the 20 visible rows (20–50%), and it ends, won, the moment
+the last of those rows is cleared; topping out ends it lost. Lines built above
+the mess count for the score and the level but not for the goal. The stack
+is dealt from the run's seed but never random noise: it is whole
+tetrominoes, in bag order, each dropped straight down from the top of the
+well where a careless player would have put it — the lowest of a few poor
+spots — until 55–70% of the covered rows are filled. So nothing floats, the
+colours are the pieces' own, there are holes and overhangs, and no row is
+full. The rows still to clear are tinted in the well, and the header counts
+them (`Rows left 3 / 7`) beside the clock. How a Challenge goes depends on
+the stack it dealt, so it keeps no high-score table; `R` deals a new one.
+
 Each mode has its own key and none of them is a default, so no button on the
 start screen is drawn as the primary one; the mode played last is merely
-marked. The top ten per mode (with lines, level and date) are kept in
+marked. The top ten per ranked mode (with lines, level and date) are kept in
 `~/.config/Omacom/omatris.conf`, and the header shows the best for the mode in
 play.
 
@@ -127,7 +141,7 @@ There is nothing to click during play.
 | `G` | Ghost piece on / off (remembered between runs) |
 | `P` | Pause / resume |
 | `R` | Restart the run at once (no prompt — it is the retry key) |
-| `1` `2` `3` | Start Marathon / Sprint / Zen (start screen) |
+| `1` `2` `3` `4` | Start Marathon / Sprint / Zen / Challenge (start screen) |
 | `H` | High scores (start screen) |
 | `S` | Handling (start screen, pause overlay); inside it `↑` `↓` choose, `←` `→` change, `D` resets to defaults, `Esc` / `Enter` / `S` close |
 | `Enter` / `Space` | Play again after a run ends |
@@ -141,8 +155,10 @@ The well is painted by one `FieldView` item at a whole number of pixels per
 cell, with the hold box on its left and the next queue on its right, both four
 cells wide. The header carries the mode, the best result, the back-to-back and
 combo badges, and the numbers that matter for the mode: score, level and lines
-in Marathon and Zen, lines left and the clock in Sprint. The window scales with
-the desktop text size; the minimum is 660 × 560 logical pixels at 100%.
+in Marathon and Zen, lines left and the clock in Sprint, rows left and the
+clock in Challenge. The window scales with the desktop text size; the
+minimum is 660 × 560 logical pixels at 100%, where the start screen scrolls
+rather than clip.
 
 ## Build, test, run
 

@@ -1,5 +1,7 @@
 #include "game.h"
 
+#include <algorithm>
+
 #include "challenge.h"
 
 namespace {
@@ -57,9 +59,17 @@ void Game::placePiece(const Placement &placement) {
     m_lowestRow = placement.origin.y();
 }
 
+// Rows that are flashing are as good as gone, so the header and the finish
+// agree with the lock that cleared them.
+int Game::dealtRowsLeft() const {
+    return int(std::count_if(m_dealtStack.begin(), m_dealtStack.end(), [this](int y) {
+        return std::find(m_clearingRows.begin(), m_clearingRows.end(), y) == m_clearingRows.end();
+    }));
+}
+
 bool Game::goalReached() const {
     if (m_params.dealtStack)
-        return m_dealtStack.empty();
+        return dealtRowsLeft() == 0;
     return m_params.lineGoal > 0 && m_lines >= m_params.lineGoal;
 }
 
@@ -276,9 +286,6 @@ void Game::lockPiece(std::vector<Event> &events) {
         levelUp.level = m_level;
         events.push_back(levelUp);
     }
-    // Counted now, not after the flash, so the header and the finish agree
-    // with the lock that earned them.
-    m_dealtStack = Challenge::afterClear(m_dealtStack, rows);
     m_clearingRows = rows;
     m_clearTicks = Rules::kClearDelayTicks;
     if (goalReached())
@@ -314,6 +321,7 @@ ClearInfo Game::award(int lines, Spin spin) {
 }
 
 void Game::finishClear(std::vector<Event> &events) {
+    m_dealtStack = Challenge::afterClear(m_dealtStack, m_clearingRows);
     m_board.clearRows(m_clearingRows);
     m_clearingRows.clear();
     m_clearTicks = 0;

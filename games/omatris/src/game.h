@@ -61,7 +61,10 @@ public:
     // Challenge: how many rows the dealt stack covered, and how many of them
     // are still on the board. Both 0 in every other mode.
     int dealtRows() const { return m_dealtRows; }
-    int dealtRowsLeft() const { return int(m_dealtStack.size()); }
+    int dealtRowsLeft() const;
+    // The board rows that still belong to it, rows mid-clear included, so a
+    // renderer can mark them.
+    const std::vector<int> &dealtStack() const { return m_dealtStack; }
     int ticks() const { return m_ticks; }
     int elapsedMs() const { return m_ticks * 1000 / Rules::kTicksPerSecond; }
     int combo() const { return m_combo; }
@@ -128,8 +131,7 @@ private:
     PieceType m_hold = PieceType::None;
     Phase m_phase = Phase::Playing;
     std::vector<int> m_clearingRows;
-    // Where the rows of a Challenge's dealt stack that are still there sit,
-    // as of the last clear the lock decided on.
+    // Where the rows of a Challenge's dealt stack that are still there sit.
     std::vector<int> m_dealtStack;
     int m_dealtRows = 0;
     qint64 m_gravity = 0;

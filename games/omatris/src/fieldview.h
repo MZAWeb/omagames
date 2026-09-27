@@ -27,6 +27,8 @@ class FieldView : public QQuickPaintedItem {
     Q_PROPERTY(QColor gridColor MEMBER m_gridColor NOTIFY colorsChanged)
     Q_PROPERTY(QColor ghostColor MEMBER m_ghostColor NOTIFY colorsChanged)
     Q_PROPERTY(QColor flashColor MEMBER m_flashColor NOTIFY colorsChanged)
+    // Behind the rows a Challenge still has to clear.
+    Q_PROPERTY(QColor dealtColor MEMBER m_dealtColor NOTIFY colorsChanged)
     // What a cell's bevel leans toward on its lit and its shaded edges.
     Q_PROPERTY(QColor lightColor MEMBER m_lightColor NOTIFY colorsChanged)
     Q_PROPERTY(QColor shadeColor MEMBER m_shadeColor NOTIFY colorsChanged)
@@ -59,6 +61,7 @@ private:
     QColor colorFor(int piece) const;
     void paintCell(QPainter *painter, int column, int row, const QColor &color);
     void paintGrid(QPainter *painter);
+    void paintDealtRows(QPainter *painter, const Game &game);
     void paintStack(QPainter *painter, const Game &game);
     void paintGhostAndPiece(QPainter *painter, const Game &game);
     void paintFlashes(QPainter *painter, qint64 now);
@@ -72,6 +75,7 @@ private:
     QColor m_gridColor;
     QColor m_ghostColor;
     QColor m_flashColor;
+    QColor m_dealtColor;
     QColor m_lightColor;
     QColor m_shadeColor;
 

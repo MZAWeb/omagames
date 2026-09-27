@@ -100,8 +100,12 @@ void ChallengeTests::clearingEveryDealtRowFinishesAtZenPace() {
         QCOMPARE(count(events, Event::Finished), 0);
         left -= 4;
         QCOMPARE(game.dealtRowsLeft(), left);
+        // The rows stay marked until the flash is over, then the rest fall.
+        QCOMPARE(int(game.dealtStack().size()), left + 4);
         waitOutTheFlash(game);
         QCOMPARE(game.phase(), Phase::Playing);
+        QCOMPARE(int(game.dealtStack().size()), left);
+        QCOMPARE(game.dealtStack().back(), kBottom);
     }
     const std::vector<Event> events = iDownTheLeftWall(game);
     QCOMPARE(count(events, Event::Finished), 1);

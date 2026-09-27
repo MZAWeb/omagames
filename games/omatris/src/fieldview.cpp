@@ -134,6 +134,14 @@ void FieldView::paintGrid(QPainter *painter) {
         painter->drawLine(QPointF(0, y * m_cellSize + 0.5), QPointF(width(), y * m_cellSize + 0.5));
 }
 
+void FieldView::paintDealtRows(QPainter *painter, const Game &game) {
+    for (int y : game.dealtStack()) {
+        const int row = y - Board::kHiddenRows;
+        if (row >= 0)
+            painter->fillRect(0, row * m_cellSize, int(width()), m_cellSize, m_dealtColor);
+    }
+}
+
 void FieldView::paintStack(QPainter *painter, const Game &game) {
     const Board &board = game.board();
     for (int y = Board::kHiddenRows; y < Board::kHeight; ++y) {
@@ -199,6 +207,7 @@ void FieldView::paint(QPainter *painter) {
     if (!game)
         return;
     painter->setPen(Qt::NoPen);
+    paintDealtRows(painter, *game);
     paintGrid(painter);
     painter->setPen(Qt::NoPen);
     paintStack(painter, *game);
