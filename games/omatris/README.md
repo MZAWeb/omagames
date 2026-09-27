@@ -89,7 +89,19 @@ well where a careless player would have put it — the lowest of a few poor
 spots — until 55–70% of the covered rows are filled. So nothing floats, the
 colours are the pieces' own, there are holes and overhangs, and no row is
 full. The rows still to clear are tinted in the well, and the header counts
-them (`Rows left 3 / 7`) beside the clock. How a Challenge goes depends on
+them (`Rows left 3 / 7`) beside the clock.
+
+Under the hold box a big **Difficulty** number, 1 to 100, says how hard the
+board left is to finish. It is rated on the deal and again every time a piece
+settles (after its lines clear), with an arrow for how far the last piece
+moved it, and runs green through yellow to red. It adds up what a player
+sizes up by eye: holes (empty cells with anything above them), the blocks
+piled over those holes, the height steps between neighbouring columns, the
+dealt rows still to go, and — only past half the well — how close the stack
+is to the ceiling, which climbs steeply. The sum is eased onto the scale so a
+fresh deal rates about 10–80 and a stack near the top reaches 100; the last
+dealt row cleared rates 1. It is a heuristic, not a solver, and only ever
+rises with each of those; the weights are named in `src/difficulty.cpp`. How a Challenge goes depends on
 the stack it dealt, so it keeps no high-score table; `R` deals a new one.
 
 Each mode has its own key and none of them is a default, so no button on the
