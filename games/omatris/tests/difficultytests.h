@@ -2,14 +2,16 @@
 
 #include <QObject>
 
-// Challenge's difficulty rating: what it measures, which way each feature
-// pushes it, its range, and the game keeping it current as pieces settle.
+// Challenge's difficulty rating: what it measures, that it follows the work
+// left rather than the board's looks, its range, and the game keeping it
+// current as pieces settle.
 class DifficultyTests : public QObject {
     Q_OBJECT
 
 private slots:
-    void measureReadsTheBoard();
-    void everyFeaturePushesTheRatingUp();
+    void measureFindsTheRowsThatHaveToGo();
+    void buildingBesideTheGapsCostsNothing();
+    void fillingAGapHelpsAndBuryingOneHurts();
     void ratingStaysBetweenOneAndAHundred();
     void freshDealsSpreadAcrossTheScale();
     void theGameRatesEverySettledBoard();
