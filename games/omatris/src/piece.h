@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QPoint>
+#include <QVariantMap>
 #include <array>
 
 // The seven tetrominoes, in the order the guideline lists them. `None` is
@@ -44,6 +45,9 @@ constexpr int kSpinKick = kMaxKicks - 1;
 int boxSize(PieceType type);
 const PieceCells &cells(PieceType type, int rotation);
 SpawnBox spawnBox(PieceType type);
+// The same as {cells: [{x, y}], width, height} for QML, from a PieceType
+// number; an empty box for anything that is not a piece.
+QVariantMap spawnBoxMap(int piece);
 // Where a piece enters: its box centred over the columns, left of centre when
 // the two cannot be halved evenly.
 int spawnColumn(PieceType type, int boardWidth);

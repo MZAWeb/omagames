@@ -19,6 +19,7 @@ HEADERS += \
     src/game.h \
     src/autoshift.h \
     src/handling.h \
+    src/preferences.h \
     src/omatrisgame.h \
     src/fieldview.h
 SOURCES += \
@@ -37,6 +38,7 @@ SOURCES += \
     src/game.cpp \
     src/autoshift.cpp \
     src/handling.cpp \
+    src/preferences.cpp \
     src/omatrisgame.cpp \
     src/fieldview.cpp
 RESOURCES += src/resources.qrc

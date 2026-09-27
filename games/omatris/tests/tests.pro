@@ -21,6 +21,7 @@ HEADERS += \
     ../src/game.h \
     ../src/autoshift.h \
     ../src/handling.h \
+    ../src/preferences.h \
     ../src/omatrisgame.h \
     enginefixture.h \
     challengetests.h \
@@ -50,6 +51,7 @@ SOURCES += \
     ../src/game.cpp \
     ../src/autoshift.cpp \
     ../src/handling.cpp \
+    ../src/preferences.cpp \
     ../src/omatrisgame.cpp \
     piecetests.cpp \
     challengetests.cpp \
