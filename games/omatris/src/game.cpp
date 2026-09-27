@@ -1,5 +1,7 @@
 #include "game.h"
 
+#include "challenge.h"
+
 namespace {
 
 // The four corners of a T's box, and which two of them the T points between
@@ -19,6 +21,12 @@ QPoint middleOf(const PieceCells &cells) {
 
 Game::Game(Mode mode, quint32 seed)
     : m_mode(mode), m_params(Rules::params(mode)), m_bag(seed) {
+    if (m_params.dealtStack) {
+        // Its own stream, so the mess and the pieces dealt to fix it are not
+        // the same shuffle read twice.
+        m_dealtStack = Challenge::build(m_board, ~seed);
+        m_dealtRows = dealtRowsLeft();
+    }
     std::vector<Event> ignored;
     spawnNext(ignored);
 }
@@ -47,6 +55,12 @@ void Game::placePiece(const Placement &placement) {
     m_lockResets = 0;
     m_lockPending = false;
     m_lowestRow = placement.origin.y();
+}
+
+bool Game::goalReached() const {
+    if (m_params.dealtStack)
+        return m_dealtStack.empty();
+    return m_params.lineGoal > 0 && m_lines >= m_params.lineGoal;
 }
 
 bool Game::grounded() const {
@@ -262,9 +276,12 @@ void Game::lockPiece(std::vector<Event> &events) {
         levelUp.level = m_level;
         events.push_back(levelUp);
     }
+    // Counted now, not after the flash, so the header and the finish agree
+    // with the lock that earned them.
+    m_dealtStack = Challenge::afterClear(m_dealtStack, rows);
     m_clearingRows = rows;
     m_clearTicks = Rules::kClearDelayTicks;
-    if (m_params.lineGoal > 0 && m_lines >= m_params.lineGoal)
+    if (goalReached())
         finishClear(events);
 }
 
@@ -300,7 +317,7 @@ void Game::finishClear(std::vector<Event> &events) {
     m_board.clearRows(m_clearingRows);
     m_clearingRows.clear();
     m_clearTicks = 0;
-    if (m_params.lineGoal > 0 && m_lines >= m_params.lineGoal) {
+    if (goalReached()) {
         m_phase = Phase::Finished;
         events.push_back(Event {Event::Finished});
         return;

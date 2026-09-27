@@ -12,12 +12,15 @@
 // player reads and the key its scores are filed under stay in one place.
 namespace Modes {
 
-// "marathon" | "sprint" | "zen".
+// "marathon" | "sprint" | "zen" | "challenge".
 QString id(Mode mode);
 // The mode an id names; `mode` is left as it was when it names none.
 bool fromId(const QString &wanted, Mode *mode);
 QString label(Mode mode);
-// {id, label, description, goal} for the start screen, in play order.
+// Whether the mode keeps a table. A Challenge does not: how it goes depends
+// on the stack it dealt, so two results are never the same contest.
+bool ranked(Mode mode);
+// {id, label, description, goal, ranked} for the start screen, in play order.
 QVariantList list();
 // The top ten per mode. A run keeps its score, lines, level and clock
 // whatever the mode; which of them ranks is the mode's business, and Sprint

@@ -3,16 +3,18 @@
 #include "piece.h"
 
 // Marathon ramps forever, Sprint races forty lines against the clock, Zen
-// never speeds up.
-enum class Mode : quint8 { Marathon, Sprint, Zen };
-constexpr int kModeCount = 3;
+// never speeds up, and Challenge is Zen with a mess to clean up first.
+enum class Mode : quint8 { Marathon, Sprint, Zen, Challenge };
+constexpr int kModeCount = 4;
 
 // How a mode differs: whether gravity follows the level, how many lines end
-// the run, and whether its table ranks by the clock or by the score.
+// the run, whether its table ranks by the clock or by the score, and whether
+// it starts on a dealt stack that ends the run once it is gone.
 struct ModeParams {
     bool gravityRamps;
     int lineGoal;  // 0 = endless
     bool rankByTime;
+    bool dealtStack;
 };
 
 namespace Rules {

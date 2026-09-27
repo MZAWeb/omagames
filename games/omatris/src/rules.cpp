@@ -6,13 +6,15 @@
 ModeParams Rules::params(Mode mode) {
     switch (mode) {
     case Mode::Sprint:
-        return {false, kSprintLines, true};
+        return {false, kSprintLines, true, false};
     case Mode::Zen:
-        return {false, 0, false};
+        return {false, 0, false, false};
+    case Mode::Challenge:
+        return {false, 0, false, true};
     case Mode::Marathon:
         break;
     }
-    return {true, 0, false};
+    return {true, 0, false, false};
 }
 
 int Rules::gravityPerTick(int level) {

@@ -309,7 +309,7 @@ void OmatrisGame::publish(const Snapshot &before) {
 
 void OmatrisGame::finishGame() {
     // A Sprint that tops out never crossed the line, so it has no time to keep.
-    const bool ranked = m_game->phase() == Phase::Finished || !rankByTime();
+    const bool ranked = this->ranked() && (m_game->phase() == Phase::Finished || !rankByTime());
     m_newHighScoreRank =
         ranked ? m_scores.insert(Modes::id(m_mode),
                                  {rankByTime() ? m_game->elapsedMs() : m_game->score(),

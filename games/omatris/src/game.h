@@ -58,6 +58,10 @@ public:
     int gravityLevel() const { return m_params.gravityRamps ? m_level : Rules::kFirstLevel; }
     int lineGoal() const { return m_params.lineGoal; }
     int linesLeft() const { return m_params.lineGoal > 0 ? std::max(0, m_params.lineGoal - m_lines) : 0; }
+    // Challenge: how many rows the dealt stack covered, and how many of them
+    // are still on the board. Both 0 in every other mode.
+    int dealtRows() const { return m_dealtRows; }
+    int dealtRowsLeft() const { return int(m_dealtStack.size()); }
     int ticks() const { return m_ticks; }
     int elapsedMs() const { return m_ticks * 1000 / Rules::kTicksPerSecond; }
     int combo() const { return m_combo; }
@@ -100,6 +104,8 @@ public:
 
 private:
     bool playable() const { return m_phase == Phase::Playing && !m_paused; }
+    // Sprint's forty lines, or the last row of a Challenge's stack cleared.
+    bool goalReached() const;
     bool shift(int dx);
     qint64 gravityThisTick() const;
     bool grounded() const;
@@ -122,6 +128,10 @@ private:
     PieceType m_hold = PieceType::None;
     Phase m_phase = Phase::Playing;
     std::vector<int> m_clearingRows;
+    // Where the rows of a Challenge's dealt stack that are still there sit,
+    // as of the last clear the lock decided on.
+    std::vector<int> m_dealtStack;
+    int m_dealtRows = 0;
     qint64 m_gravity = 0;
     int m_score = 0;
     int m_lines = 0;
