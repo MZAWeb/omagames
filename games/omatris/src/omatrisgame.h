@@ -39,6 +39,7 @@ class OmatrisGame : public QObject {
     Q_PROPERTY(int linesLeft READ linesLeft NOTIFY linesChanged)
     Q_PROPERTY(int dealtRows READ dealtRows NOTIFY modeChanged)
     Q_PROPERTY(int dealtRowsLeft READ dealtRowsLeft NOTIFY linesChanged)
+    Q_PROPERTY(int difficulty READ difficulty NOTIFY difficultyChanged)
     Q_PROPERTY(int elapsedMs READ elapsedMs NOTIFY elapsedChanged)
     Q_PROPERTY(int combo READ combo NOTIFY comboChanged)
     Q_PROPERTY(bool backToBack READ backToBack NOTIFY comboChanged)
@@ -82,6 +83,8 @@ public:
     // The rows the dealt stack covered, and how many are still to clear.
     int dealtRows() const { return m_game ? m_game->dealtRows() : 0; }
     int dealtRowsLeft() const { return m_game ? m_game->dealtRowsLeft() : 0; }
+    // 1-100, how hard the board left is to finish; 0 outside Challenge.
+    int difficulty() const { return m_game ? m_game->difficulty() : 0; }
     int elapsedMs() const { return m_game ? m_game->elapsedMs() : 0; }
     int combo() const { return m_game ? m_game->combo() : -1; }
     bool backToBack() const { return m_game && m_game->backToBack(); }
@@ -151,6 +154,7 @@ signals:
     void holdChanged();
     void queueChanged();
     void highScoresChanged();
+    void difficultyChanged();
     void stepIntervalChanged();
     void handlingChanged();
     // After anything that moved a piece, for the renderer.
@@ -172,6 +176,7 @@ private:
         int hold = kPieceCount;
         bool holdAvailable = false;
         bool backToBack = false;
+        int difficulty = 0;
         QVariantList queue;
     };
 

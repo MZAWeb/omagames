@@ -108,6 +108,11 @@ FocusScope {
                         color: theme.mix(theme.background, theme.foreground, 0.45)
                         font.pixelSize: 11 * theme.textScale
                     }
+                    DifficultyMeter {
+                        Layout.fillWidth: true
+                        Layout.topMargin: 18 * theme.textScale
+                        visible: game.dealtStack
+                    }
                     Item { Layout.fillHeight: true }
                 }
 

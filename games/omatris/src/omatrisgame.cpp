@@ -125,6 +125,7 @@ void OmatrisGame::startGame(Mode mode, quint32 seed) {
     emit comboChanged();
     emit holdChanged();
     emit queueChanged();
+    emit difficultyChanged();
     emit phaseChanged();
     emit pausedChanged();
     emit frameChanged();
@@ -286,7 +287,7 @@ OmatrisGame::Snapshot OmatrisGame::snapshot() const {
         return {};
     return {m_game->score(), m_game->level(),        m_game->lines(),       m_game->elapsedMs(),
             m_game->combo(), int(m_game->heldPiece()), m_game->holdAvailable(), m_game->backToBack(),
-            nextQueue()};
+            m_game->difficulty(), nextQueue()};
 }
 
 void OmatrisGame::publish(const Snapshot &before) {
@@ -305,6 +306,8 @@ void OmatrisGame::publish(const Snapshot &before) {
         emit holdChanged();
     if (now.queue != before.queue)
         emit queueChanged();
+    if (now.difficulty != before.difficulty)
+        emit difficultyChanged();
 }
 
 void OmatrisGame::finishGame() {

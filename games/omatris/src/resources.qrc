@@ -5,6 +5,7 @@
         <file alias="HighScoresPanel.qml">HighScoresPanel.qml</file>
         <file alias="PlayScreen.qml">PlayScreen.qml</file>
         <file alias="PlayHeader.qml">PlayHeader.qml</file>
+        <file alias="DifficultyMeter.qml">DifficultyMeter.qml</file>
         <file alias="PieceBox.qml">PieceBox.qml</file>
         <file alias="KeyLegend.qml">KeyLegend.qml</file>
         <file alias="TimeFormat.qml">TimeFormat.qml</file>

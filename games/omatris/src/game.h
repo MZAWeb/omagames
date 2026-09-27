@@ -65,6 +65,9 @@ public:
     // The board rows that still belong to it, rows mid-clear included, so a
     // renderer can mark them.
     const std::vector<int> &dealtStack() const { return m_dealtStack; }
+    // Difficulty::rate() of the board as it stood after the last piece
+    // settled, lines cleared; 0 outside Challenge.
+    int difficulty() const { return m_difficulty; }
     int ticks() const { return m_ticks; }
     int elapsedMs() const { return m_ticks * 1000 / Rules::kTicksPerSecond; }
     int combo() const { return m_combo; }
@@ -120,6 +123,7 @@ private:
     ClearInfo award(int lines, Spin spin);
     void finishClear(std::vector<Event> &events);
     void spawnNext(std::vector<Event> &events);
+    void rateDifficulty();
     void spawnPiece(PieceType type, std::vector<Event> &events);
     void topOut(std::vector<Event> &events);
 
@@ -134,6 +138,7 @@ private:
     // Where the rows of a Challenge's dealt stack that are still there sit.
     std::vector<int> m_dealtStack;
     int m_dealtRows = 0;
+    int m_difficulty = 0;
     qint64 m_gravity = 0;
     int m_score = 0;
     int m_lines = 0;
