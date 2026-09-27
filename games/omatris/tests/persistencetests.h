@@ -14,6 +14,7 @@ private slots:
     void scriptedMarathonTopsOutAndRecordsAScore();
     void scriptedSprintRecordsItsTime();
     void savedHighScoresReachQml();
+    void challengeKeepsNoTable();
     void lastModeIsRemembered();
     void ghostToggleIsRemembered();
     void handlingIsRememberedUntilReset();

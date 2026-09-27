@@ -1,12 +1,12 @@
 import OmaGames
 
-// The top ten of every mode side by side: the score for Marathon and Zen, the
-// clock for Sprint.
+// The top ten of every mode that keeps one, side by side: the score for
+// Marathon and Zen, the clock for Sprint. Challenge keeps none.
 OmaScoresPanel {
     id: root
 
     title: qsTr("High scores")
-    categories: game.modes
+    categories: game.modes.filter(mode => mode.ranked)
     entries: game.highScores
     categoryField: "mode"
     valueText: function(entry, mode) {

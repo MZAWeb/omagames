@@ -158,6 +158,37 @@ void PersistenceTests::savedHighScoresReachQml() {
     QCOMPARE(game.bests().value(QStringLiteral("zen")).toInt(), 640);
 }
 
+// How a Challenge goes depends on the stack it dealt, so a cleared one ranks
+// nowhere and the start screen offers no table for it.
+void PersistenceTests::challengeKeepsNoTable() {
+    OmatrisGame game;
+    quietStart(game, Mode::Challenge);
+    QVERIFY(game.dealtStack());
+    QVERIFY(!game.ranked());
+    QVERIFY(game.dealtRows() >= 4);
+    QCOMPARE(game.dealtRowsLeft(), game.dealtRows());
+    Game *engine = game.engineForTests();
+    while (game.phase() == kPlaying) {
+        for (int y = Board::kHeight - game.dealtRowsLeft(); y < Board::kHeight; ++y)
+            fillRow(engine->mutableBoard(), y, {0});
+        engine->placePiece({PieceType::I, 1, {-2, 0}});
+        game.hardDrop();
+        for (int i = 0; i < Rules::kClearDelayTicks; ++i)
+            game.step();
+    }
+    QCOMPARE(game.phase(), QStringLiteral("finished"));
+    QCOMPARE(game.dealtRowsLeft(), 0);
+    QVERIFY(game.score() > 0);
+    QCOMPARE(game.newHighScoreRank(), -1);
+    QVERIFY(game.highScores().isEmpty());
+    QCOMPARE(game.bests().value(QStringLiteral("challenge")).toInt(), 0);
+    for (const QVariant &mode : game.modes()) {
+        const QVariantMap map = mode.toMap();
+        QCOMPARE(map.value(QStringLiteral("ranked")).toBool(),
+                 map.value(QStringLiteral("id")).toString() != QStringLiteral("challenge"));
+    }
+}
+
 void PersistenceTests::lastModeIsRemembered() {
     {
         OmatrisGame game;

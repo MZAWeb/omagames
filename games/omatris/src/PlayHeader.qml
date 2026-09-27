@@ -2,7 +2,8 @@ import QtQuick
 import QtQuick.Layouts
 
 // Mode on the left, then the numbers that matter: score, level and lines in
-// Marathon and Zen; lines left and the clock in Sprint.
+// Marathon and Zen; lines left and the clock in Sprint; the dealt rows still
+// standing and the clock in Challenge.
 RowLayout {
     id: root
 
@@ -15,7 +16,11 @@ RowLayout {
         NumberAnimation { duration: 320; easing.type: Easing.OutCubic }
     }
 
-    readonly property var stats: game.rankByTime
+    readonly property var stats: game.dealtStack
+        ? [{ label: qsTr("Rows left"), value: qsTr("%1 / %2").arg(game.dealtRowsLeft).arg(game.dealtRows), lead: true },
+           { label: qsTr("Time"), value: clock.text(game.elapsedMs), lead: true },
+           { label: qsTr("Score"), value: root.shownScore.toLocaleString(Qt.locale(), "f", 0), lead: false }]
+        : game.rankByTime
         ? [{ label: qsTr("Lines left"), value: game.linesLeft.toString(), lead: true },
            { label: qsTr("Time"), value: clock.text(game.elapsedMs), lead: true },
            { label: qsTr("Score"), value: root.shownScore.toLocaleString(Qt.locale(), "f", 0), lead: false }]

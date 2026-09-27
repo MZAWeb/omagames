@@ -9,6 +9,7 @@ namespace {
 const auto kMarathonId = QStringLiteral("marathon");
 const auto kSprintId = QStringLiteral("sprint");
 const auto kZenId = QStringLiteral("zen");
+const auto kChallengeId = QStringLiteral("challenge");
 
 // A namespace cannot carry Q_OBJECT's tr(), so the words below name their
 // translation context themselves.
@@ -27,6 +28,7 @@ QVector<ModeInfo> modeInfos() {
         {Mode::Marathon, tr("Marathon"), tr("Endless. The levels keep coming and so does gravity.")},
         {Mode::Sprint, tr("Sprint"), tr("Forty lines at the first level's pace. The clock is the score.")},
         {Mode::Zen, tr("Zen"), tr("Endless and never faster. Stack for as long as you like.")},
+        {Mode::Challenge, tr("Challenge"), tr("A mess someone left behind, at Zen's pace. Clear every row of it.")},
     };
 }
 
@@ -38,6 +40,8 @@ QString id(Mode mode) {
         return kSprintId;
     case Mode::Zen:
         return kZenId;
+    case Mode::Challenge:
+        return kChallengeId;
     case Mode::Marathon:
         break;
     }
@@ -62,6 +66,10 @@ QString label(Mode mode) {
     return {};
 }
 
+bool ranked(Mode mode) {
+    return !Rules::params(mode).dealtStack;
+}
+
 QVariantList list() {
     QVariantList list;
     for (const ModeInfo &info : modeInfos()) {
@@ -70,6 +78,7 @@ QVariantList list() {
             {QStringLiteral("label"), info.label},
             {QStringLiteral("description"), info.description},
             {QStringLiteral("goal"), Rules::params(info.mode).lineGoal},
+            {QStringLiteral("ranked"), ranked(info.mode)},
         });
     }
     return list;
@@ -79,6 +88,8 @@ OmaGames::ScoreTable scoreTable() {
     std::vector<OmaGames::ScoreTable::Category> categories;
     for (int i = 0; i < kModeCount; ++i) {
         const Mode mode = Mode(i);
+        if (!ranked(mode))
+            continue;
         const bool byTime = Rules::params(mode).rankByTime;
         categories.push_back({id(mode),
                               byTime ? OmaGames::ScoreTable::LowerIsBetter

@@ -29,12 +29,16 @@ class OmatrisGame : public QObject {
     Q_PROPERTY(QString mode READ mode NOTIFY modeChanged)
     Q_PROPERTY(QString modeLabel READ modeLabel NOTIFY modeChanged)
     Q_PROPERTY(bool rankByTime READ rankByTime NOTIFY modeChanged)
+    Q_PROPERTY(bool ranked READ ranked NOTIFY modeChanged)
+    Q_PROPERTY(bool dealtStack READ dealtStack NOTIFY modeChanged)
     Q_PROPERTY(QVariantList modes READ modes CONSTANT)
     Q_PROPERTY(int score READ score NOTIFY scoreChanged)
     Q_PROPERTY(int level READ level NOTIFY levelChanged)
     Q_PROPERTY(int lines READ lines NOTIFY linesChanged)
     Q_PROPERTY(int lineGoal READ lineGoal NOTIFY modeChanged)
     Q_PROPERTY(int linesLeft READ linesLeft NOTIFY linesChanged)
+    Q_PROPERTY(int dealtRows READ dealtRows NOTIFY modeChanged)
+    Q_PROPERTY(int dealtRowsLeft READ dealtRowsLeft NOTIFY linesChanged)
     Q_PROPERTY(int elapsedMs READ elapsedMs NOTIFY elapsedChanged)
     Q_PROPERTY(int combo READ combo NOTIFY comboChanged)
     Q_PROPERTY(bool backToBack READ backToBack NOTIFY comboChanged)
@@ -60,17 +64,24 @@ public:
     bool paused() const { return m_game && m_game->paused(); }
     // Whether the well outlines where the falling piece would land.
     bool ghostEnabled() const { return m_ghostEnabled; }
-    // "marathon" | "sprint" | "zen": the one being played, or the last chosen.
+    // "marathon" | "sprint" | "zen" | "challenge": the one being played, or
+    // the last chosen.
     QString mode() const { return Modes::id(m_mode); }
     QString modeLabel() const { return Modes::label(m_mode); }
     bool rankByTime() const { return Rules::params(m_mode).rankByTime; }
-    // {id, label, description, goal} for the start screen, in play order.
+    bool ranked() const { return Modes::ranked(m_mode); }
+    // Whether the run began on a mess to clear: Challenge.
+    bool dealtStack() const { return Rules::params(m_mode).dealtStack; }
+    // {id, label, description, goal, ranked} for the start screen, in play order.
     static QVariantList modes() { return Modes::list(); }
     int score() const { return m_game ? m_game->score() : 0; }
     int level() const { return m_game ? m_game->level() : 0; }
     int lines() const { return m_game ? m_game->lines() : 0; }
     int lineGoal() const { return Rules::params(m_mode).lineGoal; }
     int linesLeft() const { return m_game ? m_game->linesLeft() : lineGoal(); }
+    // The rows the dealt stack covered, and how many are still to clear.
+    int dealtRows() const { return m_game ? m_game->dealtRows() : 0; }
+    int dealtRowsLeft() const { return m_game ? m_game->dealtRowsLeft() : 0; }
     int elapsedMs() const { return m_game ? m_game->elapsedMs() : 0; }
     int combo() const { return m_game ? m_game->combo() : -1; }
     bool backToBack() const { return m_game && m_game->backToBack(); }

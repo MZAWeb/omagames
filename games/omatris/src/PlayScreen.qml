@@ -127,6 +127,7 @@ FocusScope {
                         gridColor: theme.alpha(theme.foreground, 0.07)
                         ghostColor: theme.alpha(theme.foreground, 0.55)
                         flashColor: theme.brightForeground
+                        dealtColor: theme.alpha(theme.red, 0.1)
                         lightColor: theme.brightForeground
                         shadeColor: theme.darkerBackground
                     }
