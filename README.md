@@ -16,6 +16,7 @@ size.
 | **Omasnake** | `games/omasnake` | Snake: eat the dots, grow longer and faster, and never touch the wall or your own tail; Classic or Wrap edges, three speeds and high scores |
 | **Omatris** | `games/omatris` | Tetris: stack the falling blocks, clear lines, chase the level; marathon, a 40-line sprint and an endless calm mode |
 | **Oma2048** | `games/oma2048` | 2048: slide the tiles, merge equal pairs into bigger ones, reach 2048 and keep going; one-level undo and high scores |
+| **Omadrop** | `games/omadrop` | Aim and launch through numbered pegs; count them down before their turn-by-turn rise carries one through the top |
 
 Each game has its own README with rules and keyboard shortcuts.
 
@@ -47,6 +48,7 @@ One line per game, on Omarchy (or any Arch):
 curl -fsSL https://raw.githubusercontent.com/MZAWeb/omagames/main/install.sh | bash -s omadoku
 curl -fsSL https://raw.githubusercontent.com/MZAWeb/omagames/main/install.sh | bash -s blackomack
 curl -fsSL https://raw.githubusercontent.com/MZAWeb/omagames/main/install.sh | bash -s omanix
+curl -fsSL https://raw.githubusercontent.com/MZAWeb/omagames/main/install.sh | bash -s omadrop
 curl -fsSL https://raw.githubusercontent.com/MZAWeb/omagames/main/install.sh | bash -s omasnake
 curl -fsSL https://raw.githubusercontent.com/MZAWeb/omagames/main/install.sh | bash -s omasweeper
 ```

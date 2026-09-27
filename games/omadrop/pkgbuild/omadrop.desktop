@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Omadrop
+Comment=Physics peg game for Omarchy
+Exec=omadrop
+Icon=omadrop
+Terminal=false
+Categories=Game;ArcadeGame;
+StartupWMClass=omadrop
