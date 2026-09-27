@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "challenge.h"
+#include "difficulty.h"
 
 namespace {
 
@@ -326,6 +327,7 @@ void Game::finishClear(std::vector<Event> &events) {
     m_clearingRows.clear();
     m_clearTicks = 0;
     if (goalReached()) {
+        rateDifficulty();
         m_phase = Phase::Finished;
         events.push_back(Event {Event::Finished});
         return;
@@ -333,7 +335,15 @@ void Game::finishClear(std::vector<Event> &events) {
     spawnNext(events);
 }
 
+// Rated when the board is at rest: every piece that settles comes through
+// spawnNext, after its lines have cleared, and so does the opening deal.
+void Game::rateDifficulty() {
+    if (m_params.dealtStack)
+        m_difficulty = Difficulty::rate(m_board, m_dealtStack);
+}
+
 void Game::spawnNext(std::vector<Event> &events) {
+    rateDifficulty();
     m_holdUsed = false;
     spawnPiece(m_bag.take(), events);
 }

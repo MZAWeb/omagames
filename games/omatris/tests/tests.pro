@@ -14,12 +14,14 @@ HEADERS += \
     ../src/modes.h \
     ../src/bonuses.h \
     ../src/challenge.h \
+    ../src/difficulty.h \
     ../src/game.h \
     ../src/autoshift.h \
     ../src/handling.h \
     ../src/omatrisgame.h \
     enginefixture.h \
     challengetests.h \
+    difficultytests.h \
     piecetests.h \
     boardtests.h \
     scoringtests.h \
@@ -37,12 +39,14 @@ SOURCES += \
     ../src/modes.cpp \
     ../src/bonuses.cpp \
     ../src/challenge.cpp \
+    ../src/difficulty.cpp \
     ../src/game.cpp \
     ../src/autoshift.cpp \
     ../src/handling.cpp \
     ../src/omatrisgame.cpp \
     piecetests.cpp \
     challengetests.cpp \
+    difficultytests.cpp \
     boardtests.cpp \
     scoringtests.cpp \
     autoshifttests.cpp \

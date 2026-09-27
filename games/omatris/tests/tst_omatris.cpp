@@ -4,6 +4,7 @@
 #include "autoshifttests.h"
 #include "boardtests.h"
 #include "challengetests.h"
+#include "difficultytests.h"
 #include "handlingtests.h"
 #include "inputtests.h"
 #include "persistencetests.h"
@@ -25,6 +26,8 @@ int main(int argc, char *argv[]) {
     status |= QTest::qExec(&scoring, argc, argv);
     ChallengeTests challenge;
     status |= QTest::qExec(&challenge, argc, argv);
+    DifficultyTests difficulty;
+    status |= QTest::qExec(&difficulty, argc, argv);
     AutoShiftTests autoShift;
     status |= QTest::qExec(&autoShift, argc, argv);
     HandlingTests handling;

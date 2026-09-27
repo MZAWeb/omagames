@@ -167,6 +167,8 @@ void PersistenceTests::challengeKeepsNoTable() {
     QVERIFY(!game.ranked());
     QVERIFY(game.dealtRows() >= 4);
     QCOMPARE(game.dealtRowsLeft(), game.dealtRows());
+    QVERIFY(game.difficulty() > 1);
+    QSignalSpy rated(&game, &OmatrisGame::difficultyChanged);
     Game *engine = game.engineForTests();
     while (game.phase() == kPlaying) {
         for (int y = Board::kHeight - game.dealtRowsLeft(); y < Board::kHeight; ++y)
@@ -178,6 +180,8 @@ void PersistenceTests::challengeKeepsNoTable() {
     }
     QCOMPARE(game.phase(), QStringLiteral("finished"));
     QCOMPARE(game.dealtRowsLeft(), 0);
+    QCOMPARE(game.difficulty(), 1);
+    QVERIFY(!rated.isEmpty());
     QVERIFY(game.score() > 0);
     QCOMPARE(game.newHighScoreRank(), -1);
     QVERIFY(game.highScores().isEmpty());
