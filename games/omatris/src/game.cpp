@@ -1,10 +1,5 @@
 #include "game.h"
 
-#include <algorithm>
-
-#include "challenge.h"
-#include "difficulty.h"
-
 namespace {
 
 // The four corners of a T's box, and which two of them the T points between
@@ -24,12 +19,10 @@ QPoint middleOf(const PieceCells &cells) {
 
 Game::Game(Mode mode, quint32 seed)
     : m_mode(mode), m_params(Rules::params(mode)), m_bag(seed) {
-    if (m_params.dealtStack) {
-        // Its own stream, so the mess and the pieces dealt to fix it are not
-        // the same shuffle read twice.
-        m_dealtStack = Challenge::build(m_board, ~seed);
-        m_dealtRows = dealtRowsLeft();
-    }
+    // Its own stream, so the mess and the pieces dealt to fix it are not the
+    // same shuffle read twice.
+    if (m_params.dealtStack)
+        m_stack.emplace(m_board, ~seed);
     std::vector<Event> ignored;
     spawnNext(ignored);
 }
@@ -54,43 +47,24 @@ void Game::placePiece(const Placement &placement) {
     m_hasPiece = true;
     m_spin = Spin::None;
     m_gravity = 0;
-    m_lockTicks = 0;
-    m_lockResets = 0;
-    m_lockPending = false;
-    m_lowestRow = placement.origin.y();
+    m_lockDelay.start(placement.origin.y());
 }
 
-// Rows that are flashing are as good as gone, so the header and the finish
-// agree with the lock that cleared them.
-int Game::dealtRowsLeft() const {
-    return int(std::count_if(m_dealtStack.begin(), m_dealtStack.end(), [this](int y) {
-        return std::find(m_clearingRows.begin(), m_clearingRows.end(), y) == m_clearingRows.end();
-    }));
+const std::vector<int> &Game::dealtStack() const {
+    static const std::vector<int> none;
+    return m_stack ? m_stack->rows() : none;
 }
 
 bool Game::goalReached() const {
-    if (m_params.dealtStack)
+    // Rows that are flashing are as good as gone, so the finish agrees with
+    // the lock that cleared them.
+    if (m_stack)
         return dealtRowsLeft() == 0;
-    return m_params.lineGoal > 0 && m_lines >= m_params.lineGoal;
+    return m_params.lineGoal > 0 && lines() >= m_params.lineGoal;
 }
 
 bool Game::grounded() const {
     return m_hasPiece && !m_board.fits(m_piece.moved(0, 1));
-}
-
-void Game::noteMove() {
-    // A kick that pushes the piece below anywhere it has been only raises the
-    // mark: falling is what earns a fresh allowance, not turning.
-    m_lowestRow = std::max(m_lowestRow, m_piece.origin.y());
-    // Once the piece has landed, every move spends one of the allowance, and
-    // only an unspent one restarts the timer. After that the timer runs out
-    // however hard the keys are hammered.
-    if (m_lockPending && m_lockResets < Rules::kMaxLockResets) {
-        ++m_lockResets;
-        m_lockTicks = 0;
-    }
-    if (grounded())
-        m_lockPending = true;
 }
 
 bool Game::shift(int dx) {
@@ -101,7 +75,7 @@ bool Game::shift(int dx) {
         return false;
     m_piece = moved;
     m_spin = Spin::None;
-    noteMove();
+    m_lockDelay.moved(m_piece.origin.y(), grounded());
     return true;
 }
 
@@ -115,7 +89,7 @@ bool Game::slide(int dx) {
         return false;
     m_piece = moved;
     m_spin = Spin::None;
-    noteMove();
+    m_lockDelay.moved(m_piece.origin.y(), grounded());
     return true;
 }
 
@@ -135,7 +109,7 @@ bool Game::rotate(int quarters) {
             continue;
         m_piece = candidate;
         m_spin = m_piece.type == PieceType::T ? detectSpin(i) : Spin::None;
-        noteMove();
+        m_lockDelay.moved(m_piece.origin.y(), grounded());
         return true;
     }
     return false;
@@ -183,16 +157,9 @@ void Game::applyGravity() {
     if (dropped == 0)
         return;
     if (m_softDrop)
-        m_score += dropped * Rules::kSoftDropPoints;
+        m_scoring.addSoftDrop(dropped);
     m_spin = Spin::None;
-    // Reaching a row it has never been on before hands the piece a whole
-    // fresh allowance; falling back onto one it has already visited does not.
-    if (m_piece.origin.y() > m_lowestRow) {
-        m_lowestRow = m_piece.origin.y();
-        m_lockResets = 0;
-        m_lockTicks = 0;
-        m_lockPending = false;
-    }
+    m_lockDelay.fell(m_piece.origin.y());
 }
 
 std::vector<Event> Game::hardDrop() {
@@ -205,7 +172,7 @@ std::vector<Event> Game::hardDrop() {
         ++cells;
     }
     if (cells > 0) {
-        m_score += cells * Rules::kHardDropPoints;
+        m_scoring.addHardDrop(cells);
         m_spin = Spin::None;
     }
     lockPiece(events);
@@ -237,14 +204,8 @@ std::vector<Event> Game::tick() {
     if (!m_hasPiece)
         return events;
     applyGravity();
-    // The timer only runs while the piece rests on something, and in mid-air
-    // it pauses rather than rewinds: a rotation that lifts the piece off the
-    // stack for a moment buys it no time it has not paid a reset for.
-    if (grounded()) {
-        m_lockPending = true;
-        if (++m_lockTicks >= Rules::kLockDelayTicks)
-            lockPiece(events);
-    }
+    if (grounded() && m_lockDelay.rest())
+        lockPiece(events);
     return events;
 }
 
@@ -270,8 +231,8 @@ void Game::lockPiece(std::vector<Event> &events) {
     }
 
     const std::vector<int> rows = m_board.fullRows();
-    const int before = m_level;
-    locked.clear = award(int(rows.size()), spin);
+    const int before = level();
+    locked.clear = m_scoring.award(int(rows.size()), spin);
     events.push_back(locked);
     if (rows.empty()) {
         spawnNext(events);
@@ -282,9 +243,9 @@ void Game::lockPiece(std::vector<Event> &events) {
     cleared.clear = locked.clear;
     cleared.at = locked.at;
     events.push_back(cleared);
-    if (m_level != before) {
+    if (level() != before) {
         Event levelUp {Event::LevelUp};
-        levelUp.level = m_level;
+        levelUp.level = level();
         events.push_back(levelUp);
     }
     m_clearingRows = rows;
@@ -293,41 +254,15 @@ void Game::lockPiece(std::vector<Event> &events) {
         finishClear(events);
 }
 
-ClearInfo Game::award(int lines, Spin spin) {
-    ClearInfo info;
-    info.lines = lines;
-    info.spin = spin;
-    // The level in force when the piece locked is the one that pays.
-    const int base = Rules::clearPoints(lines, spin);
-    if (lines == 0) {
-        m_combo = -1;
-        info.points = base * m_level;
-        m_score += info.points;
-        return info;
-    }
-    ++m_combo;
-    info.combo = m_combo;
-    const bool difficult = Rules::isDifficult(lines, spin);
-    info.backToBack = difficult && m_backToBack;
-    int points = base;
-    if (info.backToBack)
-        points = points * Rules::kBackToBackNumerator / Rules::kBackToBackDenominator;
-    points += Rules::kComboStep * m_combo;
-    info.points = points * m_level;
-    m_score += info.points;
-    m_backToBack = difficult;
-    m_lines += lines;
-    m_level = std::max(m_level, Rules::kFirstLevel + m_lines / Rules::kLinesPerLevel);
-    return info;
-}
-
 void Game::finishClear(std::vector<Event> &events) {
-    m_dealtStack = Challenge::afterClear(m_dealtStack, m_clearingRows);
+    if (m_stack)
+        m_stack->clear(m_clearingRows);
     m_board.clearRows(m_clearingRows);
     m_clearingRows.clear();
     m_clearTicks = 0;
     if (goalReached()) {
-        rateDifficulty();
+        if (m_stack)
+            m_stack->rate(m_board);
         m_phase = Phase::Finished;
         events.push_back(Event {Event::Finished});
         return;
@@ -335,15 +270,11 @@ void Game::finishClear(std::vector<Event> &events) {
     spawnNext(events);
 }
 
-// Rated when the board is at rest: every piece that settles comes through
-// spawnNext, after its lines have cleared, and so does the opening deal.
-void Game::rateDifficulty() {
-    if (m_params.dealtStack)
-        m_difficulty = Difficulty::rate(m_board, m_dealtStack);
-}
-
 void Game::spawnNext(std::vector<Event> &events) {
-    rateDifficulty();
+    // Rated when the board is at rest: every piece that settles comes
+    // through here, after its lines have cleared.
+    if (m_stack)
+        m_stack->rate(m_board);
     m_holdUsed = false;
     spawnPiece(m_bag.take(), events);
 }

@@ -12,18 +12,23 @@ HEADERS += \
     ../src/bag.h \
     ../src/rules.h \
     ../src/modes.h \
+    ../src/scoring.h \
     ../src/bonuses.h \
     ../src/challenge.h \
     ../src/difficulty.h \
+    ../src/dealtstack.h \
+    ../src/lockdelay.h \
     ../src/game.h \
     ../src/autoshift.h \
     ../src/handling.h \
+    ../src/preferences.h \
     ../src/omatrisgame.h \
     enginefixture.h \
     challengetests.h \
     difficultytests.h \
     piecetests.h \
     boardtests.h \
+    lockdelaytests.h \
     scoringtests.h \
     autoshifttests.h \
     handlingtests.h \
@@ -37,17 +42,22 @@ SOURCES += \
     ../src/bag.cpp \
     ../src/rules.cpp \
     ../src/modes.cpp \
+    ../src/scoring.cpp \
     ../src/bonuses.cpp \
     ../src/challenge.cpp \
     ../src/difficulty.cpp \
+    ../src/dealtstack.cpp \
+    ../src/lockdelay.cpp \
     ../src/game.cpp \
     ../src/autoshift.cpp \
     ../src/handling.cpp \
+    ../src/preferences.cpp \
     ../src/omatrisgame.cpp \
     piecetests.cpp \
     challengetests.cpp \
     difficultytests.cpp \
     boardtests.cpp \
+    lockdelaytests.cpp \
     scoringtests.cpp \
     autoshifttests.cpp \
     handlingtests.cpp \

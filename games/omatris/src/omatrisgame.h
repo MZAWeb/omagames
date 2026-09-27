@@ -11,6 +11,7 @@
 #include "handling.h"
 #include "modes.h"
 #include "pacer.h"
+#include "preferences.h"
 #include "scoretable.h"
 
 // The only bridge between the engine and QML: state as properties, actions as
@@ -64,21 +65,21 @@ public:
     QString phase() const;
     bool paused() const { return m_game && m_game->paused(); }
     // Whether the well outlines where the falling piece would land.
-    bool ghostEnabled() const { return m_ghostEnabled; }
+    bool ghostEnabled() const { return m_preferences.ghost(); }
     // "marathon" | "sprint" | "zen" | "challenge": the one being played, or
     // the last chosen.
-    QString mode() const { return Modes::id(m_mode); }
-    QString modeLabel() const { return Modes::label(m_mode); }
-    bool rankByTime() const { return Rules::params(m_mode).rankByTime; }
-    bool ranked() const { return Modes::ranked(m_mode); }
+    QString mode() const { return Modes::id(m_preferences.mode()); }
+    QString modeLabel() const { return Modes::label(m_preferences.mode()); }
+    bool rankByTime() const { return Rules::params(m_preferences.mode()).rankByTime; }
+    bool ranked() const { return Modes::ranked(m_preferences.mode()); }
     // Whether the run began on a mess to clear: Challenge.
-    bool dealtStack() const { return Rules::params(m_mode).dealtStack; }
+    bool dealtStack() const { return Rules::params(m_preferences.mode()).dealtStack; }
     // {id, label, description, goal, ranked} for the start screen, in play order.
     static QVariantList modes() { return Modes::list(); }
     int score() const { return m_game ? m_game->score() : 0; }
     int level() const { return m_game ? m_game->level() : 0; }
     int lines() const { return m_game ? m_game->lines() : 0; }
-    int lineGoal() const { return Rules::params(m_mode).lineGoal; }
+    int lineGoal() const { return Rules::params(m_preferences.mode()).lineGoal; }
     int linesLeft() const { return m_game ? m_game->linesLeft() : lineGoal(); }
     // The rows the dealt stack covered, and how many are still to clear.
     int dealtRows() const { return m_game ? m_game->dealtRows() : 0; }
@@ -99,11 +100,11 @@ public:
     QVariantList highScores() const { return Modes::scoreRows(m_scores); }
     QVariantMap bests() const { return Modes::bests(m_scores); }
     int newHighScoreRank() const { return m_newHighScoreRank; }
-    const Handling &handling() const { return m_handling; }
+    const Handling &handling() const { return m_preferences.handling(); }
     // {id, label, description, value, canLower, canRaise, isDefault} for the
     // handling panel.
-    QVariantList handlingRows() const { return m_handling.rows(); }
-    bool handlingIsDefault() const { return m_handling.isDefault(); }
+    QVariantList handlingRows() const { return handling().rows(); }
+    bool handlingIsDefault() const { return handling().isDefault(); }
     int stepInterval() const { return m_pacer.interval(); }
     void setStepInterval(int interval);
 
@@ -136,7 +137,7 @@ public:
     Q_INVOKABLE void step();
     // {cells: [{x, y}], width, height} of a piece in its spawn orientation,
     // for the hold box and the next queue.
-    Q_INVOKABLE QVariantMap pieceShape(int piece) const;
+    Q_INVOKABLE QVariantMap pieceShape(int piece) const { return Piece::spawnBoxMap(piece); }
 
     Q_INVOKABLE QVariantMap windowGeometry() const;
     Q_INVOKABLE void saveWindowGeometry(int x, int y, int width, int height, bool maximized);
@@ -192,16 +193,13 @@ private:
     void finishGame();
     // The pacer runs while, and only while, a piece can fall.
     void syncTimer() { m_pacer.setRunning(playing()); }
-    void loadSettings();
     void setHandling(const Handling &handling);
     void applyHandling();
 
     std::unique_ptr<Game> m_game;
     OmaGames::ScoreTable m_scores;
     OmaGames::Pacer m_pacer;
-    Mode m_mode = Mode::Marathon;
     AutoShift m_shift;
-    Handling m_handling = Handling::defaults();
+    Preferences m_preferences;
     int m_newHighScoreRank = -1;
-    bool m_ghostEnabled = true;
 };

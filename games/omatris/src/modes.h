@@ -7,6 +7,8 @@
 #include "rules.h"
 #include "scoretable.h"
 
+class Game;
+
 // What a mode is called and how its results are kept. A mode crosses to QML
 // as a lowercase id, and that same id names its score table, so the words the
 // player reads and the key its scores are filed under stay in one place.
@@ -31,5 +33,9 @@ OmaGames::ScoreTable scoreTable();
 QVariantList scoreRows(const OmaGames::ScoreTable &scores);
 // Mode id -> the number that mode is judged on.
 QVariantMap bests(const OmaGames::ScoreTable &scores);
+// Files a run that has just ended in its mode's table and returns its rank,
+// or -1 when it did not place or does not count: a Challenge keeps no table,
+// and a Sprint that topped out never crossed the line, so it has no time.
+int record(OmaGames::ScoreTable &scores, const Game &game);
 
 }  // namespace Modes

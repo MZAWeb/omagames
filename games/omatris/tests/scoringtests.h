@@ -9,6 +9,7 @@ class ScoringTests : public QObject {
 
 private slots:
     void scoringPaysTheGuidelineTable();
+    void theTallyStandsOnItsOwn();
     void backToBackAndComboStack();
     void tSpinTripleScoresAsAFullSpin();
     void tSpinMiniIsToldFromAFullOne();

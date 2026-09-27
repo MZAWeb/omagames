@@ -2,24 +2,17 @@
 
 #include <QPoint>
 #include <algorithm>
+#include <optional>
 #include <vector>
 
 #include "bag.h"
 #include "board.h"
+#include "dealtstack.h"
+#include "lockdelay.h"
 #include "rules.h"
+#include "scoring.h"
 
 enum class Phase : quint8 { Playing, GameOver, Finished };
-
-// What one locked piece earned. `combo` is the chain length minus one, so the
-// first clear of a chain is 0 and pays no combo bonus; -1 means the placement
-// broke the chain.
-struct ClearInfo {
-    int lines = 0;
-    Spin spin = Spin::None;
-    bool backToBack = false;
-    int combo = -1;
-    int points = 0;
-};
 
 // One thing that happened, in order, so a renderer can animate it.
 struct Event {
@@ -51,27 +44,27 @@ public:
     Mode mode() const { return m_mode; }
     Phase phase() const { return m_phase; }
     bool paused() const { return m_paused; }
-    int score() const { return m_score; }
-    int lines() const { return m_lines; }
-    int level() const { return m_level; }
+    int score() const { return m_scoring.score(); }
+    int lines() const { return m_scoring.lines(); }
+    int level() const { return m_scoring.level(); }
     // The level gravity follows: Sprint and Zen keep the first level's speed.
-    int gravityLevel() const { return m_params.gravityRamps ? m_level : Rules::kFirstLevel; }
+    int gravityLevel() const { return m_params.gravityRamps ? level() : Rules::kFirstLevel; }
     int lineGoal() const { return m_params.lineGoal; }
-    int linesLeft() const { return m_params.lineGoal > 0 ? std::max(0, m_params.lineGoal - m_lines) : 0; }
+    int linesLeft() const { return m_params.lineGoal > 0 ? std::max(0, m_params.lineGoal - lines()) : 0; }
     // Challenge: how many rows the dealt stack covered, and how many of them
     // are still on the board. Both 0 in every other mode.
-    int dealtRows() const { return m_dealtRows; }
-    int dealtRowsLeft() const;
+    int dealtRows() const { return m_stack ? m_stack->dealt() : 0; }
+    int dealtRowsLeft() const { return m_stack ? m_stack->rowsLeft(m_clearingRows) : 0; }
     // The board rows that still belong to it, rows mid-clear included, so a
     // renderer can mark them.
-    const std::vector<int> &dealtStack() const { return m_dealtStack; }
+    const std::vector<int> &dealtStack() const;
     // Difficulty::rate() of the board as it stood after the last piece
     // settled, lines cleared; 0 outside Challenge.
-    int difficulty() const { return m_difficulty; }
+    int difficulty() const { return m_stack ? m_stack->difficulty() : 0; }
     int ticks() const { return m_ticks; }
     int elapsedMs() const { return m_ticks * 1000 / Rules::kTicksPerSecond; }
-    int combo() const { return m_combo; }
-    bool backToBack() const { return m_backToBack; }
+    int combo() const { return m_scoring.combo(); }
+    bool backToBack() const { return m_scoring.backToBack(); }
 
     const Board &board() const { return m_board; }
     bool hasPiece() const { return m_hasPiece; }
@@ -83,8 +76,8 @@ public:
     std::vector<PieceType> nextQueue() const;
     // Rows waiting out the clear flash; empty the rest of the time.
     const std::vector<int> &clearingRows() const { return m_clearingRows; }
-    int lockTicks() const { return m_lockTicks; }
-    int lockResets() const { return m_lockResets; }
+    int lockTicks() const { return m_lockDelay.ticks(); }
+    int lockResets() const { return m_lockDelay.resets(); }
 
     void setPaused(bool paused) { m_paused = paused; }
     bool moveLeft() { return shift(-1); }
@@ -115,15 +108,11 @@ private:
     bool shift(int dx);
     qint64 gravityThisTick() const;
     bool grounded() const;
-    // Charges a lock-delay reset against a move made once the piece has landed.
-    void noteMove();
     Spin detectSpin(int kickIndex) const;
     void applyGravity();
     void lockPiece(std::vector<Event> &events);
-    ClearInfo award(int lines, Spin spin);
     void finishClear(std::vector<Event> &events);
     void spawnNext(std::vector<Event> &events);
-    void rateDifficulty();
     void spawnPiece(PieceType type, std::vector<Event> &events);
     void topOut(std::vector<Event> &events);
 
@@ -132,33 +121,20 @@ private:
     Bag m_bag;
     Board m_board;
     Placement m_piece;
+    LockDelay m_lockDelay;
     PieceType m_hold = PieceType::None;
     Phase m_phase = Phase::Playing;
     std::vector<int> m_clearingRows;
-    // Where the rows of a Challenge's dealt stack that are still there sit.
-    std::vector<int> m_dealtStack;
-    int m_dealtRows = 0;
-    int m_difficulty = 0;
+    // Challenge's mess; empty in every other mode.
+    std::optional<DealtStack> m_stack;
     qint64 m_gravity = 0;
-    int m_score = 0;
-    int m_lines = 0;
-    int m_level = Rules::kFirstLevel;
+    Scoring m_scoring;
     int m_ticks = 0;
-    int m_combo = -1;
-    int m_lockTicks = 0;
-    int m_lockResets = 0;
-    // The deepest row the piece's origin has ever reached, so a kick that
-    // bounces it down and back up cannot pass for falling.
-    int m_lowestRow = 0;
     int m_clearTicks = 0;
     int m_softDropFactor = Rules::kSoftDropFactor;
     Spin m_spin = Spin::None;
-    // Set once the piece has rested on something since it last fell to a new
-    // lowest row: only then does a move spend part of the allowance.
-    bool m_lockPending = false;
     bool m_hasPiece = false;
     bool m_holdUsed = false;
-    bool m_backToBack = false;
     bool m_softDrop = false;
     bool m_paused = false;
 };

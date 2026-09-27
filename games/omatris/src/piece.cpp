@@ -124,6 +124,18 @@ Piece::SpawnBox Piece::spawnBox(PieceType type) {
     return box;
 }
 
+QVariantMap Piece::spawnBoxMap(int piece) {
+    QVariantList cells;
+    if (piece < 0 || piece >= kPieceCount)
+        return {{QStringLiteral("cells"), cells}, {QStringLiteral("width"), 0}, {QStringLiteral("height"), 0}};
+    const SpawnBox box = spawnBox(PieceType(piece));
+    for (QPoint cell : box.cells)
+        cells.append(QVariantMap {{QStringLiteral("x"), cell.x()}, {QStringLiteral("y"), cell.y()}});
+    return {{QStringLiteral("cells"), cells},
+            {QStringLiteral("width"), box.width},
+            {QStringLiteral("height"), box.height}};
+}
+
 int Piece::spawnColumn(PieceType type, int boardWidth) {
     return (boardWidth - boxSize(type)) / 2;
 }

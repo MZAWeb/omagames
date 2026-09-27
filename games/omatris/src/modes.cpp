@@ -1,7 +1,10 @@
 #include "modes.h"
 
 #include <QCoreApplication>
+#include <QDate>
 #include <QVector>
+
+#include "game.h"
 
 namespace Modes {
 namespace {
@@ -120,6 +123,19 @@ QVariantMap bests(const OmaGames::ScoreTable &scores) {
     for (int i = 0; i < kModeCount; ++i)
         map.insert(id(Mode(i)), scores.best(id(Mode(i))));
     return map;
+}
+
+int record(OmaGames::ScoreTable &scores, const Game &game) {
+    const Mode mode = game.mode();
+    const bool byTime = Rules::params(mode).rankByTime;
+    if (!ranked(mode) || (byTime && game.phase() != Phase::Finished))
+        return -1;
+    return scores.insert(id(mode), {byTime ? game.elapsedMs() : game.score(),
+                                    QDate::currentDate(),
+                                    {{QStringLiteral("score"), game.score()},
+                                     {QStringLiteral("lines"), game.lines()},
+                                     {QStringLiteral("level"), game.level()},
+                                     {QStringLiteral("millis"), game.elapsedMs()}}});
 }
 
 }  // namespace Modes

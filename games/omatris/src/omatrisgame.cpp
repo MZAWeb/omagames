@@ -2,16 +2,12 @@
 
 #include <QRandomGenerator>
 #include <QRect>
-#include <QSettings>
 #include <algorithm>
 
 #include "bonuses.h"
 #include "windowgeometry.h"
 
 namespace {
-
-const auto kModeKey = QStringLiteral("play/mode");
-const auto kGhostKey = QStringLiteral("play/ghost");
 
 const auto kStartId = QStringLiteral("start");
 const auto kPlayingId = QStringLiteral("playing");
@@ -22,42 +18,33 @@ const auto kFinishedId = QStringLiteral("finished");
 
 OmatrisGame::OmatrisGame(QObject *parent)
     : QObject(parent), m_scores(Modes::scoreTable()),
-      m_pacer(OmaGames::Pacer::Repeating, [this]() { step(); }, this) {
+      m_pacer(OmaGames::Pacer::Repeating, [this]() { step(); }, this),
+      m_preferences(Preferences::load()) {
     m_pacer.setTimerType(Qt::PreciseTimer);
     m_pacer.setInterval(kDefaultStepIntervalMs);
-    loadSettings();
-}
-
-void OmatrisGame::loadSettings() {
-    QSettings settings;
-    Modes::fromId(settings.value(kModeKey).toString(), &m_mode);
-    m_ghostEnabled = settings.value(kGhostKey, true).toBool();
-    m_handling = Handling::load();
     applyHandling();
     m_scores.load();
 }
 
 // Handling is a preference like the ghost: it outlives the run and the window.
 void OmatrisGame::setHandling(const Handling &handling) {
-    if (handling == m_handling)
+    if (!m_preferences.setHandling(handling))
         return;
-    m_handling = handling;
-    m_handling.save();
     applyHandling();
     emit handlingChanged();
 }
 
 void OmatrisGame::applyHandling() {
-    m_shift.setTiming(m_handling.dasTicks, m_handling.arrTicks);
+    m_shift.setTiming(handling().dasTicks, handling().arrTicks);
     if (m_game)
-        m_game->setSoftDropFactor(m_handling.softDropFactor);
+        m_game->setSoftDropFactor(handling().softDropFactor);
 }
 
 bool OmatrisGame::adjustHandling(const QString &setting, int delta) {
     Handling::Setting which;
     if (!Handling::fromId(setting, &which))
         return false;
-    Handling changed = m_handling;
+    Handling changed = handling();
     if (!changed.step(which, delta))
         return false;
     setHandling(changed);
@@ -91,18 +78,6 @@ QVariantList OmatrisGame::nextQueue() const {
     return list;
 }
 
-QVariantMap OmatrisGame::pieceShape(int piece) const {
-    QVariantList cells;
-    if (piece < 0 || piece >= kPieceCount)
-        return {{QStringLiteral("cells"), cells}, {QStringLiteral("width"), 0}, {QStringLiteral("height"), 0}};
-    const Piece::SpawnBox box = Piece::spawnBox(PieceType(piece));
-    for (QPoint cell : box.cells)
-        cells.append(QVariantMap {{QStringLiteral("x"), cell.x()}, {QStringLiteral("y"), cell.y()}});
-    return {{QStringLiteral("cells"), cells},
-            {QStringLiteral("width"), box.width},
-            {QStringLiteral("height"), box.height}};
-}
-
 void OmatrisGame::setStepInterval(int interval) {
     if (!m_pacer.setInterval(interval))
         return;
@@ -111,8 +86,7 @@ void OmatrisGame::setStepInterval(int interval) {
 }
 
 void OmatrisGame::startGame(Mode mode, quint32 seed) {
-    m_mode = mode;
-    QSettings().setValue(kModeKey, Modes::id(mode));
+    m_preferences.setMode(mode);
     m_game = std::make_unique<Game>(mode, seed);
     m_newHighScoreRank = -1;
     m_shift.clear();
@@ -133,14 +107,14 @@ void OmatrisGame::startGame(Mode mode, quint32 seed) {
 }
 
 void OmatrisGame::newGame(const QString &mode) {
-    Mode chosen = m_mode;
+    Mode chosen = m_preferences.mode();
     Modes::fromId(mode, &chosen);
     startGame(chosen, QRandomGenerator::global()->generate());
 }
 
 void OmatrisGame::restart() {
     if (m_game)
-        startGame(m_mode, QRandomGenerator::global()->generate());
+        startGame(m_preferences.mode(), QRandomGenerator::global()->generate());
 }
 
 void OmatrisGame::backToStart() {
@@ -227,8 +201,7 @@ void OmatrisGame::togglePause() {
 
 // The ghost is a preference, not a rule: it outlives the run and the window.
 void OmatrisGame::toggleGhost() {
-    m_ghostEnabled = !m_ghostEnabled;
-    QSettings().setValue(kGhostKey, m_ghostEnabled);
+    m_preferences.setGhost(!m_preferences.ghost());
     emit ghostEnabledChanged();
 }
 
@@ -311,17 +284,7 @@ void OmatrisGame::publish(const Snapshot &before) {
 }
 
 void OmatrisGame::finishGame() {
-    // A Sprint that tops out never crossed the line, so it has no time to keep.
-    const bool ranked = this->ranked() && (m_game->phase() == Phase::Finished || !rankByTime());
-    m_newHighScoreRank =
-        ranked ? m_scores.insert(Modes::id(m_mode),
-                                 {rankByTime() ? m_game->elapsedMs() : m_game->score(),
-                                  QDate::currentDate(),
-                                  {{QStringLiteral("score"), m_game->score()},
-                                   {QStringLiteral("lines"), m_game->lines()},
-                                   {QStringLiteral("level"), m_game->level()},
-                                   {QStringLiteral("millis"), m_game->elapsedMs()}}})
-               : -1;
+    m_newHighScoreRank = Modes::record(m_scores, *m_game);
     if (m_newHighScoreRank >= 0) {
         m_scores.save();
         emit highScoresChanged();
