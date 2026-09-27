@@ -7,19 +7,9 @@
 #include "bag.h"
 #include "board.h"
 #include "rules.h"
+#include "scoring.h"
 
 enum class Phase : quint8 { Playing, GameOver, Finished };
-
-// What one locked piece earned. `combo` is the chain length minus one, so the
-// first clear of a chain is 0 and pays no combo bonus; -1 means the placement
-// broke the chain.
-struct ClearInfo {
-    int lines = 0;
-    Spin spin = Spin::None;
-    bool backToBack = false;
-    int combo = -1;
-    int points = 0;
-};
 
 // One thing that happened, in order, so a renderer can animate it.
 struct Event {
@@ -51,13 +41,13 @@ public:
     Mode mode() const { return m_mode; }
     Phase phase() const { return m_phase; }
     bool paused() const { return m_paused; }
-    int score() const { return m_score; }
-    int lines() const { return m_lines; }
-    int level() const { return m_level; }
+    int score() const { return m_scoring.score(); }
+    int lines() const { return m_scoring.lines(); }
+    int level() const { return m_scoring.level(); }
     // The level gravity follows: Sprint and Zen keep the first level's speed.
-    int gravityLevel() const { return m_params.gravityRamps ? m_level : Rules::kFirstLevel; }
+    int gravityLevel() const { return m_params.gravityRamps ? level() : Rules::kFirstLevel; }
     int lineGoal() const { return m_params.lineGoal; }
-    int linesLeft() const { return m_params.lineGoal > 0 ? std::max(0, m_params.lineGoal - m_lines) : 0; }
+    int linesLeft() const { return m_params.lineGoal > 0 ? std::max(0, m_params.lineGoal - lines()) : 0; }
     // Challenge: how many rows the dealt stack covered, and how many of them
     // are still on the board. Both 0 in every other mode.
     int dealtRows() const { return m_dealtRows; }
@@ -70,8 +60,8 @@ public:
     int difficulty() const { return m_difficulty; }
     int ticks() const { return m_ticks; }
     int elapsedMs() const { return m_ticks * 1000 / Rules::kTicksPerSecond; }
-    int combo() const { return m_combo; }
-    bool backToBack() const { return m_backToBack; }
+    int combo() const { return m_scoring.combo(); }
+    bool backToBack() const { return m_scoring.backToBack(); }
 
     const Board &board() const { return m_board; }
     bool hasPiece() const { return m_hasPiece; }
@@ -120,7 +110,6 @@ private:
     Spin detectSpin(int kickIndex) const;
     void applyGravity();
     void lockPiece(std::vector<Event> &events);
-    ClearInfo award(int lines, Spin spin);
     void finishClear(std::vector<Event> &events);
     void spawnNext(std::vector<Event> &events);
     void rateDifficulty();
@@ -140,11 +129,8 @@ private:
     int m_dealtRows = 0;
     int m_difficulty = 0;
     qint64 m_gravity = 0;
-    int m_score = 0;
-    int m_lines = 0;
-    int m_level = Rules::kFirstLevel;
+    Scoring m_scoring;
     int m_ticks = 0;
-    int m_combo = -1;
     int m_lockTicks = 0;
     int m_lockResets = 0;
     // The deepest row the piece's origin has ever reached, so a kick that
@@ -158,7 +144,6 @@ private:
     bool m_lockPending = false;
     bool m_hasPiece = false;
     bool m_holdUsed = false;
-    bool m_backToBack = false;
     bool m_softDrop = false;
     bool m_paused = false;
 };

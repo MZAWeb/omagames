@@ -12,6 +12,7 @@ HEADERS += \
     ../src/bag.h \
     ../src/rules.h \
     ../src/modes.h \
+    ../src/scoring.h \
     ../src/bonuses.h \
     ../src/challenge.h \
     ../src/difficulty.h \
@@ -37,6 +38,7 @@ SOURCES += \
     ../src/bag.cpp \
     ../src/rules.cpp \
     ../src/modes.cpp \
+    ../src/scoring.cpp \
     ../src/bonuses.cpp \
     ../src/challenge.cpp \
     ../src/difficulty.cpp \

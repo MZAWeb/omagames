@@ -71,7 +71,7 @@ int Game::dealtRowsLeft() const {
 bool Game::goalReached() const {
     if (m_params.dealtStack)
         return dealtRowsLeft() == 0;
-    return m_params.lineGoal > 0 && m_lines >= m_params.lineGoal;
+    return m_params.lineGoal > 0 && lines() >= m_params.lineGoal;
 }
 
 bool Game::grounded() const {
@@ -183,7 +183,7 @@ void Game::applyGravity() {
     if (dropped == 0)
         return;
     if (m_softDrop)
-        m_score += dropped * Rules::kSoftDropPoints;
+        m_scoring.addSoftDrop(dropped);
     m_spin = Spin::None;
     // Reaching a row it has never been on before hands the piece a whole
     // fresh allowance; falling back onto one it has already visited does not.
@@ -205,7 +205,7 @@ std::vector<Event> Game::hardDrop() {
         ++cells;
     }
     if (cells > 0) {
-        m_score += cells * Rules::kHardDropPoints;
+        m_scoring.addHardDrop(cells);
         m_spin = Spin::None;
     }
     lockPiece(events);
@@ -270,8 +270,8 @@ void Game::lockPiece(std::vector<Event> &events) {
     }
 
     const std::vector<int> rows = m_board.fullRows();
-    const int before = m_level;
-    locked.clear = award(int(rows.size()), spin);
+    const int before = level();
+    locked.clear = m_scoring.award(int(rows.size()), spin);
     events.push_back(locked);
     if (rows.empty()) {
         spawnNext(events);
@@ -282,43 +282,15 @@ void Game::lockPiece(std::vector<Event> &events) {
     cleared.clear = locked.clear;
     cleared.at = locked.at;
     events.push_back(cleared);
-    if (m_level != before) {
+    if (level() != before) {
         Event levelUp {Event::LevelUp};
-        levelUp.level = m_level;
+        levelUp.level = level();
         events.push_back(levelUp);
     }
     m_clearingRows = rows;
     m_clearTicks = Rules::kClearDelayTicks;
     if (goalReached())
         finishClear(events);
-}
-
-ClearInfo Game::award(int lines, Spin spin) {
-    ClearInfo info;
-    info.lines = lines;
-    info.spin = spin;
-    // The level in force when the piece locked is the one that pays.
-    const int base = Rules::clearPoints(lines, spin);
-    if (lines == 0) {
-        m_combo = -1;
-        info.points = base * m_level;
-        m_score += info.points;
-        return info;
-    }
-    ++m_combo;
-    info.combo = m_combo;
-    const bool difficult = Rules::isDifficult(lines, spin);
-    info.backToBack = difficult && m_backToBack;
-    int points = base;
-    if (info.backToBack)
-        points = points * Rules::kBackToBackNumerator / Rules::kBackToBackDenominator;
-    points += Rules::kComboStep * m_combo;
-    info.points = points * m_level;
-    m_score += info.points;
-    m_backToBack = difficult;
-    m_lines += lines;
-    m_level = std::max(m_level, Rules::kFirstLevel + m_lines / Rules::kLinesPerLevel);
-    return info;
 }
 
 void Game::finishClear(std::vector<Event> &events) {

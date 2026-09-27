@@ -46,6 +46,27 @@ void ScoringTests::scoringPaysTheGuidelineTable() {
     QCOMPARE(Rules::clearPoints(4, Spin::None), 800);
 }
 
+// Scoring needs no board: the lines a lock cleared are all it is told.
+void ScoringTests::theTallyStandsOnItsOwn() {
+    Scoring scoring;
+    QCOMPARE(scoring.level(), Rules::kFirstLevel);
+    scoring.addSoftDrop(3);
+    scoring.addHardDrop(5);
+    QCOMPARE(scoring.score(), 3 * Rules::kSoftDropPoints + 5 * Rules::kHardDropPoints);
+    // Ten lines of singles, each extending the combo, reach the next level.
+    for (int i = 0; i < Rules::kLinesPerLevel; ++i) {
+        const ClearInfo info = scoring.award(1, Spin::None);
+        QCOMPARE(info.combo, i);
+    }
+    QCOMPARE(scoring.lines(), Rules::kLinesPerLevel);
+    QCOMPARE(scoring.level(), Rules::kFirstLevel + 1);
+    // Nothing cleared breaks the combo and pays the new level.
+    const ClearInfo miss = scoring.award(0, Spin::Full);
+    QCOMPARE(miss.combo, -1);
+    QCOMPARE(miss.points, Rules::kTSpin * (Rules::kFirstLevel + 1));
+    QCOMPARE(scoring.combo(), -1);
+}
+
 void ScoringTests::backToBackAndComboStack() {
     Game game(Mode::Zen, kSeed);
     const Event *first = find(tetrisAtTheLeftWall(game), Event::LinesCleared);
