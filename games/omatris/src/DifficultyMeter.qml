@@ -3,8 +3,8 @@ import QtQuick.Layouts
 
 // Challenge's difficulty, big: how hard the board left is to finish, 1 to
 // 100, rated by the engine each time a piece settles. The colour runs green
-// to yellow to red with it, and the small arrow says which way the last piece
-// moved it.
+// to yellow to red with it, and the small arrow says how far it has moved
+// since the deal.
 ColumnLayout {
     id: root
 
@@ -15,27 +15,14 @@ ColumnLayout {
     Behavior on shown {
         NumberAnimation { duration: 280; easing.type: Easing.OutCubic }
     }
-    property int change: 0
-    property int last: game.difficulty
+    // Measured from the deal, not the last piece: the arrow says whether the
+    // run as a whole is winning or losing ground.
+    readonly property int change: game.difficulty - game.dealtDifficulty
 
     readonly property real level: Math.max(0, Math.min(1, (game.difficulty - 1) / 99))
     readonly property color tone: root.level < 0.5
         ? theme.mix(theme.green, theme.yellow, root.level * 2)
         : theme.mix(theme.yellow, theme.red, (root.level - 0.5) * 2)
-
-    Connections {
-        target: game
-        function onDifficultyChanged() {
-            root.change = game.difficulty - root.last;
-            root.last = game.difficulty;
-        }
-        // Every new run announces its mode first, so its deal starts with no
-        // arrow rather than one measured against the last run's board.
-        function onModeChanged() {
-            root.last = game.difficulty;
-            root.change = 0;
-        }
-    }
 
     Text {
         text: qsTr("Difficulty")
@@ -62,7 +49,8 @@ ColumnLayout {
     }
     Text {
         Layout.fillWidth: true
-        text: qsTr("of 100")
+        text: root.change === 0 ? qsTr("of 100") : qsTr("of 100 · %1 at the start").arg(game.dealtDifficulty)
+        wrapMode: Text.WordWrap
         color: theme.mix(theme.background, theme.foreground, 0.45)
         font.pixelSize: 11 * theme.textScale
     }

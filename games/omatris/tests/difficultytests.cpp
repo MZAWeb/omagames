@@ -11,66 +11,87 @@ using namespace EngineFixture;
 namespace {
 
 constexpr int kSeedsTried = 300;
+constexpr int kTop = kBottom - 1;
 
-Difficulty::Features someMess() {
-    Difficulty::Features features;
-    features.holes = 6;
-    features.cover = 12;
-    features.bumpiness = 5;
-    features.height = 7;
-    features.rowsLeft = 6;
-    return features;
+// Two dealt rows with open gaps at the left: the bottom one missing columns
+// 0 and 1, the one over it columns 0 to 3. Nothing covers either.
+Board twoOpenRows() {
+    Board board;
+    fillRow(board, kBottom, {0, 1});
+    fillRow(board, kTop, {0, 1, 2, 3});
+    return board;
+}
+
+const std::vector<int> kDealt {kTop, kBottom};
+
+void put(Board &board, std::initializer_list<QPoint> cells) {
+    for (QPoint cell : cells)
+        board.set(cell, PieceType::T);
 }
 
 }  // namespace
 
-void DifficultyTests::measureReadsTheBoard() {
-    Board board;
-    // Column 0: two blocks over two empty cells. Column 1: one block on the
-    // floor. The rest empty.
-    board.set({0, kBottom - 3}, PieceType::L);
-    board.set({0, kBottom - 2}, PieceType::L);
-    board.set({1, kBottom}, PieceType::L);
-    const Difficulty::Features features = Difficulty::measure(board, {kBottom - 1, kBottom});
-    QCOMPARE(features.holes, 2);
-    QCOMPARE(features.cover, 4);
-    QCOMPARE(features.height, 4);
-    // 4 -> 1 -> 0, then flat.
-    QCOMPARE(features.bumpiness, 4);
-    QCOMPARE(features.rowsLeft, 2);
+void DifficultyTests::measureFindsTheRowsThatHaveToGo() {
+    Board board = twoOpenRows();
+    Difficulty::Features open = Difficulty::measure(board, kDealt);
+    QCOMPARE(open.rowsToClear, 2);
+    QCOMPARE(open.cellsToFill, 6);
+    QCOMPARE(open.buried, 0);
+    QCOMPARE(open.height, 2);
+
+    // A block two rows up over column 0 buries both gaps under it, and its
+    // own row has to go before they can be filled: nine more cells to fill.
+    put(board, {{0, kTop - 2}});
+    const Difficulty::Features buried = Difficulty::measure(board, kDealt);
+    QCOMPARE(buried.rowsToClear, 3);
+    QCOMPARE(buried.cellsToFill, 6 + 9);
+    // The two dealt gaps under it and the empty cell of the row between.
+    QCOMPARE(buried.buried, 2);
+    QCOMPARE(buried.height, 4);
 }
 
-void DifficultyTests::everyFeaturePushesTheRatingUp() {
-    const Difficulty::Features base = someMess();
-    const int rating = Difficulty::rate(base);
-    auto worse = [&](int Difficulty::Features::*field, int by) {
-        Difficulty::Features changed = base;
-        changed.*field += by;
-        return Difficulty::rate(changed);
-    };
-    QVERIFY(worse(&Difficulty::Features::holes, 3) > rating);
-    QVERIFY(worse(&Difficulty::Features::cover, 5) > rating);
-    QVERIFY(worse(&Difficulty::Features::bumpiness, 6) > rating);
-    QVERIFY(worse(&Difficulty::Features::rowsLeft, 3) > rating);
-    // Height is free while there is room, and costly once there is not.
-    QCOMPARE(worse(&Difficulty::Features::height, 2), rating);
-    QVERIFY(worse(&Difficulty::Features::height, 10) > rating + 20);
+// The healthy move: pieces over the solid columns, clear of every gap. The
+// dealt rows are no further from done, so the rating must not climb.
+void DifficultyTests::buildingBesideTheGapsCostsNothing() {
+    Board board = twoOpenRows();
+    const int before = Difficulty::rate(board, kDealt);
+    put(board, {{6, kTop - 1}, {7, kTop - 1}, {8, kTop - 1}, {9, kTop - 1}});
+    put(board, {{6, kTop - 2}, {7, kTop - 2}, {8, kTop - 2}, {9, kTop - 2}});
+    QCOMPARE(Difficulty::rate(board, kDealt), before);
+}
+
+void DifficultyTests::fillingAGapHelpsAndBuryingOneHurts() {
+    const Board start = twoOpenRows();
+    const int before = Difficulty::rate(start, kDealt);
+
+    // An O dropped into the gap fills four of the six cells.
+    Board filledIn = start;
+    put(filledIn, {{0, kTop}, {1, kTop}, {0, kBottom}, {1, kBottom}});
+    QVERIFY(Difficulty::rate(filledIn, kDealt) < before);
+
+    // The same four cells laid flat across the top of the gap instead: a
+    // misplaced I. It fills nothing and seals the gap under a new row.
+    Board sealed = start;
+    put(sealed, {{0, kTop - 1}, {1, kTop - 1}, {2, kTop - 1}, {3, kTop - 1}});
+    QVERIFY(Difficulty::rate(sealed, kDealt) >= before + 10);
 }
 
 void DifficultyTests::ratingStaysBetweenOneAndAHundred() {
     // Nothing dealt left: done, whatever else is on the board.
-    Difficulty::Features done = someMess();
-    done.rowsLeft = 0;
-    QCOMPARE(Difficulty::rate(done), Difficulty::kMin);
-    Difficulty::Features trivial;
-    trivial.rowsLeft = 1;
-    // One clean row to go is as easy as it gets.
-    QCOMPARE(Difficulty::rate(trivial), Difficulty::kMin);
-    Difficulty::Features hopeless = someMess();
-    hopeless.holes = 60;
-    hopeless.cover = 400;
-    hopeless.height = Board::kVisibleHeight;
-    QCOMPARE(Difficulty::rate(hopeless), Difficulty::kMax);
+    Board board = twoOpenRows();
+    QCOMPARE(Difficulty::rate(board, {}), Difficulty::kMin);
+    // One cell short of a clear is as easy as it gets.
+    Board almost;
+    fillRow(almost, kBottom, {9});
+    QCOMPARE(Difficulty::rate(almost, {kBottom}), Difficulty::kMin);
+    // Every visible row dealt, each with a gap buried under the row above.
+    Board hopeless;
+    std::vector<int> everyRow;
+    for (int y = Board::kHiddenRows; y < Board::kHeight; ++y) {
+        fillRow(hopeless, y, {y % 2 == 0 ? 2 : 7});
+        everyRow.push_back(y);
+    }
+    QCOMPARE(Difficulty::rate(hopeless, everyRow), Difficulty::kMax);
 }
 
 // A deal rates somewhere in the middle, rarely at either end, so there is
@@ -84,8 +105,8 @@ void DifficultyTests::freshDealsSpreadAcrossTheScale() {
         lowest = std::min(lowest, rating);
         highest = std::max(highest, rating);
     }
-    QVERIFY(lowest > Difficulty::kMin && lowest < 30);
-    QVERIFY(highest > 60 && highest < 90);
+    QVERIFY(lowest > Difficulty::kMin && lowest < 20);
+    QVERIFY(highest > 60 && highest < Difficulty::kMax);
 }
 
 void DifficultyTests::theGameRatesEverySettledBoard() {
@@ -94,14 +115,10 @@ void DifficultyTests::theGameRatesEverySettledBoard() {
     Game game(Mode::Challenge, kSeed);
     QCOMPARE(game.difficulty(), Difficulty::rate(game.board(), game.dealtStack()));
     QVERIFY(game.difficulty() > Difficulty::kMin);
-    // Pieces piled into the middle only make it worse, one rating per piece.
-    int previous = game.difficulty();
     for (int i = 0; i < 4 && game.phase() == Phase::Playing; ++i) {
         game.hardDrop();
         waitOutTheFlash(game);
         QCOMPARE(game.difficulty(), Difficulty::rate(game.board(), game.dealtStack()));
-        QVERIFY(game.difficulty() >= previous);
-        previous = game.difficulty();
     }
 
     // Cleared out, it rates as done.

@@ -61,6 +61,8 @@ public:
     // Difficulty::rate() of the board as it stood after the last piece
     // settled, lines cleared; 0 outside Challenge.
     int difficulty() const { return m_stack ? m_stack->difficulty() : 0; }
+    // The same, for the board as it was dealt.
+    int dealtDifficulty() const { return m_stack ? m_stack->dealtDifficulty() : 0; }
     int ticks() const { return m_ticks; }
     int elapsedMs() const { return m_ticks * 1000 / Rules::kTicksPerSecond; }
     int combo() const { return m_scoring.combo(); }

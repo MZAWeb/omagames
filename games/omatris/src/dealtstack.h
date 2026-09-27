@@ -19,8 +19,9 @@ public:
     const std::vector<int> &rows() const { return m_rows; }
     // The rows left once those in `clearing` are counted gone.
     int rowsLeft(const std::vector<int> &clearing) const;
-    // Difficulty::rate() as of the last rate().
+    // Difficulty::rate() as of the last rate(), and as it was on the deal.
     int difficulty() const { return m_difficulty; }
+    int dealtDifficulty() const { return m_dealtDifficulty; }
 
     // `cleared` have left the board; the rest fall past them.
     void clear(const std::vector<int> &cleared);
@@ -30,4 +31,5 @@ private:
     std::vector<int> m_rows;
     int m_dealt = 0;
     int m_difficulty = 0;
+    int m_dealtDifficulty = 0;
 };

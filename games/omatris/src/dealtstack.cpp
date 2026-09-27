@@ -8,6 +8,7 @@
 DealtStack::DealtStack(Board &board, quint32 seed)
     : m_rows(Challenge::build(board, seed)), m_dealt(int(m_rows.size())) {
     rate(board);
+    m_dealtDifficulty = m_difficulty;
 }
 
 int DealtStack::rowsLeft(const std::vector<int> &clearing) const {

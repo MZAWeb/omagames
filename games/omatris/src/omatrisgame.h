@@ -41,6 +41,7 @@ class OmatrisGame : public QObject {
     Q_PROPERTY(int dealtRows READ dealtRows NOTIFY modeChanged)
     Q_PROPERTY(int dealtRowsLeft READ dealtRowsLeft NOTIFY linesChanged)
     Q_PROPERTY(int difficulty READ difficulty NOTIFY difficultyChanged)
+    Q_PROPERTY(int dealtDifficulty READ dealtDifficulty NOTIFY modeChanged)
     Q_PROPERTY(int elapsedMs READ elapsedMs NOTIFY elapsedChanged)
     Q_PROPERTY(int combo READ combo NOTIFY comboChanged)
     Q_PROPERTY(bool backToBack READ backToBack NOTIFY comboChanged)
@@ -86,6 +87,8 @@ public:
     int dealtRowsLeft() const { return m_game ? m_game->dealtRowsLeft() : 0; }
     // 1-100, how hard the board left is to finish; 0 outside Challenge.
     int difficulty() const { return m_game ? m_game->difficulty() : 0; }
+    // What it was on the deal, for the change since.
+    int dealtDifficulty() const { return m_game ? m_game->dealtDifficulty() : 0; }
     int elapsedMs() const { return m_game ? m_game->elapsedMs() : 0; }
     int combo() const { return m_game ? m_game->combo() : -1; }
     bool backToBack() const { return m_game && m_game->backToBack(); }

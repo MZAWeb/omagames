@@ -99,11 +99,16 @@ void ChallengeTests::theStackCountsFlashingRowsAsGone() {
     QCOMPARE(stack.rowsLeft({}), dealt);
     QCOMPARE(stack.rowsLeft({kBottom, 0}), dealt - 1);
     QVERIFY(stack.difficulty() > 1);
+    QCOMPARE(stack.dealtDifficulty(), stack.difficulty());
     // Cleared for real, the bottom row goes and the rest fall onto the floor.
     stack.clear({kBottom});
     QCOMPARE(stack.rowsLeft({}), dealt - 1);
     QCOMPARE(stack.rows().back(), kBottom);
     QCOMPARE(stack.dealt(), dealt);
+    // Rated again after the clear, the deal's rating stays put.
+    const int dealtRating = stack.dealtDifficulty();
+    stack.rate(board);
+    QCOMPARE(stack.dealtDifficulty(), dealtRating);
 }
 
 void ChallengeTests::clearingEveryDealtRowFinishesAtZenPace() {

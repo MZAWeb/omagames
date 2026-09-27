@@ -93,15 +93,18 @@ them (`Rows left 3 / 7`) beside the clock.
 
 Under the hold box a big **Difficulty** number, 1 to 100, says how hard the
 board left is to finish. It is rated on the deal and again every time a piece
-settles (after its lines clear), with an arrow for how far the last piece
-moved it, and runs green through yellow to red. It adds up what a player
-sizes up by eye: holes (empty cells with anything above them), the blocks
-piled over those holes, the height steps between neighbouring columns, the
-dealt rows still to go, and — only past half the well — how close the stack
-is to the ceiling, which climbs steeply. The sum is eased onto the scale so a
-fresh deal rates about 10–80 and a stack near the top reaches 100; the last
-dealt row cleared rates 1. It is a heuristic, not a solver, and only ever
-rises with each of those; the weights are named in `src/difficulty.cpp`. How a Challenge goes depends on
+settles (after its lines clear), with an arrow for how far it has moved since
+the deal, and runs green through yellow to red. It estimates the work left,
+not how tidy the board looks. The rows that have to go are the dealt rows,
+plus any row with a block over an empty cell of one of those, since it must
+be cleared before that cell can be filled. The work is the empty cells across
+those rows, a piece per four, plus extra for each that is buried under
+something, and a steep charge once the stack passes row 12. So building on
+top of the mess clear of its gaps leaves the number where it was, filling a
+gap lowers it, and sealing one under a misplaced piece makes it jump. It is
+linear in that work, so a fresh deal rates about 10–70, a mistake shows as a
+step of several points, and the last dealt row cleared rates 1. It is a
+heuristic, not a solver; the costs are named in `src/difficulty.cpp`. How a Challenge goes depends on
 the stack it dealt, so it keeps no high-score table; `R` deals a new one.
 
 Each mode has its own key and none of them is a default, so no button on the
