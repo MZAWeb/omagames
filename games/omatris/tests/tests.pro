@@ -6,6 +6,8 @@ TEMPLATE = app
 TARGET = tst_omatris
 
 INCLUDEPATH += ../src ../env
+# The recorded games in the repo, which the suite plays to the end.
+DEFINES += OMATRIS_REPLAYS=\\\"$$PWD/../replays\\\"
 
 HEADERS += \
     ../src/piece.h \
@@ -23,6 +25,7 @@ HEADERS += \
     ../src/calls.h \
     ../src/boardmetrics.h \
     ../src/placements.h \
+    ../src/replayplayer.h \
     ../src/autoshift.h \
     ../src/handling.h \
     ../src/preferences.h \
@@ -43,7 +46,8 @@ HEADERS += \
     persistencetests.h \
     boardmetricstests.h \
     placementtests.h \
-    envtests.h
+    envtests.h \
+    replaytests.h
 
 SOURCES += \
     ../src/piece.cpp \
@@ -61,10 +65,12 @@ SOURCES += \
     ../src/calls.cpp \
     ../src/boardmetrics.cpp \
     ../src/placements.cpp \
+    ../src/replayplayer.cpp \
     ../src/autoshift.cpp \
     ../src/handling.cpp \
     ../src/preferences.cpp \
     ../src/omatrisgame.cpp \
+    ../src/omatrisgamereplay.cpp \
     ../env/omatrisobservation.cpp \
     ../env/omatrisenv.cpp \
     piecetests.cpp \
@@ -80,4 +86,5 @@ SOURCES += \
     boardmetricstests.cpp \
     placementtests.cpp \
     envtests.cpp \
+    replaytests.cpp \
     tst_omatris.cpp

@@ -4,7 +4,9 @@
 #include <QVariantList>
 #include <QVariantMap>
 #include <QVector>
+#include <functional>
 #include <memory>
+#include <optional>
 
 #include "autoshift.h"
 #include "game.h"
@@ -12,6 +14,7 @@
 #include "modes.h"
 #include "pacer.h"
 #include "preferences.h"
+#include "replayplayer.h"
 #include "scoretable.h"
 
 // The only bridge between the engine and QML: state as properties, actions as
@@ -56,6 +59,15 @@ class OmatrisGame : public QObject {
     Q_PROPERTY(QVariantList handling READ handlingRows NOTIFY handlingChanged)
     Q_PROPERTY(bool handlingIsDefault READ handlingIsDefault NOTIFY handlingChanged)
     Q_PROPERTY(int stepInterval READ stepInterval WRITE setStepInterval NOTIFY stepIntervalChanged)
+    // Watching a recorded game (--replay) rather than playing one.
+    Q_PROPERTY(bool replaying READ replaying NOTIFY replayChanged)
+    Q_PROPERTY(QString replayAgent READ replayAgent NOTIFY replayChanged)
+    // 1 to 4, slowest first, as keys 1 to 4 pick it; the label says how
+    // fast that is against the clock the game was played on.
+    Q_PROPERTY(int replaySpeed READ replaySpeed NOTIFY replayChanged)
+    Q_PROPERTY(QString replaySpeedLabel READ replaySpeedLabel NOTIFY replayChanged)
+    // Every call made: what is on screen is where the recording stops.
+    Q_PROPERTY(bool replayEnded READ replayEnded NOTIFY replayChanged)
 
 public:
     // One simulation tick per timer shot: 60 ticks a second.
@@ -69,18 +81,18 @@ public:
     bool ghostEnabled() const { return m_preferences.ghost(); }
     // "marathon" | "sprint" | "zen" | "challenge": the one being played, or
     // the last chosen.
-    QString mode() const { return Modes::id(m_preferences.mode()); }
-    QString modeLabel() const { return Modes::label(m_preferences.mode()); }
-    bool rankByTime() const { return Rules::params(m_preferences.mode()).rankByTime; }
-    bool ranked() const { return Modes::ranked(m_preferences.mode()); }
+    QString mode() const { return Modes::id(shownMode()); }
+    QString modeLabel() const { return Modes::label(shownMode()); }
+    bool rankByTime() const { return Rules::params(shownMode()).rankByTime; }
+    bool ranked() const { return Modes::ranked(shownMode()); }
     // Whether the run began on a mess to clear: Challenge.
-    bool dealtStack() const { return Rules::params(m_preferences.mode()).dealtStack; }
+    bool dealtStack() const { return Rules::params(shownMode()).dealtStack; }
     // {id, label, description, goal, ranked} for the start screen, in play order.
     static QVariantList modes() { return Modes::list(); }
     int score() const { return m_game ? m_game->score() : 0; }
     int level() const { return m_game ? m_game->level() : 0; }
     int lines() const { return m_game ? m_game->lines() : 0; }
-    int lineGoal() const { return Rules::params(m_preferences.mode()).lineGoal; }
+    int lineGoal() const { return Rules::params(shownMode()).lineGoal; }
     int linesLeft() const { return m_game ? m_game->linesLeft() : lineGoal(); }
     // The rows the dealt stack covered, and how many are still to clear.
     int dealtRows() const { return m_game ? m_game->dealtRows() : 0; }
@@ -111,6 +123,15 @@ public:
     int stepInterval() const { return m_pacer.interval(); }
     void setStepInterval(int interval);
 
+    bool replaying() const { return m_replay.has_value(); }
+    QString replayAgent() const { return m_replay ? m_replay->agent() : QString(); }
+    int replaySpeed() const { return m_replaySpeed; }
+    QString replaySpeedLabel() const;
+    bool replayEnded() const { return m_replay && m_replay->done(); }
+    // Starts watching the replay in `path`; false and the reason when it is
+    // not one this game can play.
+    bool loadReplay(const QString &path, QString *error);
+
     // Read-only view for the renderer; null on the start screen.
     const Game *engine() const { return m_game.get(); }
     // Scenario hook for tests only.
@@ -138,6 +159,10 @@ public:
     Q_INVOKABLE bool adjustHandling(const QString &setting, int delta);
     Q_INVOKABLE void resetHandling();
     Q_INVOKABLE void step();
+    Q_INVOKABLE void setReplaySpeed(int speed);
+    // Plays the replay on to the next piece that locks, paused or not.
+    Q_INVOKABLE void replayNextPiece();
+    Q_INVOKABLE void restartReplay();
     // {cells: [{x, y}], width, height} of a piece in its spawn orientation,
     // for the hold box and the next queue.
     Q_INVOKABLE QVariantMap pieceShape(int piece) const { return Piece::spawnBoxMap(piece); }
@@ -160,6 +185,7 @@ signals:
     void highScoresChanged();
     void difficultyChanged();
     void stepIntervalChanged();
+    void replayChanged();
     void handlingChanged();
     // After anything that moved a piece, for the renderer.
     void frameChanged();
@@ -185,6 +211,12 @@ private:
     };
 
     bool playing() const { return m_game && m_game->phase() == Phase::Playing && !m_game->paused(); }
+    // The game on screen's, which a replay's need not be the player's last.
+    Mode shownMode() const { return m_game ? m_game->mode() : m_preferences.mode(); }
+    // Puts `game` on screen, fresh, and tells QML everything changed.
+    void show(std::unique_ptr<Game> game);
+    // The keys move the piece: a game is on, and it is the player's.
+    bool playerInControl() const { return playing() && !m_replay; }
     void press(int direction);
     void release(int direction);
     void turn(int quarters);
@@ -194,8 +226,16 @@ private:
     Snapshot snapshot() const;
     void publish(const Snapshot &before);
     void finishGame();
-    // The pacer runs while, and only while, a piece can fall.
-    void syncTimer() { m_pacer.setRunning(playing()); }
+    // The pacer runs while, and only while, a piece can fall: in a replay,
+    // while there is something left to show.
+    void syncTimer() { m_pacer.setRunning(playing() && !replayEnded()); }
+    // Past real speed a replay locks pieces faster than their popups can
+    // rise and fade, and they would only pile up over the well.
+    bool replayTooFastToRead() const;
+    void replayBeats();
+    // Makes `calls` on the replay's game and shows what they did.
+    void playReplay(const std::function<std::vector<Event>()> &calls);
+    void endReplay();
     void setHandling(const Handling &handling);
     void applyHandling();
 
@@ -205,4 +245,8 @@ private:
     AutoShift m_shift;
     Preferences m_preferences;
     int m_newHighScoreRank = -1;
+    std::optional<ReplayPlayer> m_replay;
+    int m_replaySpeed = 2;
+    // Quarter beats owed, so a slow speed shows a beat every few frames.
+    int m_beatCredit = 0;
 };

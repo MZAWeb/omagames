@@ -36,7 +36,9 @@ void OmatrisGame::setHandling(const Handling &handling) {
 
 void OmatrisGame::applyHandling() {
     m_shift.setTiming(handling().dasTicks, handling().arrTicks);
-    if (m_game)
+    // A replay drops as fast as it was recorded dropping, not as the player
+    // likes to.
+    if (m_game && !m_replay)
         m_game->setSoftDropFactor(handling().softDropFactor);
 }
 
@@ -86,8 +88,13 @@ void OmatrisGame::setStepInterval(int interval) {
 }
 
 void OmatrisGame::startGame(Mode mode, quint32 seed) {
+    endReplay();
     m_preferences.setMode(mode);
-    m_game = std::make_unique<Game>(mode, seed);
+    show(std::make_unique<Game>(mode, seed));
+}
+
+void OmatrisGame::show(std::unique_ptr<Game> game) {
+    m_game = std::move(game);
     m_newHighScoreRank = -1;
     m_shift.clear();
     applyHandling();
@@ -113,7 +120,9 @@ void OmatrisGame::newGame(const QString &mode) {
 }
 
 void OmatrisGame::restart() {
-    if (m_game)
+    if (m_replay)
+        restartReplay();
+    else if (m_game)
         startGame(m_preferences.mode(), QRandomGenerator::global()->generate());
 }
 
@@ -122,13 +131,14 @@ void OmatrisGame::backToStart() {
         return;
     m_game.reset();
     m_pacer.stop();
+    endReplay();
     emit phaseChanged();
     emit pausedChanged();
     emit frameChanged();
 }
 
 void OmatrisGame::press(int direction) {
-    if (!playing())
+    if (!playerInControl())
         return;
     m_shift.press(direction);
     const Snapshot before = snapshot();
@@ -145,19 +155,19 @@ void OmatrisGame::release(int direction) {
 }
 
 void OmatrisGame::turn(int quarters) {
-    if (!playing())
+    if (!playerInControl())
         return;
     m_game->rotate(quarters);
     emit frameChanged();
 }
 
 void OmatrisGame::setSoftDrop(bool on) {
-    if (m_game)
+    if (m_game && !m_replay)
         m_game->setSoftDrop(on);
 }
 
 void OmatrisGame::hardDrop() {
-    if (!playing())
+    if (!playerInControl())
         return;
     const Snapshot before = snapshot();
     apply(m_game->hardDrop());
@@ -166,7 +176,7 @@ void OmatrisGame::hardDrop() {
 }
 
 void OmatrisGame::swapHold() {
-    if (!playing())
+    if (!playerInControl())
         return;
     const Snapshot before = snapshot();
     apply(m_game->hold());
@@ -179,7 +189,8 @@ void OmatrisGame::pause() {
         return;
     m_game->setPaused(true);
     m_shift.clear();
-    m_game->setSoftDrop(false);
+    if (!m_replay)
+        m_game->setSoftDrop(false);
     syncTimer();
     emit pausedChanged();
 }
@@ -208,6 +219,10 @@ void OmatrisGame::toggleGhost() {
 void OmatrisGame::step() {
     if (!playing())
         return;
+    if (m_replay) {
+        replayBeats();
+        return;
+    }
     const Snapshot before = snapshot();
     if (const int shift = m_shift.tick(); shift != 0) {
         if (m_shift.instant())
@@ -250,6 +265,8 @@ void OmatrisGame::handle(const Event &event) {
 
 // Popups are placed in visible board cells, which is all QML knows about.
 void OmatrisGame::announce(const ClearInfo &clear, QPoint where) {
+    if (replayTooFastToRead())
+        return;
     const QPoint at(where.x(), std::max(0, where.y() - Board::kHiddenRows));
     for (const QString &text : Bonuses::texts(clear))
         emit bonusEarned(text, at.x(), at.y());
@@ -284,7 +301,8 @@ void OmatrisGame::publish(const Snapshot &before) {
 }
 
 void OmatrisGame::finishGame() {
-    m_newHighScoreRank = Modes::record(m_scores, *m_game);
+    // Someone else's game is never the player's high score.
+    m_newHighScoreRank = m_replay ? -1 : Modes::record(m_scores, *m_game);
     if (m_newHighScoreRank >= 0) {
         m_scores.save();
         emit highScoresChanged();

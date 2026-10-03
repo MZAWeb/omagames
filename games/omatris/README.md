@@ -164,6 +164,8 @@ There is nothing to click during play.
 | `Y` / `Enter`, `N` / `Esc` | Confirm / cancel a dialog |
 | `Ctrl+Q` | Quit |
 
+Watching a replay, the keys are the replay's own (see Watching a replay).
+
 ## Layout
 
 The well is painted by one `FieldView` item at a whole number of pixels per
@@ -234,9 +236,44 @@ Sprint's fortieth line, or a Challenge's last dealt row.
 
 ### Rules version
 
-The env reports `rules_version` 1. It goes up with any change that makes
-the same calls play out differently (a rule constant, the lock delay, the
-kicks), so old replays and trained models are refused rather than misread.
+The env reports `rules_version` 1 (`Rules::kVersion`). It goes up with any
+change that makes the same calls play out differently (a rule constant, the
+lock delay, the kicks), so old replays and trained models are refused rather
+than misread. Bumping it means recording the sample below again.
+
+### Watching a replay
+
+Every game the env plays is recorded as a replay: the seed and every call
+it made, which is the whole game. The app plays one back:
+
+```sh
+bin/run omatris --replay games/omatris/replays/greedy-marathon.json
+```
+
+The sample is 300 pieces of Marathon placed by a greedy heuristic (117
+lines, level 12, 101,325 points), recorded through `libomatris_env.so`; a
+test plays it to the end and checks it still scores that. A file that is
+not an Omatris replay of these rules is refused on the command line, and
+nothing opens.
+
+The game on screen is the recorded one: the player's keys don't move it,
+it's never a high score, and it drops pieces with the soft drop it was
+recorded with, not the player's handling. The header says whose game it is
+and how fast it's shown. A placing agent moves its piece with no time
+between inputs, so each of those moves is shown for a frame of its own; an
+agent that pressed keys in real time is shown in real time at 1×.
+
+| Key | Action |
+|---|---|
+| `P` | Pause / play. Paused, the well stays in view |
+| `1` `2` `3` `4` | Speed: ¼×, ½× (the default, three or four pieces a second), 1×, 8×. Above 1× the bonus popups are skipped |
+| `→` | On to the next piece, paused or not |
+| `R` | Watch again from the start |
+| `G` | Ghost piece on / off |
+| `Esc` | Leave for the start screen |
+
+The replay can end before its game does (an agent cut short after a set
+number of pieces); the overlay then says "End of the replay".
 
 ## Build, test, run
 

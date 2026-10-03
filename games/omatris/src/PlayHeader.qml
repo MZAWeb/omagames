@@ -33,6 +33,28 @@ RowLayout {
 
     TimeFormat { id: clock }
 
+    // A word in a tinted lozenge: the streaks a player is nursing, and how a
+    // replay is being shown.
+    component Badge: Rectangle {
+        id: badge
+        property string text
+        property color tint: theme.accent
+        implicitWidth: label.implicitWidth + 12 * theme.textScale
+        implicitHeight: label.implicitHeight + 5 * theme.textScale
+        radius: 4
+        color: theme.alpha(badge.tint, 0.18)
+        border.width: 1
+        border.color: theme.alpha(badge.tint, 0.5)
+        Text {
+            id: label
+            anchors.centerIn: parent
+            text: badge.text
+            color: badge.tint
+            font.pixelSize: 11 * theme.textScale
+            font.bold: true
+        }
+    }
+
     ColumnLayout {
         spacing: 0
         Text {
@@ -41,8 +63,15 @@ RowLayout {
             font.pixelSize: 17 * theme.textScale
             font.bold: true
         }
+        // A replay is someone else's game: who played it, not the best.
         Text {
-            visible: root.bestText !== ""
+            visible: game.replaying
+            text: game.replayAgent !== "" ? qsTr("Replay · %1").arg(game.replayAgent) : qsTr("Replay")
+            color: theme.accent
+            font.pixelSize: 11 * theme.textScale
+        }
+        Text {
+            visible: root.bestText !== "" && !game.replaying
             text: qsTr("Best %1").arg(root.bestText)
             color: theme.mix(theme.background, theme.foreground, 0.55)
             font.pixelSize: 11 * theme.textScale
@@ -56,39 +85,24 @@ RowLayout {
     Row {
         spacing: 6 * theme.textScale
 
-        Rectangle {
-            visible: game.backToBack
-            width: b2b.implicitWidth + 12 * theme.textScale
-            height: b2b.implicitHeight + 5 * theme.textScale
-            radius: 4
-            color: theme.alpha(theme.yellow, 0.18)
-            border.width: 1
-            border.color: theme.alpha(theme.yellow, 0.5)
-            Text {
-                id: b2b
-                anchors.centerIn: parent
-                text: qsTr("B2B")
-                color: theme.yellow
-                font.pixelSize: 11 * theme.textScale
-                font.bold: true
-            }
+        Badge {
+            visible: game.replaying && game.paused
+            text: qsTr("Paused")
+            tint: theme.orange
         }
-        Rectangle {
+        Badge {
+            visible: game.replaying
+            text: game.replaySpeedLabel
+            tint: theme.cyan
+        }
+        Badge {
+            visible: game.backToBack
+            text: qsTr("B2B")
+            tint: theme.yellow
+        }
+        Badge {
             visible: game.combo >= 1
-            width: combo.implicitWidth + 12 * theme.textScale
-            height: combo.implicitHeight + 5 * theme.textScale
-            radius: 4
-            color: theme.alpha(theme.accent, 0.18)
-            border.width: 1
-            border.color: theme.alpha(theme.accent, 0.5)
-            Text {
-                id: combo
-                anchors.centerIn: parent
-                text: qsTr("Combo x%1").arg(game.combo)
-                color: theme.accent
-                font.pixelSize: 11 * theme.textScale
-                font.bold: true
-            }
+            text: qsTr("Combo x%1").arg(game.combo)
         }
     }
 
