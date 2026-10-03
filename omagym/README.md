@@ -30,12 +30,15 @@ placed at ten key presses a second:
 
 | Agent | Trained | Whole run | Score | Lines | Games survived (of 20) |
 |---|---|---|---|---|---|
-| `mcts`, from `dqn`'s network | 20,000 steps | 24 min | **9,384,719** | 996.6 | 20 |
+| `dqn`, `inputs=rich_hand` | 100,000 steps | 9 min | **10,516,885** | 992.6 | 19 |
+| `dqn`, `inputs=rich` | 100,000 steps | 9 min | 9,608,866 | 924.5 | 18 |
+| `mcts`, from `dqn`'s network | 20,000 steps | 24 min | 9,384,719 | 996.6 | 20 |
 | `dqn` | 100,000 steps | 5 min | 8,462,525 | 977.9 | 19 |
 | `greedy` | none | under a minute | 6,390,662 | 998.5 | 20 |
 | `lookahead` (greedy's judgement) | none | 6 min | 6,244,006 | 999.0 | 20 |
 | `lookahead`, judged by `cem`'s weights | none | 3 min | 4,453,274 | 569.8 | 6 |
 | `cem` | 520,000 steps | 13 min | 3,672,947 | 542.7 | 6 |
+| `dqn`, `inputs=cnn` or `cnn_hand` | 100,000 steps | 7 min | about 480 | 1 | 0 |
 | `ppo` | 1,000,000 steps | 7 min | 435 | 0.5 | 0 |
 | `random` | none | seconds | 291 | 0.1 | 0 |
 
@@ -45,8 +48,14 @@ RTX 4090, several runs at once. The planners spend most of theirs playing:
 
 What it shows:
 
-- **Search plus a learned value wins.** `mcts` planning with `dqn`'s network
-  beats `dqn` alone on every one of the 20 games.
+- **What the network sees matters most.** The same `dqn` with cem's 15
+  features and the held and next pieces (`rich_hand`) beats plain `dqn` on
+  all 20 games, and `mcts` too. Whether the hand itself helps over `rich`
+  alone, these 20 games can't tell: `rich` topped out twice, which is where
+  the difference lies. The CNNs learned nothing in 100,000 steps: from raw
+  cells, a network needs far longer.
+- **Search plus a learned value helps.** `mcts` planning with plain `dqn`'s
+  network beats `dqn` alone on every one of the 20 games.
 - **Score and survival are different goals.** `greedy` and `lookahead`
   clear nearly every line but score a third less: they clear lines one at a
   time and keep the stack flat. The learners build up for multi-line clears.
