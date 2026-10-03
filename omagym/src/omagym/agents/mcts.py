@@ -63,6 +63,7 @@ class MonteCarloTreeSearch(Agent):
     games = ("omatris",)
     description = "Monte Carlo tree search guided by a value network that learns from the search (AlphaZero-style)."
     trainable = True
+    default_steps = 20_000
 
     @dataclass
     class Config:

@@ -31,6 +31,8 @@ class Agent:
     games: ClassVar[tuple[str, ...]] = ()
     description: ClassVar[str] = ""
     trainable: ClassVar[bool] = False
+    # How long `omagym run` trains it unless told otherwise (`--steps`).
+    default_steps: ClassVar[int] = 100_000
 
     @dataclass
     class Config:

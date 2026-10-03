@@ -1,8 +1,8 @@
 """omagym: train agents on omagames, test them, and compare what you tried.
 
     uv run omagym agents
-    uv run omagym eval --game omatris --agent greedy
-    uv run omagym train --game omatris --agent dqn --steps 100000
+    uv run omagym run --agent greedy                  # plays the evaluation games
+    uv run omagym run --agent dqn --steps 100000      # trains, then plays them
     uv run omagym compare --game omatris      # each agent's best run, ranked
     uv run omagym compare greedy-baseline last
 """
@@ -42,40 +42,31 @@ def _parser() -> argparse.ArgumentParser:
 
     command("agents", _agents, "list the agents and their settings")
 
-    for name, function, help in (
-        ("train", _train, "train an agent, evaluating as it goes; recorded as a run"),
-        ("eval", _eval, "test an agent on the fixed evaluation games; recorded as a run"),
-    ):
-        sub = command(name, function, help)
-        sub.add_argument("--game", default="omatris", choices=native.games())
-        sub.add_argument("--agent", help="agent name (see `omagym agents`)")
-        sub.add_argument("--set", action="append", default=[], metavar="KEY=VALUE", help="an agent setting")
-        sub.add_argument("--env", action="append", default=[], metavar="KEY=VALUE", help="an env setting, e.g. mode=sprint")
-        sub.add_argument("--episodes", type=int, help="evaluation games (default per game)")
-        sub.add_argument("--max-steps", type=int, help="steps an evaluation game is cut at (default per game)")
-        sub.add_argument("--name", help="a label for the run, usable wherever a run id is")
-        sub.add_argument("--notes", help="what you were trying")
-        sub.add_argument("--seed", type=int, default=0)
-        sub.add_argument("--device", default="auto", help="auto, cpu or cuda")
-    train_parser = commands.choices["train"]
-    train_parser.add_argument("--steps", type=int, default=100_000, help="env steps to train for")
-    train_parser.add_argument("--eval-every", type=int, help="steps between quick evaluations (default steps/10)")
-    train_parser.add_argument("--eval-episodes", type=int, default=5, help="games in each quick evaluation")
-    train_parser.add_argument("--snapshots", type=int, default=10,
-                              help="games recorded along the way, from step 0 to the end, for `watch --training`")
-    commands.choices["eval"].add_argument("--run", help="test the best checkpoint of this training run")
+    sub = command("run", _run, "play an agent on the evaluation games, training it first if it learns")
+    sub.add_argument("--game", default="omatris", choices=native.games())
+    sub.add_argument("--agent", required=True, help="agent name (see `omagym agents`)")
+    sub.add_argument("--set", action="append", default=[], metavar="KEY=VALUE", help="an agent setting")
+    sub.add_argument("--env", action="append", default=[], metavar="KEY=VALUE", help="an env setting, e.g. mode=sprint")
+    sub.add_argument("--episodes", type=int, help="evaluation games (default per game)")
+    sub.add_argument("--max-steps", type=int, help="steps an evaluation game is cut at (default per game)")
+    sub.add_argument("--name", help="a label for the run, usable wherever a run id is")
+    sub.add_argument("--notes", help="what you were trying")
+    sub.add_argument("--seed", type=int, default=0)
+    sub.add_argument("--device", default="auto", help="auto, cpu or cuda")
+    learning = sub.add_argument_group("for agents that learn")
+    learning.add_argument("--steps", type=int, help="env steps to train for (default per agent, see `agents`)")
+    learning.add_argument("--eval-every", type=int, help="steps between quick evaluations (default steps/10)")
+    learning.add_argument("--eval-episodes", type=int, default=5, help="games in each quick evaluation")
+    learning.add_argument("--snapshots", type=int, default=10,
+                          help="games recorded along the way, from step 0 to the end, for `watch --training`")
 
     sub = command("runs", records.runs, "list recorded runs, newest first")
     sub.add_argument("--game")
     sub.add_argument("--agent")
-    sub.add_argument("--kind", choices=("train", "eval"))
+    sub.add_argument("--trained", action="store_true", help="only runs that trained (and so left a model)")
     sub.add_argument("--limit", type=int, default=30)
 
-    sub = command("models", records.models, "list trained models: training runs with a checkpoint")
-    sub.add_argument("--game")
-    sub.add_argument("--agent")
-
-    sub = command("show", records.show, "everything about one run, or one trained model")
+    sub = command("show", records.show, "everything about one run")
     sub.add_argument("run", help="run id, a unique prefix of one, its name, or 'last'")
 
     sub = command("compare", records.compare, "which runs played best, and whether the difference is real")
@@ -97,8 +88,6 @@ def _parser() -> argparse.ArgumentParser:
     sub = command("delete", records.delete, "forget runs: their results, checkpoints and replays")
     sub.add_argument("runs", nargs="+")
     sub.add_argument("--yes", action="store_true", help="don't ask first")
-    sub.add_argument("--with-tests", action="store_true",
-                     help="a trained model goes with the runs that tested its checkpoint")
 
     sub = command("note", records.note, "name a run or write down what it was about")
     sub.add_argument("run")
@@ -144,7 +133,7 @@ def _device(choice: str) -> str:
 def _agents(args) -> None:
     for cls in all_agents():
         games = ", ".join(cls.games) or "any game"
-        learns = "  (learns)" if cls.trainable else ""
+        learns = f"  (learns: {cls.default_steps:,} steps by default)" if cls.trainable else ""
         print(f"{cls.name} [{games}]{learns}\n    {cls.description}")
         settings = [f"{f}={getattr(cls.Config(), f)}" for f in cls.Config.__dataclass_fields__]
         if settings:
@@ -153,23 +142,23 @@ def _agents(args) -> None:
         print(f"{module}: unavailable, {reason}")
 
 
-def _start(args, kind: str, store: Store, agent_name: str, overrides: dict, parent: str | None = None):
-    """Builds the agent, resolves the env config and opens the run."""
-    cls = resolve(agent_name, args.game)
-    config = make_config(cls, overrides)
+def _run(args) -> int:
+    """One run: build the agent, train it if it learns, then play the evaluation games."""
+    store = Store()
+    cls = resolve(args.agent, args.game)
+    config = make_config(cls, _pairs(args.set))
     env_config = {**cls.env_config(args.game), **_env_values(_pairs(args.env))}
     with Env(args.game, **env_config) as probe:
         spec = probe.spec
-    resolved_env = {k: v for k, v in spec.config.items() if k != "max_steps"}
     game_defaults = defaults(args.game)
-    device = _device(args.device)
+    steps = (args.steps or cls.default_steps) if cls.trainable else None
     run = store.new_run(
-        kind, args.game, cls.name, name=args.name, notes=args.notes, parent=parent,
-        agent_config=vars(config), env_config=resolved_env, seed=args.seed, device=device,
+        "train" if cls.trainable else "eval", args.game, cls.name, name=args.name, notes=args.notes,
+        agent_config=vars(config), env_config={k: v for k, v in spec.config.items() if k != "max_steps"},
+        seed=args.seed, device=_device(args.device), train_steps=steps,
         eval_episodes=args.episodes or game_defaults.eval_episodes,
         eval_max_steps=args.max_steps or game_defaults.eval_max_steps,
-        train_steps=getattr(args, "steps", None), rules_version=spec.rules_version,
-        versions=provenance.versions(), code="pending", dirty=0,
+        rules_version=spec.rules_version, versions=provenance.versions(), code="pending", dirty=0,
     )
     code = provenance.snapshot(Path(run["dir"]))
     store.db.execute("UPDATE runs SET code = ?, commit_sha = ?, dirty = ? WHERE id = ?",
@@ -177,73 +166,44 @@ def _start(args, kind: str, store: Store, agent_name: str, overrides: dict, pare
     store.db.commit()
     if code["dirty"]:
         print(f"note: uncommitted changes recorded in {run['dir']}/code.patch")
-    return store.run(run["id"]), cls(config, spec, device)
+    run = store.run(run["id"])
+    agent = cls(config, spec, run["device"])
 
-
-def _train(args) -> int:
-    if not args.agent:
-        raise ValueError("--agent is required")
-    store = Store()
-    run, agent = _start(args, "train", store, args.agent, _pairs(args.set))
-    if not agent.trainable:
-        store.finish(run["id"], "failed")
-        raise ValueError(f"{agent.name} does not learn; use `omagym eval` for it")
-    schedule = Schedule(
-        steps=args.steps, eval_every=args.eval_every or max(1, args.steps // 10),
-        eval_episodes=args.eval_episodes, final_episodes=run["eval_episodes"], max_steps=run["eval_max_steps"],
-        snapshots=args.snapshots,
-    )
-    print(f"run {run['id']}: training {agent.name} on {args.game} for {args.steps:,} steps on {run['device']}")
     try:
-        status = train(store, run, agent, schedule)
-    except Exception:
+        if cls.trainable:
+            status = _train(store, run, agent, steps, args)
+        else:
+            status = _evaluate(store, run, agent)
+    except BaseException:
         store.finish(run["id"], "failed")
         raise
     print(f"\n{status}.\n")
-    trained = store.run(run["id"])
-    print(report.show(trained, store.series(run["id"], "eval/score_mean"), False,
-                      records.model(store, trained), records.checkpoints(trained)))
+    print(records.details(store, store.run(run["id"])))
     return 0
 
 
-def _eval(args) -> int:
-    store = Store()
-    parent = store.run(args.run) if args.run else None
-    if parent:
-        if parent["game"] != args.game and args.game != "omatris":
-            raise ValueError(f"{parent['id']} trained on {parent['game']}, not {args.game}")
-        args.game = parent["game"]
-        overrides = {k: str(v) for k, v in parent["agent_config"].items()}
-        overrides.update(_pairs(args.set))
-        args.env = [f"{k}={v}" for k, v in parent["env_config"].items()] + args.env
-        run, agent = _start(args, "eval", store, parent["agent"], overrides, parent=parent["id"])
-        checkpoint = Path(parent["dir"]) / "best.pt"
-        if not checkpoint.exists():
-            raise ValueError(f"{parent['id']} has no checkpoint to test")
-        agent.load(checkpoint)
-    elif args.agent:
-        run, agent = _start(args, "eval", store, args.agent, _pairs(args.set))
-    else:
-        raise ValueError("give --agent, or --run to test a trained agent")
+def _train(store: Store, run: dict, agent, steps: int, args) -> str:
+    schedule = Schedule(
+        steps=steps, eval_every=args.eval_every or max(1, steps // 10), eval_episodes=args.eval_episodes,
+        final_episodes=run["eval_episodes"], max_steps=run["eval_max_steps"], snapshots=args.snapshots,
+    )
+    print(f"run {run['id']}: training {agent.name} on {run['game']} for {steps:,} steps on {run['device']}, "
+          f"then {run['eval_episodes']} games cut at {run['eval_max_steps']} steps")
+    return train(store, run, agent, schedule)
 
-    print(f"run {run['id']}: {run['eval_episodes']} games of {args.game}, cut at {run['eval_max_steps']} steps")
-    label = run["name"] or run["id"]
+
+def _evaluate(store: Store, run: dict, agent) -> str:
+    print(f"run {run['id']}: {run['eval_episodes']} games of {run['game']}, cut at {run['eval_max_steps']} steps")
 
     def progress(i, result):
         print(f"  game {i + 1:>3}: score {report.number(result['score']):>10}  {result['steps']:>6} steps", flush=True)
 
-    try:
-        episodes, summary = evaluate(agent, args.game, run["env_config"], run["eval_episodes"],
-                                     run["eval_max_steps"], Path(run["dir"]) / "replays", label, progress)
-    except BaseException:
-        store.finish(run["id"], "failed")
-        raise
+    episodes, summary = evaluate(agent, run["game"], run["env_config"], run["eval_episodes"], run["eval_max_steps"],
+                                 Path(run["dir"]) / "replays", run["name"] or run["id"], progress)
     store.add_episodes(run["id"], episodes)
     store.set_summary(run["id"], summary)
     store.finish(run["id"], "done")
-    print()
-    print(report.show(store.run(run["id"]), [], False))
-    return 0
+    return "done"
 
 
 if __name__ == "__main__":

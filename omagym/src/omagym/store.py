@@ -20,12 +20,12 @@ from pathlib import Path
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS runs (
     id TEXT PRIMARY KEY,
-    kind TEXT NOT NULL,            -- train | eval
+    kind TEXT NOT NULL,            -- train (it trained, then played) | eval (it only played)
     game TEXT NOT NULL,
     agent TEXT NOT NULL,
     name TEXT,                     -- your label for it
     notes TEXT,
-    parent TEXT,                   -- for an eval of a trained agent: the training run
+    parent TEXT,                   -- unused since runs train and test in one go; kept for old runs
     agent_config TEXT NOT NULL,    -- JSON
     env_config TEXT NOT NULL,      -- JSON, as the env resolved it
     eval_episodes INTEGER,
@@ -172,10 +172,6 @@ class Store:
             query += " LIMIT ?"
             params.append(limit)
         return [self.run(r["id"]) for r in self.db.execute(query, params)]
-
-    def evaluations_of(self, run_id: str) -> list[str]:
-        """Runs that tested this training run's checkpoint."""
-        return [r["id"] for r in self.db.execute("SELECT id FROM runs WHERE parent = ? ORDER BY id", (run_id,))]
 
     def summary(self, run_id: str) -> dict[str, float]:
         rows = self.db.execute("SELECT key, value FROM summary WHERE run = ?", (run_id,))

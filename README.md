@@ -50,7 +50,7 @@ alone. Omatris and Omasnake can replay what an agent played
 (`bin/run omatris --replay <file>`).
 
 ```sh
-cd omagym && uv sync && uv run omagym eval --agent greedy
+cd omagym && uv sync && uv run omagym run --agent greedy
 ```
 
 `omagym/README.md` explains how it works and how to add a strategy;

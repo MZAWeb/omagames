@@ -1,4 +1,4 @@
-"""Turning runs into text: what `runs`, `models`, `show`, `diff` and `compare` print."""
+"""Turning runs into text: what `runs`, `show`, `diff` and `compare` print."""
 
 from __future__ import annotations
 
@@ -30,33 +30,20 @@ def headline_keys(game: str) -> list[str]:
 
 
 def runs_table(runs: list[dict]) -> str:
-    rows = []
-    for r in runs:
-        rows.append([
-            r["id"], r["kind"], r["agent"], r["name"] or "", r["status"], r["code"],
-            spread(r["summary"], "score"),
-        ])
-    return table(["run", "kind", "agent", "name", "status", "code", "score"], rows)
+    rows = [[r["id"], r["agent"], r["name"] or "", r["status"], _trained(r), r["code"], spread(r["summary"], "score")]
+            for r in runs]
+    return table(["run", "agent", "name", "status", "trained", "code", "score"], rows)
 
 
-def models_table(models: list[dict]) -> str:
-    rows = [[m["id"], m["name"] or "", m["game"], m["agent"], m["status"], _trained(m),
-             spread(m["summary"], "score"), str(len(m["tests"])), str(m["snapshots"])] for m in models]
-    return table(["model", "name", "game", "agent", "status", "trained", "score", "tests", "snapshots"], rows)
-
-
-def show(run: dict, curve: list[tuple[int, float]], patch_exists: bool, model: dict | None = None,
-         checkpoints: list[str] = ()) -> str:
+def show(run: dict, curve: list[tuple[int, float]], patch_exists: bool, trained: dict | None = None) -> str:
     out = [
         f"run       {run['id']}" + (f"  ({run['name']})" if run["name"] else ""),
-        f"kind      {run['kind']} of {run['agent']} on {run['game']}, {run['status']}",
+        f"agent     {run['agent']} on {run['game']}, {run['status']}",
         f"code      {run['code']}" + ("  (uncommitted changes in code.patch)" if patch_exists else ""),
         f"rules     version {run['rules_version']}   versions {run['versions']}",
         f"started   {run['started']}   finished {run['finished'] or '-'}",
         f"dir       {run['dir']}",
     ]
-    if run["parent"]:
-        out.append(f"of        {run['parent']}")
     if run["notes"]:
         out.append(f"notes     {run['notes']}")
     out += ["", "agent     " + _settings(run["agent_config"]), "env       " + _settings(run["env_config"])]
@@ -70,20 +57,16 @@ def show(run: dict, curve: list[tuple[int, float]], patch_exists: bool, model: d
         out.append(table(["", "mean", "std", "min", "median", "max"], rows))
     if curve:
         out += ["", "learning curve (eval score by training steps):", _curve(curve)]
-    if model:
+    if trained:
         # Agents report progress between games, so a run ends a little past
         # its budget; only one stopped short of it is worth saying so.
-        short = (model["trained_steps"] or 0) < (run["train_steps"] or 0)
-        out += ["", f"trained   {_trained(model)}" + (f" of {number(run['train_steps'])} asked for" if short else ""),
-                f"model     {', '.join(checkpoints) or 'no checkpoint'} in {run['dir']}"]
-        if model["snapshots"]:
-            out.append(f"snapshots {model['snapshots']}, of it playing as it learned: "
+        short = (trained["steps"] or 0) < (run["train_steps"] or 0)
+        out += ["", f"trained   {_trained({'trained_steps': trained['steps']})}"
+                + (f" of {number(run['train_steps'])} asked for" if short else ""),
+                f"model     {', '.join(trained['checkpoints']) or 'no checkpoint'} in {run['dir']}"]
+        if trained["snapshots"]:
+            out.append(f"snapshots {trained['snapshots']}, of it playing as it learned: "
                        f"omagym watch {run['id']} --training")
-        if model["tests"]:
-            out += ["", "tests of its checkpoint:",
-                    table(["run", "name", "games", "score"],
-                          [[t["id"], t["name"] or "", number(t["summary"].get("episodes")), spread(t["summary"], "score")]
-                           for t in model["tests"]])]
     return "\n".join(out)
 
 
@@ -148,9 +131,9 @@ def _signed(value: float) -> str:
 def diff(runs: list[dict]) -> str:
     game = runs[0]["game"]
     keys = headline_keys(game)
-    rows = [[r["id"], r["kind"], r["agent"], r["name"] or "", r["code"], number(r["summary"].get("episodes")),
+    rows = [[r["id"], r["agent"], _trained(r), r["name"] or "", r["code"], number(r["summary"].get("episodes")),
              *(spread(r["summary"], k) for k in keys)] for r in runs]
-    out = [table(["run", "kind", "agent", "name", "code", "games", *(k.removeprefix("sum_") for k in keys)], rows)]
+    out = [table(["run", "agent", "trained", "name", "code", "games", *(k.removeprefix("sum_") for k in keys)], rows)]
 
     tests = {(r["game"], r["summary"].get("episodes"), r["eval_max_steps"]) for r in runs}
     if len(tests) > 1:

@@ -53,6 +53,7 @@ class CrossEntropy(Agent):
     games = ("omatris",)
     description = "Evolves the weights of 15 board features with the noisy cross-entropy method. No PyTorch."
     trainable = True
+    default_steps = 500_000
 
     @dataclass
     class Config:

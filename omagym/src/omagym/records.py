@@ -1,7 +1,7 @@
 """The commands on runs already recorded: list, show, compare, watch, name, delete.
 
-A trained model is a training run with a checkpoint: `models` lists those,
-and every other command here takes one by its run id or name.
+A run of an agent that learns trained first, and keeps what it learned (its
+checkpoints and snapshots) in its folder; `runs --trained` lists those.
 """
 
 from __future__ import annotations
@@ -16,35 +16,26 @@ from .training import snapshot_files
 
 
 def runs(args) -> None:
-    runs = Store().runs(args.game, args.agent, args.kind, args.limit)
-    print(report.runs_table(runs) if runs else "no runs yet: try `omagym eval --agent greedy`")
-
-
-def models(args) -> None:
     store = Store()
-    found = [model(store, run) for run in store.runs(args.game, args.agent, "train", limit=None)
-             if checkpoints(run)]
-    print(report.models_table(found) if found else
-          "no trained models yet: try `omagym train --agent dqn`")
+    found = store.runs(args.game, args.agent, "train" if args.trained else None, args.limit)
+    for run in found:
+        run["trained_steps"] = store.trained_steps(run["id"])
+    print(report.runs_table(found) if found else "no runs yet: try `omagym run --agent greedy`")
 
 
-def model(store: Store, run: dict) -> dict:
-    """A training run with what a model listing shows beside it."""
-    return {**run, "trained_steps": store.trained_steps(run["id"]),
-            "tests": [store.run(t) for t in store.evaluations_of(run["id"])],
-            "snapshots": len(snapshot_files(run))}
-
-
-def checkpoints(run: dict) -> list[str]:
-    return [name for name in ("best.pt", "last.pt") if (Path(run["dir"]) / name).exists()]
+def details(store: Store, run: dict) -> str:
+    """Everything `show` prints about a run."""
+    trained = None
+    if run["kind"] == "train":
+        trained = {"steps": store.trained_steps(run["id"]), "snapshots": len(snapshot_files(run)),
+                   "checkpoints": [n for n in ("best.pt", "last.pt") if (Path(run["dir"]) / n).exists()]}
+    return report.show(run, store.series(run["id"], "eval/score_mean"),
+                       (Path(run["dir"]) / "code.patch").exists(), trained)
 
 
 def show(args) -> None:
     store = Store()
-    run = store.run(args.run)
-    curve = store.series(run["id"], "eval/score_mean")
-    model_info = model(store, run) if run["kind"] == "train" else None
-    print(report.show(run, curve, (Path(run["dir"]) / "code.patch").exists(), model_info, checkpoints(run)))
+    print(details(store, store.run(args.run)))
 
 
 def compare(args) -> None:
@@ -71,15 +62,12 @@ def _best_per_agent(store: Store, game: str, metric: str, lower_is_better: bool)
                 best[run["agent"]] = run
     if not best:
         raise ValueError(f"no finished {game} runs on the default evaluation games yet; "
-                         "try `omagym eval --agent greedy`")
+                         "try `omagym run --agent greedy`")
     return list(best.values())
 
 
 def _trained_steps(store: Store, run: dict) -> int | None:
-    """Steps of training behind a run: its own, or for a test of a checkpoint, the training run's."""
-    if run["kind"] == "train":
-        return store.trained_steps(run["id"])
-    return store.trained_steps(run["parent"]) if run["parent"] else None
+    return store.trained_steps(run["id"]) if run["kind"] == "train" else None
 
 
 def diff(args) -> None:
@@ -87,6 +75,8 @@ def diff(args) -> None:
     runs = [store.run(ref) for ref in args.runs]
     if len({r["game"] for r in runs}) > 1:
         raise ValueError("those runs are of different games")
+    for run in runs:
+        run["trained_steps"] = _trained_steps(store, run)
     print(report.diff(runs))
 
 
@@ -111,13 +101,6 @@ def watch(args) -> int:
 def delete(args) -> int:
     store = Store()
     runs = {run["id"]: run for run in (store.run(ref) for ref in args.runs)}
-    for run_id in list(runs):
-        orphans = [e for e in store.evaluations_of(run_id) if e not in runs]
-        if orphans and args.with_tests:
-            runs.update({e: store.run(e) for e in orphans})
-        elif orphans:
-            raise ValueError(f"{run_id}'s checkpoint was tested by {', '.join(orphans)}: "
-                             "delete those too, or pass --with-tests")
     print("\n".join(f"  {run_id}" + (f"  ({run['name']})" if run["name"] else "") for run_id, run in runs.items()))
     if not args.yes and not _confirm(f"delete {len(runs)} run(s) and their files? [y/N] "):
         print("nothing deleted")

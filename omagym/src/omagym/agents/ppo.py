@@ -62,6 +62,7 @@ class PPO(Agent):
     name = "ppo"
     description = "Learns a policy network directly with proximal policy optimisation. Plays any game."
     trainable = True
+    default_steps = 1_000_000
 
     @dataclass
     class Config:
