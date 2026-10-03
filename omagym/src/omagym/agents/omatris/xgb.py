@@ -36,9 +36,10 @@ from pathlib import Path
 import numpy as np
 import xgboost as xgb
 
-from ..games import omatris
-from . import afterstate_value, register, resolve
-from .base import Agent
+from ...games import omatris
+from .. import register, resolve
+from . import afterstate_value
+from ..base import Agent
 
 
 @register
@@ -97,7 +98,7 @@ class XGBoostRanker(Agent):
 
     def _teacher(self) -> Agent:
         """The teacher: a recorded run, trained if it learned, or an agent's defaults."""
-        from ..store import Store
+        from ...store import Store
 
         try:
             run = Store().run(self.config.teacher)

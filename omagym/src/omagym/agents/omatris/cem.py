@@ -42,9 +42,9 @@ from pathlib import Path
 
 import numpy as np
 
-from ..games import omatris
-from . import register
-from .base import Agent
+from ...games import omatris
+from .. import register
+from ..base import Agent
 
 
 @register

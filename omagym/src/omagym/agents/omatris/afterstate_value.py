@@ -17,8 +17,8 @@ from __future__ import annotations
 import numpy as np
 from torch import nn
 
-from ..env import EnvSpec
-from ..games import omatris
+from ...env import EnvSpec
+from ...games import omatris
 
 # The ways a board can be shown to the network, from most hand-made to least:
 #

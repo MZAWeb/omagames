@@ -51,10 +51,11 @@ import numpy as np
 import torch
 from torch import nn
 
-from ..env import Env
-from ..games import omatris
-from . import afterstate_value, register
-from .base import Agent
+from ...env import Env
+from ...games import omatris
+from .. import register
+from . import afterstate_value
+from ..base import Agent
 
 
 @register
@@ -358,7 +359,7 @@ class _Bounds:
 
 def _dqn_network(model: str):
     """A trained dqn's inputs, size and weights."""
-    from ..store import Store
+    from ...store import Store
 
     run = Store().run(model)
     if run["kind"] != "train" or run["agent"] != "dqn":

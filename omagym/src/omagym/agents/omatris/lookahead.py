@@ -48,10 +48,10 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from ..env import Env
-from ..games import omatris
-from . import register
-from .base import Agent
+from ...env import Env
+from ...games import omatris
+from .. import register
+from ..base import Agent
 
 # Greedy's four weights, written in the rich features' scaled units, so that
 # rating a landing with these is rating it as greedy does.
@@ -209,8 +209,8 @@ def _judge(model: str, spec, device: str):
     # experiment store nor PyTorch.
     from pathlib import Path
 
-    from ..store import Store
-    from . import resolve
+    from ...store import Store
+    from .. import resolve
 
     run = Store().run(model)
     if run["kind"] != "train" or run["agent"] not in ("cem", "dqn"):

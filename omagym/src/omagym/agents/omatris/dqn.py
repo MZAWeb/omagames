@@ -46,9 +46,10 @@ import numpy as np
 import torch
 from torch import nn
 
-from ..games import omatris
-from . import afterstate_value, register
-from .base import Agent
+from ...games import omatris
+from .. import register
+from . import afterstate_value
+from ..base import Agent
 
 
 @register

@@ -343,15 +343,18 @@ src/omagym/
   agents/
     base.py              Agent, the interface every strategy implements
     __init__.py          the registry, and the list of agent modules
-    random_agent.py      random
-    greedy.py            greedy, for Tetris and for Snake: start reading here
-    cem.py               cem
-    afterstate_value.py  the network that rates boards, and what it sees: shared by dqn and mcts
-    dqn.py               dqn
-    lookahead.py         lookahead
-    mcts.py              mcts
-    ppo.py               ppo
-    xgb.py               xgb
+    random_agent.py      random: any game
+    ppo.py               ppo: any game
+    omatris/             the agents that play Tetris only
+      greedy.py            greedy: start reading here
+      cem.py               cem
+      afterstate_value.py  the network that rates boards, and what it sees: shared by dqn and mcts
+      dqn.py               dqn
+      lookahead.py         lookahead
+      mcts.py              mcts
+      xgb.py               xgb
+    omasnake/
+      greedy.py            greedy for Snake
   evaluation.py          playing the tests' games, and summarising them
   training.py            everything around an agent's training: budget, curve, checkpoints, snapshots
   store.py               the experiment database
@@ -368,7 +371,9 @@ experiments/             your runs (not in git)
 
 An agent is one class in one file:
 
-1. Create `src/omagym/agents/my_agent.py`:
+1. Create `src/omagym/agents/my_agent.py` (for any game), or
+   `src/omagym/agents/<game>/my_agent.py` (for one game; then its imports
+   are one dot deeper, `from .. import register`):
 
    ```python
    from dataclasses import dataclass
@@ -401,7 +406,8 @@ An agent is one class in one file:
            return int(np.argmax(value))
    ```
 
-2. Add `"my_agent"` to the module list at the bottom of `agents/__init__.py`.
+2. Add `"my_agent"` (or `"<game>.my_agent"`) to the module list at the
+   bottom of `agents/__init__.py`.
 3. `uv run omagym agents` lists it; `uv run omagym run --agent cautious` tests it.
 
 What an agent sees is the game's observation, a dict of NumPy arrays named
