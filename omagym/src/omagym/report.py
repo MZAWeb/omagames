@@ -72,7 +72,7 @@ def show(run: dict, curve: list[tuple[int, float]], patch_exists: bool, trained:
             continue
         s = run["summary"]
         keys = [test.metric, "score", *test.headline]
-        field = comparison_key
+        field = lambda k: comparison_key(k, (n.removeprefix(prefix) for n in s if n.startswith(prefix)))  # noqa: E731
         out += ["", f"{test.name} test, {test.about}: {number(s[prefix + 'episodes'])} games, "
                 f"{number(s.get(prefix + 'won_mean', 0) * 100)}% won"]
         out.append(table(["", "mean", "std", "min", "median", "max"],

@@ -118,7 +118,7 @@ def _results(run: dict) -> dict:
         p = test["prefix"]
         if f"{p}episodes" not in s:
             continue
-        key = comparison.metric_key(test["metric"])
+        key = comparison.metric_key(test["metric"], (k.removeprefix(p) for k in s if k.startswith(p)))
         out[test["name"]] = {
             "metric": test["metric"], "lower": test["lower"],
             "mean": s.get(f"{p}{key}_mean"), "std": s.get(f"{p}{key}_std"),
@@ -148,7 +148,9 @@ def _group(store: Store, name: str) -> dict:
     run, _ = comparison.combine(name, members, [[] for _ in members])
     spread = {}
     for test in _tests(run["game"]):
-        key = f"{test['prefix']}{comparison.metric_key(test['metric'])}_mean"
+        prefix = test["prefix"]
+        key = prefix + comparison.metric_key(test["metric"], (k.removeprefix(prefix) for k in run["summary"]
+                                                              if k.startswith(prefix))) + "_mean"
         values = [m["summary"][key] for m in members if key in m["summary"]]
         if values:
             mean = sum(values) / len(values)
@@ -207,7 +209,7 @@ def _compare(store: Store, refs: list[str], query: dict) -> dict:
     resolved = [records.resolve(store, ref, name) for ref in refs]
     runs, episodes = [r for r, _ in resolved], {r["id"]: e for r, e in resolved}
     ranking = comparison.rank(runs, episodes, metric, lower, name, test.max_steps if test else None)
-    key = comparison.metric_key(metric)
+    key = comparison.metric_key(metric, next((e for played in episodes.values() for e in played), None))
     per_game = {run["id"]: {e["seed"]: e.get(key) for e in episodes[run["id"]]} for run in runs}
     differing = {}
     for field in ("agent_config", "env_config", "train_mix"):

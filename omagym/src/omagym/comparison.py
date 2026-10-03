@@ -47,12 +47,18 @@ class Ranking:
     cap: int = 0
 
 
-def metric_key(metric: str) -> str:
-    """The episode field a metric is read from: "lines" is the summed signal "sum_lines"."""
-    direct = ("score", "steps", "reward", "won", "steps_to_win", "difficulty", "pieces_per_difficulty",
-              "points_per_line", "avg_holes", "avg_height", "clears_1", "clears_2", "clears_3", "clears_4",
-              "tetris_share", "tetris_streak")
-    return metric if metric in direct else f"sum_{metric}"
+def metric_key(metric: str, fields=None) -> str:
+    """The episode field a metric is read from.
+
+    A field the games record under that name ("score", "steps_to_win",
+    "tetris_share"), else the signal summed over the game ("lines" is
+    "sum_lines"). `fields` is what is recorded (an episode, or a summary's
+    names without their _mean); without it, only the fields every game has
+    are known by name.
+    """
+    names = {f.removesuffix("_mean") for f in fields} if fields is not None else {"score", "steps", "reward", "won",
+                                                                                    "steps_to_win"}
+    return metric if metric in names or metric.startswith(("sum_", "max_")) else f"sum_{metric}"
 
 
 def rank(runs: list[dict], episodes: dict[str, list[dict]], metric: str = "score",
@@ -63,7 +69,7 @@ def rank(runs: list[dict], episodes: dict[str, list[dict]], metric: str = "score
     if len({r["eval_max_steps"] for r in runs}) > 1:
         caps = ", ".join(f"{r['id']} at {r['eval_max_steps']}" for r in runs)
         raise ValueError(f"those runs' games were cut at different lengths ({caps}), so they played different tests")
-    key = metric_key(metric)
+    key = metric_key(metric, next((e for played in episodes.values() for e in played), None))
     results = {}
     for run in runs:
         played = episodes.get(run["id"], [])

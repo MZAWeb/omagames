@@ -15,7 +15,9 @@ from pathlib import Path
 import numpy as np
 
 from .agents import Agent
+from .comparison import metric_key
 from .env import Env
+from .games import defaults
 
 EVAL_SEED_BASE = 1_000_000_000
 
@@ -23,11 +25,13 @@ EVAL_SEED_BASE = 1_000_000_000
 def play(agent: Agent, env: Env, seed: int, explore: bool = False) -> dict:
     """One episode; what it scored, how long it lasted, and its signals summed."""
     obs = env.reset(seed)
+    # Every signal summed over the game, and the highest it reached (a 2048
+    # run's best tile is max_highest); plus whatever the game's own tracker
+    # counts (Tetris: clears by size, streaks).
     totals = {name: 0.0 for name in env.spec.signals}
-    # Clears by size (a Tetris is a clear of four), where the game clears lines.
-    clears = [0, 0, 0, 0]
-    # Tetrises in a row (other clears end a streak), and the longest streak.
-    streak = longest = 0
+    peaks = {name: float("-inf") for name in env.spec.signals}
+    make_tracker = defaults(env.game).tracker
+    tracker = make_tracker() if make_tracker else None
     reward, steps = 0.0, 0
     while True:
         step = env.step(agent.decide(env, obs, env.mask(), explore=explore))
@@ -35,10 +39,9 @@ def play(agent: Agent, env: Env, seed: int, explore: bool = False) -> dict:
         reward += step.reward
         for name, value in step.signals.items():
             totals[name] += value
-        if 1 <= step.signals.get("lines", 0) <= 4:
-            clears[int(step.signals["lines"]) - 1] += 1
-            streak = streak + 1 if step.signals["lines"] == 4 else 0
-            longest = max(longest, streak)
+            peaks[name] = max(peaks[name], value)
+        if tracker:
+            tracker.step(step.signals)
         obs = step.obs
         if step.done:
             break
@@ -46,7 +49,7 @@ def play(agent: Agent, env: Env, seed: int, explore: bool = False) -> dict:
     # Won: the game reached its goal (a Challenge cleared, a Sprint's forty
     # lines), rather than being lost or cut short.
     won = step.terminated and info.get("phase") == "finished"
-    return {
+    episode = {
         "score": info.get("score", reward),
         "steps": steps,
         "reward": reward,
@@ -56,25 +59,9 @@ def play(agent: Agent, env: Env, seed: int, explore: bool = False) -> dict:
         "difficulty": float(info.get("dealt_difficulty", 0)),
         "ended": "terminated" if step.terminated else "cut short",
         **{f"sum_{k}": v for k, v in totals.items()},
-        **({f"clears_{n}": float(c) for n, c in enumerate(clears, 1)} if "lines" in totals else {}),
-        **({"tetris_streak": float(longest),
-            "tetris_share": 4 * clears[3] / totals["lines"] if totals["lines"] else 0.0} if "lines" in totals else {}),
-    } | style({"steps": steps, "score": info.get("score", reward), **{f"sum_{k}": v for k, v in totals.items()}})
-
-
-def style(episode: dict) -> dict:
-    """How a game was played, beyond its score: points per line, and the
-    holes and stack height after an average move. From an episode's sums, so
-    it can be worked out again for games already recorded."""
-    out = {}
-    steps = max(1, episode["steps"])
-    if "sum_lines" in episode:
-        # 0 for a game with no lines, so every game has the field.
-        out["points_per_line"] = episode["score"] / episode["sum_lines"] if episode["sum_lines"] else 0.0
-    for signal, name in (("sum_holes", "avg_holes"), ("sum_max_height", "avg_height")):
-        if signal in episode:
-            out[name] = episode[signal] / steps
-    return out
+        **{f"max_{k}": v for k, v in peaks.items()},
+    }
+    return episode | (tracker.result(episode) if tracker else {})
 
 
 def summarize(episodes: list[dict]) -> dict[str, float]:
@@ -123,12 +110,13 @@ def evaluate(
         if result["difficulty"]:
             result["pieces_per_difficulty"] = result["steps_to_win"] / result["difficulty"]
         results.append(result)
+        key = metric_key(best_by, result)
         if replays is not None:
             replay = {**env.replay(), "agent": label, "episode": i}
             games = replays / "games"
             games.mkdir(parents=True, exist_ok=True)
             (games / f"{i:02d}.json").write_text(json.dumps(replay) + "\n")
-            goodness = sign * result[best_by]
+            goodness = sign * result[key]
             if best is None or goodness > best[0]:
                 best = (goodness, env.replay())
             if worst is None or goodness < worst[0]:
@@ -150,13 +138,10 @@ def other_tests(agent: Agent, run: dict, store, label: str, progress=None) -> No
     Their games are stored under the test's name, their summary with its name
     in front ("challenge/steps_to_win_mean"), their replays in replays/<name>/.
     """
-    from .comparison import metric_key as comparison_key
-    from .games import defaults
-
     for test in defaults(run["game"]).tests:
         env_config = {**run["env_config"], **test.env}
         episodes, summary = evaluate(agent, run["game"], env_config, test.episodes, test.max_steps,
                                      Path(run["dir"]) / "replays" / test.name, label, progress,
-                                     comparison_key(test.metric), test.lower_is_better)
+                                     test.metric, test.lower_is_better)
         store.add_episodes(run["id"], episodes, test.name)
         store.set_summary(run["id"], {f"{test.name}/{k}": v for k, v in summary.items()})

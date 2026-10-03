@@ -85,7 +85,9 @@ def compare(args) -> None:
 
 def _best_per_agent(store: Store, game: str, metric: str, lower_is_better: bool, test: str = "") -> list[dict]:
     """Each agent's best finished run on the game's default evaluation games."""
-    key = (f"{test}/" if test else "") + f"{comparison.metric_key(metric)}_mean"
+    prefix = f"{test}/" if test else ""
+    recorded = {k.removeprefix(prefix) for r in store.runs(game=game, limit=None) for k in r["summary"] if k.startswith(prefix)}
+    key = prefix + f"{comparison.metric_key(metric, recorded)}_mean"
     sign = -1.0 if lower_is_better else 1.0
     standard = defaults(game)
     best: dict[str, dict] = {}

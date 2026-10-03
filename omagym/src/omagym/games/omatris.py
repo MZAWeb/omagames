@@ -144,3 +144,42 @@ def hand_after(obs: dict[str, np.ndarray], spec: EnvSpec, count: int) -> np.ndar
     next_after = np.where(used_hold & (held == 0), queue[1], queue[0])
     eye = np.eye(PIECE_KINDS, dtype=np.float32)
     return np.concatenate([eye[held_after], eye[next_after]], axis=1)
+
+
+# -- How a game was played: what evaluation.play() counts for Omatris ----------
+
+
+class Tracker:
+    """Counts what a Tetris game's score doesn't say: clears by size (a
+    Tetris is a clear of four), the longest run of Tetrises with no smaller
+    clear between, and from the game's sums, points per line and the holes
+    and stack height after an average move."""
+
+    def __init__(self):
+        self.clears = [0, 0, 0, 0]
+        self.streak = self.longest = 0
+
+    def step(self, signals: dict) -> None:
+        lines = int(signals.get("lines", 0))
+        if 1 <= lines <= 4:
+            self.clears[lines - 1] += 1
+            self.streak = self.streak + 1 if lines == 4 else 0
+            self.longest = max(self.longest, self.streak)
+
+    def result(self, episode: dict) -> dict:
+        lines = episode.get("sum_lines", 0.0)
+        return {**{f"clears_{n}": float(c) for n, c in enumerate(self.clears, 1)},
+                "tetris_streak": float(self.longest),
+                "tetris_share": 4 * self.clears[3] / lines if lines else 0.0,
+                **style(episode)}
+
+
+def style(episode: dict) -> dict:
+    """Points per line, and the holes and stack height after an average move,
+    from an episode's sums (so it can be worked out for games already
+    recorded). A game with no lines has 0 points per line."""
+    steps = max(1, episode["steps"])
+    lines = episode.get("sum_lines", 0.0)
+    return {"points_per_line": episode["score"] / lines if lines else 0.0,
+            "avg_holes": episode.get("sum_holes", 0.0) / steps,
+            "avg_height": episode.get("sum_max_height", 0.0) / steps}

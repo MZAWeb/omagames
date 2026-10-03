@@ -9,7 +9,10 @@ on them.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
+
+from . import omatris
 
 
 @dataclass(frozen=True)
@@ -43,6 +46,9 @@ class GameDefaults:
     # How a game was played, for `compare` to show beside the ranking: (the
     # episode field, its label, whether lower is better), means over the games.
     style: tuple[tuple[str, str, bool], ...] = ()
+    # Makes, for each game played, what counts the game's own measures as it
+    # goes (step(signals) each move, result(episode) at the end).
+    tracker: Callable | None = None
     # What the main test is called, and the tests every run also plays.
     main_test: str = "standard"
     tests: tuple[Test, ...] = ()
@@ -65,6 +71,7 @@ _DEFAULTS = {
     # pace, frame_skip, and ignore it.
     "omatris": GameDefaults(
         eval_episodes=20, eval_max_steps=2500, headline=("lines",), env={"input_rate": 10}, main_test="marathon",
+        tracker=omatris.Tracker,
         style=(("sum_lines", "lines", False), ("points_per_line", "points per line", False),
                ("clears_1", "singles", False), ("clears_2", "doubles", False), ("clears_3", "triples", False),
                ("clears_4", "Tetrises", False), ("tetris_share", "share of lines in Tetrises", False),
