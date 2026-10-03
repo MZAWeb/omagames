@@ -512,6 +512,11 @@ the code (marked "code"). Run it with a `--name`,
 9. **Evolve a small network, not a weighted sum** (code): the same method
    over the weights of a tiny MLP (neuroevolution), so the evaluation can
    say "holes matter more when the stack is high", which a sum can't.
+10. **Restarts** (code): when the spread collapses, restart around the best
+    mean with a wider spread (IPOP-style), so one bad generation can't end
+    the search in a local optimum.
+11. **A cheaper first round** (code): score every candidate on one short
+    game, and only the promising ones on full games (successive halving).
 
 ### `dqn`
 
@@ -541,6 +546,16 @@ the code (marked "code"). Run it with a `--name`,
 9. **A curriculum** (code): start some training games from messy mid-game
    boards (Challenge mode's dealt rows) or at high gravity, so it learns to
    recover from trouble instead of only avoiding it.
+10. **Mirror the board** (code): Tetris is symmetric left to right if L
+    swaps with J and S with Z. Store every transition mirrored too and it
+    learns from twice the experience for free (data augmentation).
+11. **A softer target network** (code): Polyak averaging, the target moving
+    a little toward the network every step (tau = 0.005) rather than jumping
+    every `target_sync` steps.
+12. **An ensemble** (code): a few value networks trained side by side; act
+    on their average, and explore where they disagree (bootstrapped DQN).
+13. **Normalisation in the network** (code): LayerNorm between the layers,
+    which lets a bigger network and a higher learning rate train stably.
 
 ### `lookahead`
 
@@ -563,6 +578,9 @@ the code (marked "code"). Run it with a `--name`,
    with what is held then, for instance with a `dqn` judge trained on
    `rich_hand`, so lines that keep an I for later stop looking the same as
    lines that waste it.
+8. **A time budget instead of a fixed depth** (code): search deeper while
+   time is left (iterative deepening), so it thinks hard on difficult
+   pieces and quickly on easy ones.
 
 ### `mcts`
 
@@ -590,6 +608,12 @@ the code (marked "code"). Run it with a `--name`,
 9. **Gumbel root selection** (code, Danihelka et al., 2022): sequential
    halving among the root's best few landings. It is designed for small
    simulation budgets like this one, where plain PUCT wastes visits.
+10. **Reuse the tree within the preview** (code): the part of the tree
+    whose pieces were all visible is still right after the move; keep it
+    instead of starting from nothing.
+11. **Distil the search** (code): train a fast network to copy mcts's
+    moves, then play with the network alone: most of the strength at a
+    fraction of the time per move.
 
 ### `ppo`
 
@@ -618,3 +642,59 @@ the code (marked "code"). Run it with a `--name`,
    for Snake, where real rewards are too rare to stumble on.
 9. **Memory for raw keys** (code): stack the last few frames, or give the
    policy a recurrent layer, so it knows which way it was moving the piece.
+10. **Population-based training** (code): several PPO runs at once; every
+    so often the worst copy the weights and settings of the best, with
+    small mutations. The settings tune themselves during training.
+11. **A residual CNN encoder** (code) for the board, shared by actor and
+    critic, rather than one-hot cells into two separate plain networks.
+
+## 9. Techniques worth trying with any learner
+
+Not tied to one agent; most apply to `cem`, `dqn`, `mcts` and `ppo` alike.
+
+**Getting more from the same experience**
+- **Symmetry**: mirror boards left to right (L swaps with J, S with Z) to
+  double the data; any game with a symmetry has this for free.
+- **Reuse**: prioritised replay, and self-imitation (replaying the agent's
+  own best games, the ones that went better than it expected).
+- **Demonstrations**: start from recordings of a stronger player (greedy,
+  mcts, or you, through the app) rather than from nothing.
+
+**Shaping what it learns from**
+- **Reward shaping**, potential-based so it can't change the best play.
+- **Curricula**: easy versions first (low gravity, short games, a clean
+  board), harder as it improves; or the reverse, start from the hard
+  positions it keeps losing.
+- **Auxiliary tasks**: have the network also predict things it can check,
+  like the next piece's best landing, the holes after a move or the lines
+  cleared. Learning those shapes features the value can use.
+
+**Choosing settings**
+- **Random search** over settings, with fixed seeds and `compare`: usually
+  beats tuning by hand, and grid search, for the same number of runs.
+- **Bayesian optimisation** (Optuna, for instance) once a run is expensive.
+- **Population-based training**: settings that change during the run.
+- **Schedules**: a learning rate, exploration or entropy bonus that decays
+  over training, rather than a constant.
+
+**Bigger and better networks**
+- Residual CNNs, LayerNorm, attention across the board's columns; scale up
+  until the GPU is busy, since the game side is rarely the limit for a big
+  network.
+- **Distillation**: train a small, fast network to copy a big or a searching
+  one, then deploy the small one.
+- **Ensembles**: several networks, averaged; their disagreement is a measure
+  of uncertainty, which is useful for exploring.
+
+**Exploration**
+- Noisy networks, Boltzmann (softmax) exploration instead of epsilon-greedy,
+  count-based bonuses, curiosity (RND) for sparse rewards.
+
+**Speed, which buys everything else**
+- Vectorised envs (`og_step_batch`), parallel actors (Ape-X, IMPALA): many
+  games playing while one learner trains, on all your cores.
+- Batched network calls on the GPU, in training and in search.
+
+**Measuring honestly** (section 4)
+- Several seeds before believing anything, the same evaluation games for
+  everyone, and ablations: when three changes help, find out which did.
