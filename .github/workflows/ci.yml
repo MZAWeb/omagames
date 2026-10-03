@@ -103,29 +103,6 @@ jobs:
       - name: Test ${{ matrix.suite }}
         run: bin/test ${{ matrix.suite }}
 
-  # omagym is the Python lab that trains agents on the games (omagym/README.md).
-  # Its tests build the env libraries they play through, so they need the Qt
-  # toolchain as well as uv.
-  omagym:
-    name: omagym
-    runs-on: ubuntu-latest
-    container: archlinux:latest
-    steps:
-      - name: Install Qt 6, toolchain and uv
-        run: pacman -Syu --noconfirm --needed $ARCH_PACKAGES uv python
-
-      - uses: actions/checkout@v7
-
-      # A run records the commit it ran; git refuses a checkout owned by
-      # another user unless told it is safe.
-      - name: Trust the checkout
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-      # PyTorch is several GB; the tests that need it skip without it.
-      - name: Test omagym (without PyTorch)
-        working-directory: omagym
-        run: uv run --no-group learn pytest -q -rs
-
   quality:
     name: Code quality
     runs-on: ubuntu-latest

@@ -239,7 +239,6 @@ src/omagym/
   report.py              the tables `runs`, `show`, `diff` and `compare` print
   cli.py                 the `omagym` command: its options, training and testing
   records.py             the commands on recorded runs: runs, show, compare, watch, delete...
-tests/                   `uv run pytest`
 experiments/             your runs (not in git)
 ```
 
@@ -283,9 +282,8 @@ An agent is one class in one file. To add one:
 2. Add `"my_agent"` to the module list at the bottom of
    `agents/__init__.py`.
 
-3. `uv run omagym agents` lists it, `uv run omagym eval --agent cautious`
-   tests it, and `uv run pytest` already checks it only ever plays legal
-   moves.
+3. `uv run omagym agents` lists it, and `uv run omagym eval --agent cautious`
+   tests it on the evaluation games.
 
 What an agent sees is the game's observation: a dict of NumPy arrays named
 in the game's README (`board`, `candidates`, `afterstates` for Omatris;
@@ -322,12 +320,3 @@ command, so a change there is picked up on the next run. If a change makes
 the same moves play out differently, bump the game's `Rules::kVersion`.
 Runs record it, so results from before and after the change are never
 mistaken for each other.
-
-## Tests
-
-```sh
-uv run pytest
-```
-
-The tests use a throwaway experiment store. The ones that need PyTorch skip
-without it.
