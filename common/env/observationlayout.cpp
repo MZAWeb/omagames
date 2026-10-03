@@ -13,14 +13,16 @@ int aligned(int bytes) {
 
 }  // namespace
 
-int ObservationLayout::add(const QString &name, DType type, const std::vector<int> &shape) {
+int ObservationLayout::add(const QString &name, DType type, const std::vector<int> &shape,
+                           const QStringList &labels) {
+    Q_ASSERT(labels.isEmpty() || (!shape.empty() && labels.size() == shape.back()));
     int elements = 1;
     for (int extent : shape) {
         Q_ASSERT(extent > 0);
         elements *= extent;
     }
     const int offset = m_size;
-    m_tensors.push_back({name, type, shape, offset, elements});
+    m_tensors.push_back({name, type, shape, labels, offset, elements});
     m_size = aligned(offset + elements * int(bytesPer(type)));
     return count() - 1;
 }
@@ -31,12 +33,15 @@ QJsonObject ObservationLayout::toJson() const {
         QJsonArray shape;
         for (int extent : tensor.shape)
             shape.append(extent);
-        tensors.append(QJsonObject{
+        QJsonObject json{
             {QStringLiteral("name"), tensor.name},
             {QStringLiteral("dtype"), dtypeName(tensor.type)},
             {QStringLiteral("shape"), shape},
             {QStringLiteral("offset"), tensor.offset},
-        });
+        };
+        if (!tensor.labels.isEmpty())
+            json.insert(QStringLiteral("labels"), QJsonArray::fromStringList(tensor.labels));
+        tensors.append(json);
     }
     return {{QStringLiteral("size"), m_size}, {QStringLiteral("tensors"), tensors}};
 }

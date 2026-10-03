@@ -9,6 +9,7 @@ class EnvPartsTests : public QObject {
 private slots:
     void layoutAlignsEveryTensor();
     void layoutWritesWhereItSays();
+    void layoutNamesTheColumnsItIsGiven();
 
     void configFillsInDefaults();
     void configRejectsAnUnknownKey();

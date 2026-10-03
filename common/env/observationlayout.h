@@ -2,6 +2,7 @@
 
 #include <QJsonObject>
 #include <QString>
+#include <QStringList>
 
 #include <cstddef>
 #include <vector>
@@ -22,7 +23,9 @@ public:
     static constexpr int kAlignment = 8;
 
     // Appends a tensor and returns its index, which is what at() takes.
-    int add(const QString &name, DType type, const std::vector<int> &shape);
+    // `labels` name the entries of its last axis (the columns of a table of
+    // stats), so a trainer reads them by name rather than by position.
+    int add(const QString &name, DType type, const std::vector<int> &shape, const QStringList &labels = {});
 
     int count() const { return int(m_tensors.size()); }
     int size() const { return m_size; }
@@ -35,7 +38,7 @@ public:
         return reinterpret_cast<T *>(buffer + m_tensors[size_t(tensor)].offset);
     }
 
-    // {size, tensors: [{name, dtype, shape, offset}]}
+    // {size, tensors: [{name, dtype, shape, offset, labels?}]}
     QJsonObject toJson() const;
 
     static size_t bytesPer(DType type);
@@ -46,6 +49,7 @@ private:
         QString name;
         DType type;
         std::vector<int> shape;
+        QStringList labels;
         int offset;
         int elements;
     };

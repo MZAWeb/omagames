@@ -64,6 +64,17 @@ void EnvPartsTests::layoutWritesWhereItSays() {
     QCOMPARE(layout.elements(cells), 5);
 }
 
+void EnvPartsTests::layoutNamesTheColumnsItIsGiven() {
+    ObservationLayout layout;
+    layout.add(QStringLiteral("board"), ObservationLayout::DType::U8, {2, 2});
+    layout.add(QStringLiteral("stats"), ObservationLayout::DType::I32, {2},
+               {QStringLiteral("score"), QStringLiteral("lines")});
+    const QJsonArray tensors = layout.toJson().value(QStringLiteral("tensors")).toArray();
+    QVERIFY(!tensors[0].toObject().contains(QStringLiteral("labels")));
+    QCOMPARE(tensors[1].toObject().value(QStringLiteral("labels")).toArray(),
+             (QJsonArray{QStringLiteral("score"), QStringLiteral("lines")}));
+}
+
 void EnvPartsTests::configFillsInDefaults() {
     QString error;
     const auto resolved = OmaGames::EnvConfig::resolve(schema(), {{QStringLiteral("frame_skip"), 4}}, &error);
