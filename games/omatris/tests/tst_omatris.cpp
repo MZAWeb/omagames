@@ -2,6 +2,7 @@
 #include <QtTest>
 
 #include "autoshifttests.h"
+#include "boardmetricstests.h"
 #include "boardtests.h"
 #include "challengetests.h"
 #include "difficultytests.h"
@@ -39,5 +40,7 @@ int main(int argc, char *argv[]) {
     status |= QTest::qExec(&input, argc, argv);
     PersistenceTests persistence;
     status |= QTest::qExec(&persistence, argc, argv);
+    BoardMetricsTests metrics;
+    status |= QTest::qExec(&metrics, argc, argv);
     return status;
 }
