@@ -126,8 +126,9 @@ loop ("rate every landing, take the best") with a better way of rating.
 | `cem` | Omatris | learns | The cross-entropy method: evolves the weights of 15 board features. No PyTorch |
 | `dqn` | Omatris | learns | A neural network that learns how good a board is (deep Q-learning on afterstates) |
 | `lookahead` | Omatris | plans | Beam search over the next pieces on copies of the game, judging boards with greedy's weights or a `cem` or `dqn` run's |
-| `mcts` | Omatris | plans and learns | Monte Carlo tree search with a value network that learns from the search (AlphaZero-style) |
-| `ppo` | any | learns | Proximal policy optimisation: learns the policy itself from the raw observation. The general one, and the road to Trackmania |
+| `mcts` | Omatris | plans and learns | Monte Carlo tree search with a value network that learns from the search (AlphaZero-style); PUCT or Thompson sampling (`selection`) |
+| `ppo` | any | learns | Proximal policy optimisation: learns the policy itself from the raw observation, choosing among all drops or hold, rotation and column in turn (`policy`). The general one, and the road to Trackmania |
+| `xgb` | Omatris | learns | XGBoost trees learning to rank the landings a teacher chooses: imitation of any agent or run, with optional DAgger |
 
 Their settings are listed by `omagym agents` and changed with `--set`. For
 `dqn` (and `mcts`), the most important one is **what the network sees**,
@@ -350,6 +351,7 @@ src/omagym/
     lookahead.py         lookahead
     mcts.py              mcts
     ppo.py               ppo
+    xgb.py               xgb
   evaluation.py          playing the tests' games, and summarising them
   training.py            everything around an agent's training: budget, curve, checkpoints, snapshots
   store.py               the experiment database
