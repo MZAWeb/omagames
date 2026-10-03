@@ -272,13 +272,30 @@ back to the same score. The env writes one at every episode end on request.
 
 ### `--replay` in the app
 
-`bin/run omatris --replay run.json` opens the normal game with no player
-input. It shows the agent's name in the header and has its own keys, shown
-in the UI as usual: `P` pause, `1`–`4` speed (1×, 2×, 4×, as fast as it
-draws), `→` step one piece while paused, `R` restart the replay, `Esc` leave.
-The bridge feeds calls from the replay into `Game` on its normal pacer, and
-the speed is the pacer interval. Results are never written to the
-high-score table.
+Built in step 4; `games/omatris/README.md` ("Watching a replay") is the
+spec, and `games/omatris/replays/greedy-marathon.json` a sample.
+
+```sh
+bin/run omatris --replay games/omatris/replays/greedy-marathon.json
+```
+
+It opens the normal game with no player input, the agent's name in the
+header, and the replay's own keys shown in the legend as usual: `P` pause,
+`1`–`4` speed (¼×, ½×, 1×, 8×), `→` next piece, `R` watch again, `Esc`
+leave. Results are never written to the high-score table, and the player's
+handling is set aside for the soft drop the replay was recorded with.
+
+`ReplayPlayer` (engine, QtCore) reads the file and refuses another game,
+another `rules_version`, an unknown mode or input. It plays the calls back
+in *beats*, one per frame at 1×: a tick is a beat, a hard drop or hold is,
+and so is an input made with no time after another. Without that rule, a
+placement-mode game (inputs with no ticks between them) would show pieces
+teleporting into place; with it, each move gets a frame, and a raw-mode
+game, whose inputs each ride with a tick, plays at real speed. A placing
+agent's piece is about 8 beats, so the default ½× shows three or four pieces
+a second.
+
+The app links only `common/env/replay.cpp`, not the env ABI.
 
 This gives you the "generation 1 vs generation 500" style of video: the
 trainer saves the best evaluation replay of each checkpoint, and you watch
@@ -313,7 +330,8 @@ Every env follows the same pattern. Each game keeps its spec in its README.
 3. **Done.** `omatris`: `OmatrisEnv` with the three action spaces, plus env
    tests (determinism, masks match `Placements`, replay round trip, no
    `QSettings` writes).
-4. `omatris`: `--replay` in the app and its README section.
+4. **Done.** `omatris`: `--replay` in the app and its README section, plus a
+   sample replay.
 5. A second game (2048 or Snake) to prove the interface is generic before it
    hardens. Bump `OG_ABI_VERSION` freely until then.
 
