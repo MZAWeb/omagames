@@ -67,7 +67,8 @@ _DEFAULTS = {
         eval_episodes=20, eval_max_steps=2500, headline=("lines",), env={"input_rate": 10}, main_test="marathon",
         style=(("sum_lines", "lines", False), ("points_per_line", "points per line", False),
                ("clears_1", "singles", False), ("clears_2", "doubles", False), ("clears_3", "triples", False),
-               ("clears_4", "Tetrises", False), ("sum_tspin", "T-spins", False),
+               ("clears_4", "Tetrises", False), ("tetris_share", "share of lines in Tetrises", False),
+               ("tetris_streak", "longest Tetris streak", False), ("sum_tspin", "T-spins", False),
                ("avg_holes", "holes", True), ("avg_height", "stack height", True)),
         tests=(
             # Getting out of trouble: each game opens on a dealt mess of holes

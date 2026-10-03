@@ -93,6 +93,13 @@ class AfterstateDQN(Agent):
         reward_win: float = 0.0         # once, for winning: a Challenge cleared (try 100)
         reward_dealt_row: float = 0.0   # per dealt row of a Challenge cleared: digging (try 10)
         reward_tspin: float = 0.0       # per T-spin
+        # A streak of Tetrises: the k-th Tetris in a row earns
+        # reward_tetris_streak * base^(k-1), the exponent capped at cap - 1
+        # (uncapped, the targets would grow until the network can't follow).
+        # Any clear of 1 to 3 lines ends the streak; moves that clear none don't.
+        reward_tetris_streak: float = 0.0   # try 20
+        tetris_streak_base: float = 2.0
+        tetris_streak_cap: int = 6
         # Shaping, potential-based so it can't change what the best play is
         # (README, Science section 3): paid for the *change* in holes and in the
         # stack's height after each piece, so a hole is felt when it is made.
@@ -111,6 +118,8 @@ class AfterstateDQN(Agent):
         self.rng = np.random.default_rng(config.seed)
         # The board potential before the next move, for shaping; none at a game's start.
         self._shape_before: float | None = None
+        # Tetrises in a row so far this training game.
+        self._streak = 0
         self.input_size = afterstate_value.input_size(config.inputs, spec)
         self.net = afterstate_value.network(config.inputs, spec, config.hidden, config.layers).to(device)
         self.target = copy.deepcopy(self.net)
@@ -158,6 +167,15 @@ class AfterstateDQN(Agent):
         elif step.terminated:
             reward += c.reward_win   # it ended without topping out: the goal was reached
         if before is not None:
+            lines = int(s["lines"])
+            if lines == 4:
+                self._streak += 1
+                power = min(self._streak, c.tetris_streak_cap) - 1
+                reward += c.reward_tetris_streak * c.tetris_streak_base ** power
+            elif lines:
+                self._streak = 0
+            if step.done:
+                self._streak = 0
             stats = self.spec.tensors["stats"].column("dealt_rows_left")
             reward += c.reward_dealt_row * float(before["stats"][stats] - step.obs["stats"][stats])
             # Potential-based shaping: Phi(board) = -(holes * a + height * b);

@@ -50,7 +50,8 @@ class Ranking:
 def metric_key(metric: str) -> str:
     """The episode field a metric is read from: "lines" is the summed signal "sum_lines"."""
     direct = ("score", "steps", "reward", "won", "steps_to_win", "difficulty", "pieces_per_difficulty",
-              "points_per_line", "avg_holes", "avg_height", "clears_1", "clears_2", "clears_3", "clears_4")
+              "points_per_line", "avg_holes", "avg_height", "clears_1", "clears_2", "clears_3", "clears_4",
+              "tetris_share", "tetris_streak")
     return metric if metric in direct else f"sum_{metric}"
 
 

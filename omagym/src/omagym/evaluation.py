@@ -26,6 +26,8 @@ def play(agent: Agent, env: Env, seed: int, explore: bool = False) -> dict:
     totals = {name: 0.0 for name in env.spec.signals}
     # Clears by size (a Tetris is a clear of four), where the game clears lines.
     clears = [0, 0, 0, 0]
+    # Tetrises in a row (other clears end a streak), and the longest streak.
+    streak = longest = 0
     reward, steps = 0.0, 0
     while True:
         step = env.step(agent.decide(env, obs, env.mask(), explore=explore))
@@ -35,6 +37,8 @@ def play(agent: Agent, env: Env, seed: int, explore: bool = False) -> dict:
             totals[name] += value
         if 1 <= step.signals.get("lines", 0) <= 4:
             clears[int(step.signals["lines"]) - 1] += 1
+            streak = streak + 1 if step.signals["lines"] == 4 else 0
+            longest = max(longest, streak)
         obs = step.obs
         if step.done:
             break
@@ -53,6 +57,8 @@ def play(agent: Agent, env: Env, seed: int, explore: bool = False) -> dict:
         "ended": "terminated" if step.terminated else "cut short",
         **{f"sum_{k}": v for k, v in totals.items()},
         **({f"clears_{n}": float(c) for n, c in enumerate(clears, 1)} if "lines" in totals else {}),
+        **({"tetris_streak": float(longest),
+            "tetris_share": 4 * clears[3] / totals["lines"] if totals["lines"] else 0.0} if "lines" in totals else {}),
     } | style({"steps": steps, "score": info.get("score", reward), **{f"sum_{k}": v for k, v in totals.items()}})
 
 
