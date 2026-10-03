@@ -251,6 +251,16 @@ also reports `score`, `lines`, `pieces` (pieces locked), `tspin` (1 mini,
 can build its own reward. An episode ends when the run does: a top out, the
 Sprint's fortieth line, or a Challenge's last dealt row.
 
+### Drawing a replay
+
+`og_replay_frames(replay)` plays a replay back for a viewer that has no
+engine (omagym's web viewer): `{width, height, hidden_rows, mode, agent,
+ended, frames}`, with a frame for the deal and one after every piece that
+locks. A frame has the well as a string, one character per cell from the
+top (`.` empty, else the piece letter, `IJLOSTZ`), `score`, `lines`,
+`level`, `ticks`, the `queue`, the `hold`, the cells of the piece that just
+`placed`, and in a Challenge `dealt_rows_left` and `difficulty`.
+
 ### Rules version
 
 The env reports `rules_version` 1 (`Rules::kVersion`). It goes up with any

@@ -279,6 +279,37 @@ void EnvTests::theReplayIsTheGame() {
     }
 }
 
+void EnvTests::aReplayIsDrawnPieceByPiece() {
+    // Forty placements of a Challenge at a human's speed, drawn for a viewer.
+    OmatrisEnv env = makeEnv({{QStringLiteral("mode"), QStringLiteral("challenge")}, {QStringLiteral("input_rate"), 10}});
+    QRandomGenerator rng(5);
+    int placed = 0;
+    for (; placed < 40 && env.game().phase() == Phase::Playing; ++placed)
+        env.step(pick(env, rng));
+    QString error;
+    const auto drawn = env.frames(env.replay(), &error);
+    QVERIFY2(drawn, qPrintable(error));
+    const QJsonArray frames = drawn->value(QStringLiteral("frames")).toArray();
+    QCOMPARE(frames.size(), placed + 1);  // the deal, then one per piece
+    QVERIFY(!frames.first().toObject().contains(QStringLiteral("placed")));
+    QCOMPARE(frames.last().toObject().value(QStringLiteral("placed")).toArray().size(), 4);
+
+    // The last frame is the game as the env left it.
+    const QJsonObject last = frames.last().toObject();
+    const QString board = last.value(QStringLiteral("board")).toString();
+    QCOMPARE(board.size(), Board::kCellCount);
+    for (int i = 0; i < Board::kCellCount; ++i)
+        QCOMPARE(board.at(i) == QLatin1Char('.'), env.game().board().at(i) == PieceType::None);
+    QCOMPARE(last.value(QStringLiteral("score")).toInt(), env.game().score());
+    QCOMPARE(last.value(QStringLiteral("lines")).toInt(), env.game().lines());
+    QCOMPARE(last.value(QStringLiteral("dealt_rows_left")).toInt(), env.game().dealtRowsLeft());
+    QCOMPARE(drawn->value(QStringLiteral("mode")).toString(), QStringLiteral("challenge"));
+
+    OmaGames::Replay other(QStringLiteral("omasnake"), 1, {}, 1);
+    QVERIFY(!env.frames(other, &error));
+    QVERIFY(error.contains(QStringLiteral("omasnake")));
+}
+
 void EnvTests::aReseededCloneKeepsWhatIsVisible() {
     OmatrisEnv env = makeEnv();
     env.step(0);

@@ -73,6 +73,7 @@ SOURCES += \
     ../src/omatrisgamereplay.cpp \
     ../env/omatrisobservation.cpp \
     ../env/omatrisenv.cpp \
+    ../env/omatrisframes.cpp \
     piecetests.cpp \
     challengetests.cpp \
     difficultytests.cpp \

@@ -21,6 +21,7 @@ private slots:
     void theModeIsTheOneConfigured();
     void theSameSeedAndActionsPlayTheSameGame();
     void theReplayIsTheGame();
+    void aReplayIsDrawnPieceByPiece();
     void aReseededCloneKeepsWhatIsVisible();
     void theEnvLeavesSettingsAlone();
     void theAbiPlaysOmatris();

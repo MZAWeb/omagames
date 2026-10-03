@@ -47,4 +47,5 @@ SOURCES += \
     ../src/placements.cpp \
     ../../../common/src/scoretable.cpp \
     omatrisobservation.cpp \
-    omatrisenv.cpp
+    omatrisenv.cpp \
+    omatrisframes.cpp

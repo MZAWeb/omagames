@@ -40,6 +40,7 @@ public:
     std::unique_ptr<OmaGames::Env> clone(bool reseedHidden, quint32 seed) const override;
     OmaGames::Replay replay() const override { return m_replay; }
     QJsonObject info() const override;
+    std::optional<QJsonObject> frames(const OmaGames::Replay &replay, QString *error) const override;
 
     const Game &game() const { return *m_game; }
     // What the placement space offers now, in action order.
