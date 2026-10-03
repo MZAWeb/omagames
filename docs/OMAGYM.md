@@ -1,7 +1,7 @@
 # Omagym: training agents to play omagames
 
-Status: **design draft.** This file is the seed for a separate repository
-(working name `omagym`). It lives here until that repository exists so that
+Status: **design draft.** This file is the seed for a separate repository,
+`omagym`. It lives here until that repository exists so that
 it can be reviewed next to `docs/AGENT-ENV.md`, the omagames side it depends
 on.
 
@@ -19,8 +19,9 @@ A small, readable lab for learning machine learning on games we own:
 ## Stack
 
 - **Python 3.12**, managed with `uv`.
-- **numpy** and **PyTorch** (CPU is fine for Tetris features; a GPU helps
-  for CNN policies).
+- **numpy** and **PyTorch** with CUDA: a GPU is available, so configs take a
+  `device` that defaults to `cuda` when present. CEM on features stays on the
+  CPU, where it is faster; the neural algorithms train on the GPU.
 - **Gymnasium** API compatibility, *not* as a framework. Our envs implement
   `gymnasium.Env` and `VectorEnv` so Stable-Baselines3 or CleanRL scripts
   can be used as a sanity baseline, but our own loop doesn't depend on them.
@@ -181,8 +182,6 @@ at an omagames checkout where `bin/build-env <game>` has been run.
 
 ## Open questions
 
-- Name: `omagym`, `omalab`, something else?
-- Is local CPU enough, or should configs assume a CUDA GPU for the CNN work?
 - Should the replay viewer also show *why* (value per candidate, policy
   probabilities) as an overlay? That's a bigger app change and would need
   the live socket mode.
