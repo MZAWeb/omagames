@@ -69,8 +69,15 @@ class MonteCarloTreeSearch(Agent):
     class Config:
         # Simulations per move: the search's budget. More is stronger and slower.
         simulations: int = 32
+        # How each simulation picks the landing to try, at every node:
+        # "puct" (AlphaZero's rule, below) or "thompson" (Thompson sampling,
+        # see _thompson()).
+        selection: str = "puct"
         # How much "barely tried" counts against "looks good" in PUCT.
         c_puct: float = 1.5
+        # Thompson sampling's uncertainty about a landing never tried, on the
+        # 0..1 value scale; it shrinks with every visit.
+        ts_spread: float = 0.5
         # How sharply the network's ratings turn into the priors that tell
         # the search where to look first: smaller means more single-minded.
         prior_temperature: float = 0.5
@@ -110,6 +117,8 @@ class MonteCarloTreeSearch(Agent):
         if config.model:
             self.inputs, hidden, layers, weights = _dqn_network(config.model)
         afterstate_value.check(self.inputs)
+        if config.selection not in ("puct", "thompson"):
+            raise ValueError(f"selection must be puct or thompson, not {config.selection!r}")
         self.net = afterstate_value.network(self.inputs, spec, hidden, layers).to(device)
         if weights is not None:
             self.net.load_state_dict(weights)
@@ -193,9 +202,28 @@ class MonteCarloTreeSearch(Agent):
             search has hardly tried; shrinks every time it is tried. So
             early on the priors steer, and later the values found do.
         """
+        if self.config.selection == "thompson":
+            return self._thompson(node)
         value = self._bounds.scale(node.q())
         bonus = self.config.c_puct * node.priors * np.sqrt(node.visits.sum() + 1) / (1 + node.visits)
         return int(np.argmax(value + bonus))
+
+    def _thompson(self, node: _Node) -> int:
+        """Thompson sampling: draw a plausible value for every landing, try the best draw.
+
+        The search treats each landing as a slot machine whose payout it is
+        unsure of: a Normal around the value found so far (or the network's
+        guess, if never tried), narrower the more it has been tried. Drawing
+        once from each and taking the highest draw tries a landing exactly as
+        often as it might be the best one. A well-tried good landing is
+        usually picked; a barely tried one with a fair guess gets a chance
+        now and then; a well-tried bad one, almost never. It is the bandit
+        rule PUCT's bonus is an alternative to (README, To do 1), with no
+        c_puct to tune, though the network's priors play no part in it.
+        """
+        value = self._bounds.scale(node.q())
+        spread = self.config.ts_spread / np.sqrt(1 + node.visits)
+        return int(np.argmax(self.rng.normal(value, spread)))
 
     def _expand(self, node: _Node, landing: int) -> _Node:
         source = node.env or self._env
