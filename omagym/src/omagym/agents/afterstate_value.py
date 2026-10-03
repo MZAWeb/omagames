@@ -36,7 +36,11 @@ from ..games import omatris
 # - "rich_hand", "cnn_hand": "rich" or "cnn", plus what is in hand after the
 #   landing: the held piece and the next one (omatris.hand_after()). Only
 #   these let the network value keeping an I in the hold for a Tetris.
-INPUTS = ("features", "rich", "board", "cnn", "rich_hand", "cnn_hand")
+# - "hybrid": the cells through the CNN, with cem's fifteen features and the
+#   hand joined in after it. The features give it a running start (it plays
+#   like "rich_hand" from early on); the convolutions are there to find
+#   whatever the features miss, given the training to do it.
+INPUTS = ("features", "rich", "board", "cnn", "rich_hand", "cnn_hand", "hybrid")
 _HAND = 2 * omatris.PIECE_KINDS
 
 # Rough sizes of the five features on a busy board, so the network sees
@@ -56,6 +60,8 @@ def _cells(spec: EnvSpec) -> int:
 
 def input_size(inputs: str, spec: EnvSpec) -> int:
     """How many numbers describe one board (and, with _hand, what's in hand)."""
+    if inputs == "hybrid":
+        return _cells(spec) + len(omatris.RICH) + _HAND
     base = {"features": len(omatris.FEATURES), "rich": len(omatris.RICH)}.get(inputs.removesuffix("_hand"))
     size = base if base is not None else _cells(spec)
     return size + (_HAND if inputs.endswith("_hand") else 0)
@@ -65,6 +71,10 @@ def inputs_for(inputs: str, obs: dict[str, np.ndarray], spec: EnvSpec, count: in
     """[count, input_size] floats: every landing on offer, as the network sees it."""
     if inputs == "features":
         return omatris.afterstate_features(obs, spec, count) / _FEATURE_SCALE
+    if inputs == "hybrid":
+        # The cells first, so the network can split them off for the CNN.
+        return np.concatenate([inputs_for("board", obs, spec, count), inputs_for("rich_hand", obs, spec, count)],
+                              axis=1)
     if inputs.endswith("_hand"):
         board = inputs_for(inputs.removesuffix("_hand"), obs, spec, count)
         return np.concatenate([board, omatris.hand_after(obs, spec, count)], axis=1)
@@ -81,8 +91,8 @@ def network(inputs: str, spec: EnvSpec, hidden: int, layers: int) -> nn.Module:
     followed by a ReLU (which lets the network bend: without it, any stack
     of layers is just one weighted sum). A CNN puts two convolutions first.
     """
-    if inputs == "cnn_hand":
-        return _BoardAndHand(spec, hidden, layers)
+    if inputs in ("cnn_hand", "hybrid"):
+        return _BoardAndMore(spec, hidden, layers, input_size(inputs, spec) - _cells(spec))
     stack: list[nn.Module] = []
     width = input_size(inputs, spec)
     if inputs == "cnn":
@@ -101,15 +111,16 @@ def network(inputs: str, spec: EnvSpec, hidden: int, layers: int) -> nn.Module:
     return nn.Sequential(*stack)
 
 
-class _BoardAndHand(nn.Module):
-    """The CNN for the board, with the pieces in hand joined in after it.
+class _BoardAndMore(nn.Module):
+    """The CNN for the board, with more numbers joined in after it.
 
     The cells go through the convolutions, which look for shapes on the
-    board; the hand isn't a picture, so it skips them and joins the
-    convolutions' output on the way into the fully connected layers.
+    board. What follows them in the input (the pieces in hand; for "hybrid",
+    the features too) isn't a picture, so it skips the convolutions and joins
+    their output on the way into the fully connected layers.
     """
 
-    def __init__(self, spec: EnvSpec, hidden: int, layers: int):
+    def __init__(self, spec: EnvSpec, hidden: int, layers: int, extra: int):
         super().__init__()
         self.cells = _cells(spec)
         rows, cols = spec.tensors["afterstates"].shape[1:]
@@ -120,7 +131,7 @@ class _BoardAndHand(nn.Module):
             nn.Flatten(),
         )
         stack: list[nn.Module] = []
-        width = 32 * rows * cols + _HAND
+        width = 32 * rows * cols + extra
         for _ in range(layers):
             stack += [nn.Linear(width, hidden), nn.ReLU()]
             width = hidden
@@ -128,5 +139,5 @@ class _BoardAndHand(nn.Module):
         self.rest = nn.Sequential(*stack)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        board, hand = x[:, : self.cells], x[:, self.cells:]
-        return self.rest(torch.cat([self.board(board), hand], dim=1))
+        cells, more = x[:, : self.cells], x[:, self.cells:]
+        return self.rest(torch.cat([self.board(cells), more], dim=1))
