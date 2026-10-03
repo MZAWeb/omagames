@@ -52,7 +52,9 @@ from .base import Agent
 
 # uint8 tensors hold categories (a cell's contents, a piece's kind) and are
 # one-hot encoded with this many classes; anything higher shares the last.
-_CATEGORIES = 8
+# 2048's cells are powers of two up to 2^17, so it needs 18.
+_CATEGORIES = {"oma2048": 18}
+_DEFAULT_CATEGORIES = 8
 # Tensors only the placement action space has: a policy over 80 drops has no use for them.
 _SKIP = ("candidates", "afterstates")
 
@@ -118,7 +120,8 @@ class PPO(Agent):
         torch.manual_seed(config.seed)
         self.rng = np.random.default_rng(config.seed)
         self.tensors = [t for t in spec.tensors.values() if t.name not in _SKIP]
-        size = sum(int(np.prod(t.shape)) * (_CATEGORIES if t.dtype == np.uint8 else 1) for t in self.tensors)
+        self.categories = _CATEGORIES.get(spec.game, _DEFAULT_CATEGORIES)
+        size = sum(int(np.prod(t.shape)) * (self.categories if t.dtype == np.uint8 else 1) for t in self.tensors)
         self.normalizer = _RunningNorm(size)
         # Two networks: the actor (the policy, one output per action) and the
         # critic (the value, one output). Tanh and orthogonal initialisation
@@ -150,7 +153,7 @@ class PPO(Agent):
         for t in self.tensors:
             values = obs[t.name].reshape(-1)
             if t.dtype == np.uint8:
-                parts.append(np.eye(_CATEGORIES, dtype=np.float32)[np.minimum(values, _CATEGORIES - 1)].reshape(-1))
+                parts.append(np.eye(self.categories, dtype=np.float32)[np.minimum(values, self.categories - 1)].reshape(-1))
             else:
                 parts.append(values.astype(np.float32))
         return np.concatenate(parts)
