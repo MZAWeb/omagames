@@ -91,7 +91,22 @@ _DEFAULTS = {
                  lower_is_better=True, headline=("steps_to_win", "difficulty", "won", "topped_out")),
         ),
     ),
-    "omasnake": GameDefaults(eval_episodes=50, eval_max_steps=3000, headline=("ate",)),
+    "omasnake": GameDefaults(eval_episodes=50, eval_max_steps=3000, headline=("ate",),
+                             style=(("sum_ate", "dots eaten", False), ("max_length", "longest", False),
+                                    ("steps", "moves", False))),
+    # 2048: games played to the end (a cap only so a game can't run forever),
+    # and the same games stopped at the first 2048 tile, ranked by how few
+    # moves that took; a game that never gets there counts as the whole cap.
+    "oma2048": GameDefaults(
+        eval_episodes=20, eval_max_steps=20000, headline=("merges",), main_test="standard",
+        style=(("max_highest", "highest tile", False), ("sum_merges", "merges", False), ("steps", "moves", False),
+               ("sum_won", "share that reached 2048", False)),
+        tests=(
+            Test("reach2048", "reach a 2048 tile in as few moves as possible", {"goal": 2048},
+                 episodes=20, max_steps=3000, metric="steps_to_win", lower_is_better=True,
+                 headline=("won", "max_highest")),
+        ),
+    ),
 }
 
 
