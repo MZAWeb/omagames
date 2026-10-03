@@ -2,6 +2,7 @@
 #include <QtTest>
 
 #include "bridgetests.h"
+#include "envtests.h"
 #include "foodtests.h"
 #include "snaketests.h"
 #include "speedtests.h"
@@ -21,5 +22,7 @@ int main(int argc, char *argv[]) {
     status |= QTest::qExec(&speed, argc, argv);
     BridgeTests bridge;
     status |= QTest::qExec(&bridge, argc, argv);
+    EnvTests env;
+    status |= QTest::qExec(&env, argc, argv);
     return status;
 }

@@ -80,6 +80,11 @@ public:
 
     std::vector<Event> tick();
 
+    // Redraws where every dot from now on will land, from `seed`: the one
+    // thing about a game the player cannot see, which a planner's copy must
+    // not be able to read.
+    void reseedHidden(quint32 seed) { m_rng.seed(seed); }
+
     // Scenario hooks for tests: the rules never call these.
     void placeSnake(const std::deque<QPoint> &body, Direction heading);
     void placeFood(QPoint food) { m_food = food; }
