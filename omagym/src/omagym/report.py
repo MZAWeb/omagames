@@ -122,6 +122,19 @@ def ranking(result: Ranking) -> str:
     return "\n".join(out)
 
 
+def style_table(runs: list[dict], rows: list[dict]) -> str:
+    """How they played: one row per measure, a column per run, the best marked *."""
+    label = _labels(runs)
+    body = []
+    for row in rows:
+        cells = []
+        for value in row["values"]:
+            mark = "*" if value is not None and value == row["best"] and len(runs) > 1 else " "
+            cells.append(f"{number(value)}{mark}" if value is not None else "-")
+        body.append([row["label"] + (" (lower is better)" if row["lower"] else ""), *cells])
+    return "how they played (means over the games; * the best):\n" + table(["", *(label[r["id"]] for r in runs)], body)
+
+
 def _conclusion(standings, label: dict[str, str]) -> list[str]:
     best = label[standings[0].run["id"]]
     lines = [f"{best} played best."]

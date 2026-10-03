@@ -50,7 +50,13 @@ def compare(args) -> None:
     for run in runs:
         run["trained_steps"] = _trained_steps(store, run)
     episodes = {run["id"]: store.episodes(run["id"], name) for run in runs}
-    print(report.ranking(comparison.rank(runs, episodes, metric, lower, name, test.max_steps if test else None)))
+    ranking = comparison.rank(runs, episodes, metric, lower, name, test.max_steps if test else None)
+    print(report.ranking(ranking))
+    ordered = [s.run for s in ranking.standings]
+    rows = comparison.style(ordered, name, defaults(game).style, main=test is None)
+    if rows:
+        print()
+        print(report.style_table(ordered, rows))
 
 
 def _best_per_agent(store: Store, game: str, metric: str, lower_is_better: bool, test: str = "") -> list[dict]:

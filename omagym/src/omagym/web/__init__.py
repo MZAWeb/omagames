@@ -207,6 +207,8 @@ def _compare(store: Store, refs: list[str], query: dict) -> dict:
         "per_game": {rid: [values.get(seed) for seed in ranking.seeds] for rid, values in per_game.items()},
         "differing": differing,
         "runs": [r["id"] for r in runs],
+        # How they played, beyond the ranked measure, in the ranking's order.
+        "style": comparison.style([s.run for s in ranking.standings], name, defaults(game).style, main=test is None),
     }
 
 

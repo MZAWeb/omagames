@@ -334,6 +334,7 @@ async function comparePage(query) {
         <td class="num">${s.verdict === "best" ? "" : `${s.wins}–${s.ties}–${s.losses}`}</td>
         <td class="num">${s.verdict === "best" ? "" : `${signed(s.difference)} <span class="muted">(${signed(s.low)} to ${signed(s.high)})</span>`}</td>
         <td>${verdict(s)}</td><td class="notes">${esc(s.notes)}</td></tr>`).join("")}</tbody></table></div>
+    ${styleCard(result, colorOf)}
     <div class="card"><h2>Game by game</h2>
       <p class="muted">Each column is one game, the same deal for every run; the darker a cell, the better that run did on that game among these runs. Hover for the value; click to watch the runs play that game side by side.</p>
       <div style="overflow-x:auto">${heatmap(result, colorOf)}</div></div>
@@ -344,6 +345,22 @@ async function comparePage(query) {
   const details = await Promise.all(ids.filter((id) => all.find((r) => r.id === id)?.trained_steps).slice(0, 8).map((id) => api(`run/${id}`)));
   lineChart(body.querySelector("#curves"), details.filter((d) => d.curves["eval/score_mean"]).map((d) => ({
     name: label(d), color: colorOf[d.id], points: d.curves["eval/score_mean"]})), {xLabel: "training steps", yLabel: "quick evaluation score", empty: "None of these runs trained."});
+}
+
+// How they played, beyond the ranked measure: one row per measure, the best
+// of each row in bold, so a change of style shows even when the score doesn't.
+function styleCard(result, colorOf) {
+  if (!result.style.length) return "";
+  const order = result.standings.map((s) => s.id);
+  return `<div class="card"><h2>How they played</h2>
+    <p class="muted">Means over the ${result.test} games; the best of each row is in bold.</p>
+    <table><thead><tr><th></th>${result.standings.map((s) => `<th class="num"><span class="dot" style="background:${colorOf[s.id]}"></span>${esc(s.name || s.id)}</th>`).join("")}</tr></thead><tbody>
+    ${result.style.map((row) => `<tr><td>${row.label}${row.lower ? ' <span class="muted">(lower is better)</span>' : ""}</td>
+      ${order.map((_, i) => {
+        const v = row.values[i];
+        const best = v !== null && v === row.best && order.length > 1;
+        return `<td class="num">${v === null ? "–" : best ? `<b>${fmt(v, 2)}</b>` : fmt(v, 2)}</td>`;
+      }).join("")}</tr>`).join("")}</tbody></table></div>`;
 }
 
 // Settings that differ. Those every run has come first; those only some

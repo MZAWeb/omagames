@@ -111,3 +111,28 @@ def _verdict(gaps: np.ndarray, best_case: float) -> str:
     if not gaps.any():
         return "same"
     return "worse" if best_case < 0 else "can't tell"
+
+
+def style(runs: list[dict], test: str, columns: tuple, main: bool) -> list[dict]:
+    """How each run played a test, beyond the measure it is ranked by.
+
+    One row per column the game names (lines, points per line, Tetrises,
+    holes...), each run's mean over the test's games, and which run did best
+    on it. Plus how many games each kept going (the main test: survived to
+    the cap) or won (another test).
+    """
+    prefix = f"{test}/" if test else ""
+    rows = []
+    for key, label, lower in columns:
+        values = [run["summary"].get(f"{prefix}{key}_mean") for run in runs]
+        rows.append({"key": key, "label": label, "lower": lower, "values": values})
+    kept = "cut_short" if main else "won_mean"
+    games = [run["summary"].get(f"{prefix}episodes") for run in runs]
+    values = [run["summary"].get(f"{prefix}{kept}") for run in runs]
+    if not main:
+        values = [v * g if v is not None and g else None for v, g in zip(values, games)]
+    rows.append({"key": kept, "label": "survived to the cap" if main else "won", "lower": False, "values": values})
+    for row in rows:
+        known = [v for v in row["values"] if v is not None]
+        row["best"] = (min(known) if row["lower"] else max(known)) if known else None
+    return [row for row in rows if any(v is not None for v in row["values"])]

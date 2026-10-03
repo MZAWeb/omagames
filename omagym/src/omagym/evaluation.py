@@ -62,8 +62,9 @@ def style(episode: dict) -> dict:
     it can be worked out again for games already recorded."""
     out = {}
     steps = max(1, episode["steps"])
-    if episode.get("sum_lines"):
-        out["points_per_line"] = episode["score"] / episode["sum_lines"]
+    if "sum_lines" in episode:
+        # 0 for a game with no lines, so every game has the field.
+        out["points_per_line"] = episode["score"] / episode["sum_lines"] if episode["sum_lines"] else 0.0
     for signal, name in (("sum_holes", "avg_holes"), ("sum_max_height", "avg_height")):
         if signal in episode:
             out[name] = episode[signal] / steps
