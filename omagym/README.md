@@ -168,6 +168,11 @@ messes, capped at 1,000 pieces, a loss counting as the whole cap.
 | `ppo` | 435 | 0.5 | 0 | 0 | 28.9 | 10 min |
 | `random` | 291 | 0.1 | 0 | 0 | 28.9 | seconds |
 
+Since then (To do 4 has the detail): over three seeds, `dqn-rich-hand`
+averages 9.51M on Marathon and 3.7 on Challenge, and seeds of the same
+setup can learn quite different styles. `dqn-rich-hand-mix60-dig25`, trained
+three times longer on a 40/60 mix, is the best Marathon run yet at 11.81M.
+
 `runs` shows what each one is (its notes). "Whole run" is training plus
 both tests, on a 20-core machine with an RTX 4090, several runs at once.
 
@@ -950,70 +955,80 @@ Not tied to one agent; most apply to `cem`, `dqn`, `mcts` and `ppo` alike.
 The experiments worth running next, roughly in order. Each is a run (or a
 few) to `compare` with what is there now.
 
-## 1. Thompson sampling as mcts's selection rule (smallest, do first)
+## 1. Thompson sampling in mcts (built: `--set selection=thompson`)
 
 A plain bandit over landings is just greedy: it assumes a choice pays off
-now and changes nothing after, while in Tetris a landing's cost shows up
-pieces later. *Hierarchical* bandits, one per decision with payoffs backed
-up from the ones below, are tree search: UCT is "UCB applied to trees".
-Thompson sampling instead of UCB is a published variant (Bai et al., 2013,
-Thompson-sampling Monte Carlo planning).
+now and changes nothing after. *Hierarchical* bandits, one per decision with
+payoffs backed up from the ones below, are tree search: UCT is "UCB applied
+to trees", and Thompson sampling in its place is a published variant (Bai
+et al., 2013). In `mcts.py`, `selection=thompson` draws a value for every
+landing from a Normal around what the search found (or the network's
+guess), narrowing with visits, and tries the best draw; `ts_spread` is how
+unsure it is of a landing never tried.
 
-- In `mcts.py`, a `--set selection=thompson` beside PUCT, in `_select()`.
-- A posterior per landing: a Normal whose mean is the average value found
-  and whose spread shrinks with visits (the network's rating as the prior
-  for unvisited ones). Sample one value per landing, descend into the
-  highest. About 40 lines.
-- Experiment: PUCT against Thompson at the same simulations (32, then 8 and
-  128); TS tends to explore better on small budgets, which is ours.
+**To run:** PUCT against Thompson, as groups of seeds, at the same
+simulations (8, 32, 128), from the same network:
+`omagym run --agent mcts --set model=<dqn run> --set selection=thompson --seeds 3 --name mcts-ts`.
+A first look (3 short games, 16 simulations) had PUCT ahead, with
+`ts_spread` untuned.
 
-## 2. XGBoost, learning to rank from a stronger player
+## 2. XGBoost learning to rank a teacher (built: the `xgb` agent)
 
-XGBoost is supervised: it fits a function from labelled examples, it
-doesn't play or explore. Two places it fits:
+XGBoost is supervised: `xgb` watches a teacher play (any recorded run, or an
+agent's defaults) and learns, with `rank:pairwise`, to score the landing
+the teacher chose above the others, from the `rich_hand` features. Trees
+capture interactions a weighted sum can't ("holes matter more when the
+stack is high"). `dagger` lets it play a share of moves itself while the
+teacher still labels them, so it learns to recover from its own mistakes.
+It reports `agreement`, how often its pick is the teacher's.
 
-- **Learning to rank (preferred).** Record mcts (or lookahead) playing; for
-  each position, the landings with `rich_hand` features, labelled by which
-  one the planner chose. Train with `rank:pairwise` (or `rank:ndcg`), one
-  query group per position. Trees capture interactions a weighted sum can't
-  ("holes matter more when the stack is high"). Expect much of mcts's play
-  at greedy's speed: distillation with a tree ensemble as the student.
-- **Fitted value iteration** (Ernst et al., 2005, Fitted Q Iteration):
-  play games, targets r + gamma * V(next board) from the current model,
-  refit on all of them, repeat. The RL route to trees; less stable, and it
-  refits in batches.
+**To run:** teachers (`--set teacher=lookahead`, `teacher=<best dqn run>`,
+`teacher=<an mcts run>`), with and without `--set dagger=0.3`, and whether
+the student gets the teacher's strength at a fraction of its time per move.
+A first look: 73% agreement with `lookahead` after 3,000 moves, playing at
+greedy's level.
 
-Pieces needed: `xgboost` in the `learn` group of pyproject.toml; a new agent
-`agents/xgb.py` (trainable: train() collects demonstrations by playing the
-teacher, then fits; save/load the booster); the teacher as a setting
-(`--set teacher=<mcts run>`). Inference over ~40 landings a move is fast.
+## 3. A factored policy for ppo (built: `--set policy=factored`)
 
-## 3. A hierarchical action space for ppo
+Instead of one softmax over Omatris's 80 drops, the policy picks hold or
+not, then the rotation, then the column, each masked to what is still
+legal, with the column scores shared by every rotation.
 
-Choose hold or not, then the rotation, then the column, each a small choice
-of its own (a factored or autoregressive policy), instead of one softmax
-over 80 drops. Fewer options at each step, and what's learned about a column
-is shared across rotations.
+**To run:** flat against factored, as groups of seeds and for far longer
+than a million steps. A first look (40,000 steps): 301 against 268.
 
-## 4. Get dqn-rich-hand-mix's score back without losing its digging
+## 4. Training on a mix of Marathon and Challenge
 
-What happened (one seed each): training 50/50 on Challenge made
-`dqn-rich-hand` tidy and safe (stack 7.0 -> 5.0 rows, holes per piece 1.4 ->
-0.3, 20/20 survived, spread +-360k -> +-46k, Challenge 3.7 -> 1.6) but it
-stopped building for Tetrises: points per line 10,595 -> 8,032, Marathon
-10.5M -> 8.0M. Digging rewards clean low boards; Marathon's best play is a
-tall stack with an open well. It also got half the Marathon practice.
+What three seeds per setup showed (`dqn`, `inputs=rich_hand`, +100 per
+Challenge won, +10 per dealt row, 100,000 steps):
 
-Experiments, each against `dqn-rich-hand` and `dqn-rich-hand-mix` (tick all
-three in `omagym web` -> Compare, on both tests):
+| Challenge share | Marathon (mean of 3 seeds) | Challenge, pieces per difficulty |
+|---|---|---|
+| 0% | 9.51M | 3.72 |
+| 10% | 9.47M | 12.69 (worse at digging on every seed) |
+| 30% | 9.02M | 2.58 |
+| 50% | 8.64M | 2.31 |
 
-- A smaller share: `--train-mix challenge=0.2`.
-- Longer training so Marathon practice isn't halved: `--steps 300000`.
-- A cheaper digging reward: `--set reward_dealt_row=3` (+10 equals a line,
-  and may outweigh building for Tetrises).
-- Pay Tetrises outright: a bigger `--set reward_line=...` so building for one
-  beats digging when there's nothing left to dig.
-- More than one seed (`--seed 1/2/3`) before believing any of it.
+- **Each run settles into one of two styles, and the seed picks which**:
+  Tetris-building (10.0-10.8M, 120-150 Tetrises a game) or clean singles and
+  doubles (7.5-8.0M, no Tetrises, good at digging), whatever the mix. A
+  single seed per setup made it look as if the mix killed Tetrises.
+- 30% costs about 5% of the Marathon score for digging a third faster.
+- 10% digs worse than no mix on all three seeds, unexplained so far.
+- `dqn-rich-hand-mix50-s1` (tagged great) does both: 10.24M with 129
+  Tetrises a game, and 2.09 on Challenge.
+- `dqn-rich-hand-mix60-dig25` (60% Challenge, +200 per win, +25 per dealt
+  row, **300,000 steps**) is the best Marathon run yet, 11.81M with 179
+  Tetrises a game, beating every run on all 20 games, and digs at 2.3. One
+  seed.
+
+**To run:**
+- `dqn-rich-hand-mix60-dig25` with `--seeds 3`, and the same 300,000 steps
+  with no mix, to tell the longer training from the mix.
+- What makes the Tetris style reliable rather than a seed lottery: longer
+  exploration (`epsilon_steps`), shaping toward an open well, more steps.
+- The reward variants (`-nodig`, `-dig3`, `-line20`) were one seed each;
+  rerun them with `--seeds 3` before reading anything into them.
 
 ## 5. Things to try, agent by agent
 
