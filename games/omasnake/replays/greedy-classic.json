@@ -1,0 +1,13 @@
+{
+  "calls": "U t54 L t27 U t54 R t18 D t63 L t63 D t27 R t81 D t27 R t9 D t24 L t80 U t16 L t64 D t16 R t216 U t24 L t8 D t8 L t32 U t112 L t56 D t133 R t98 U t126 L t140 D t98 R t21 U t63 L t35 U t6 R t36 D t78 R t84 U t72 L t144 D t66 R t66 U t96 L t48 D t50 R t120 U t45 L t95 D t80 L t40 U t40 R t145 U t25 L t85 U t20 R t55 D t75 L t75 U t85 R t55 D t85 L t85 D t10 L t10 U t5 R t5 U t10 R t35 U t90 L t5 D t100 R t5 U t10 R t5 D t20 R t60 U t45 L t5 D t10 L t35 D t5 R t35 D t25 L t5 U t20 L t5 D t25 R t15 U t30 R t15 U t35 L t75 D t20 L t15 U t15 R t10 U t10 R t75 D t10 L t5 U t5 L t35 D t70 L t5 U t95 R t5 D t20 R t35 D t75 L t105 U t25 R t75 U t25 R t50 U t25 L t100 D t70 R t115 U t90 L t20 D t30 L t10 D t15 L t35 U t35 L t85 D t80 R t80 U t100 R t60 D t105 L t5 U t85 L t130 U t5 R t65 U t5 R t80 D t15 L t105 D t10 R t90 D t35 L t10 D t25 R t25 U t60 L t5 D t55 L t15 U t15 R t5 D t10 R t5 U t55 L t15 D t35 L t5 D t35 L t80 U t85 R t40 D t80 L t35 U t75 R t5 D t70 R t5 U t75 L t15 D t85 L t35 U t35 R t30 U t55 R t25 D t55 R t60 U t65 L t90 D t100 R t90 U t25 L t25 U t70 R t40 D t80 L t10 U t15 L t25 U t60 R t5 D t55 R t5 U t55 R t5 D t55 R t5 U t60 L t25 D t80 L t30 U t60 R t5 U t35 R t75 D t25 L t20 U t15 L t35 D t15 L t15 U t20 R t5 D t15 R t5 U t15 R t45 D t15 R t5 U t15 R t5 D t20",
+  "config": {
+    "actions": "absolute",
+    "difficulty": "normal",
+    "mode": "classic"
+  },
+  "format": "replay/v1",
+  "game": "omasnake",
+  "rules_version": 1,
+  "seed": 18,
+  "agent": "greedy toward the food"
+}

@@ -19,6 +19,11 @@ struct SpeedParams {
 
 namespace Rules {
 
+// Bumped whenever the same turns on the same seed would play out
+// differently. Agents' replays and trained models carry it, so a stale one
+// is refused rather than misread.
+constexpr int kVersion = 1;
+
 constexpr int kTicksPerSecond = 60;
 
 SpeedParams params(Difficulty difficulty);

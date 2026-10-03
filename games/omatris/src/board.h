@@ -21,7 +21,9 @@ public:
 
     static int index(QPoint p) { return p.y() * kWidth + p.x(); }
     static QPoint point(int index) { return {index % kWidth, index / kWidth}; }
-    static bool inside(QPoint p);
+    // Inline, like blocked(): collision is the hottest thing an agent's
+    // placement search does, millions of times a second.
+    static bool inside(QPoint p) { return p.x() >= 0 && p.x() < kWidth && p.y() >= 0 && p.y() < kHeight; }
     // A row the player can see.
     static bool visible(QPoint p) { return p.y() >= kHiddenRows; }
 
@@ -32,7 +34,7 @@ public:
     bool empty() const;
 
     // Off the field or already filled: the only test collision needs.
-    bool blocked(QPoint p) const;
+    bool blocked(QPoint p) const { return !inside(p) || at(p) != PieceType::None; }
     bool fits(const Placement &placement) const;
     void lock(const Placement &placement);
 

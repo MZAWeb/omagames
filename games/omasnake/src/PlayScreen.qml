@@ -25,7 +25,26 @@ FocusScope {
         return "";
     }
 
+    // Watching a replay, the keys run the recording rather than the snake.
+    function replayKey(key: int): bool {
+        switch (key) {
+        case Qt.Key_P: case Qt.Key_Space: game.togglePause(); break;
+        case Qt.Key_1: case Qt.Key_2: case Qt.Key_3: case Qt.Key_4:
+            game.setReplaySpeed(key - Qt.Key_0);
+            break;
+        case Qt.Key_Right: game.replayNextMove(); break;
+        case Qt.Key_R: game.restartReplay(); break;
+        case Qt.Key_Escape: root.leaveRequested(); break;
+        default: return false;
+        }
+        return true;
+    }
+
     Keys.onPressed: function(event) {
+        if (game.replaying) {
+            event.accepted = root.replayKey(event.key);
+            return;
+        }
         var direction = root.directionFor(event.key);
         if (direction !== "") {
             game.turn(direction);

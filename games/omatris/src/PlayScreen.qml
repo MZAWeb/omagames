@@ -21,7 +21,27 @@ FocusScope {
     readonly property var pieceColors: [theme.cyan, theme.blue, theme.orange,
                                         theme.yellow, theme.green, theme.magenta, theme.red]
 
+    // Watching a replay, the keys run the recording rather than the piece.
+    function replayKey(key: int): bool {
+        switch (key) {
+        case Qt.Key_P: game.togglePause(); break;
+        case Qt.Key_1: case Qt.Key_2: case Qt.Key_3: case Qt.Key_4:
+            game.setReplaySpeed(key - Qt.Key_0);
+            break;
+        case Qt.Key_Right: game.replayNextPiece(); break;
+        case Qt.Key_R: game.restartReplay(); break;
+        case Qt.Key_G: game.toggleGhost(); break;
+        case Qt.Key_Escape: root.leaveRequested(); break;
+        default: return false;
+        }
+        return true;
+    }
+
     Keys.onPressed: function(event) {
+        if (game.replaying) {
+            event.accepted = root.replayKey(event.key);
+            return;
+        }
         switch (event.key) {
         case Qt.Key_Left:
             // Auto-repeat is the keyboard's; delayed auto shift is the game's.
@@ -45,7 +65,7 @@ FocusScope {
     }
     Keys.onReleased: function(event) {
         // Auto-repeat releases are not the finger leaving the key.
-        if (event.isAutoRepeat)
+        if (event.isAutoRepeat || game.replaying)
             return;
         switch (event.key) {
         case Qt.Key_Left: game.releaseLeft(); break;
@@ -90,7 +110,11 @@ FocusScope {
                             font.pixelSize: 12 * theme.textScale
                         }
                         Item { Layout.fillWidth: true }
-                        OmaKeyHint { key: qsTr("C"); active: game.holdAvailable }
+                        OmaKeyHint {
+                            visible: !game.replaying
+                            key: qsTr("C")
+                            active: game.holdAvailable
+                        }
                     }
                     PieceBox {
                         Layout.fillWidth: true

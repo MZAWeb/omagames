@@ -27,7 +27,8 @@ ApplicationWindow {
     // pause, so the pause overlay never flickers in between and hands the
     // focus back to the field the moment it disappears again.
     function leaveGame() {
-        if (game.phase === "playing") {
+        // Nothing is lost leaving a replay: the file is still there.
+        if (game.phase === "playing" && !game.replaying) {
             pausedBeforeLeaving = game.paused;
             confirmLoader.active = true;
             game.pause();
@@ -62,7 +63,8 @@ ApplicationWindow {
 
     Loader {
         anchors.fill: parent
-        active: game.paused && !confirmLoader.active
+        // A paused replay keeps the field in view, to be stepped through.
+        active: game.paused && !game.replaying && !confirmLoader.active
         sourceComponent: PauseOverlay {
             onLeaveRequested: win.leaveGame()
         }
@@ -72,7 +74,7 @@ ApplicationWindow {
 
     Loader {
         anchors.fill: parent
-        active: game.phase === "gameover"
+        active: game.phase === "gameover" || game.replayEnded
         sourceComponent: GameOverOverlay {}
         onLoaded: (item as Item).forceActiveFocus()
         onActiveChanged: if (!active) win.refocus()

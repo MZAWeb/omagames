@@ -18,5 +18,6 @@
         <file alias="OmaGames/OmaKeyLegend.qml">qml/OmaGames/OmaKeyLegend.qml</file>
         <file alias="OmaGames/OmaScoresPanel.qml">qml/OmaGames/OmaScoresPanel.qml</file>
         <file alias="OmaGames/OmaBonusPopup.qml">qml/OmaGames/OmaBonusPopup.qml</file>
+        <file alias="OmaGames/OmaBadge.qml">qml/OmaGames/OmaBadge.qml</file>
     </qresource>
 </RCC>

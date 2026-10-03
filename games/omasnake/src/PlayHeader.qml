@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import OmaGames
 
 // Mode and difficulty, the snake's length, the speed it is running at, and
 // the score against the best of this table.
@@ -13,18 +14,45 @@ RowLayout {
     Behavior on shownScore {
         NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
     }
-    readonly property bool beatingBest: game.score > game.best
+    // A replay is someone else's game: nothing to beat.
+    readonly property bool beatingBest: game.score > game.best && !game.replaying
 
-    Text {
-        text: game.modeLabel
-        color: theme.foreground
-        font.pixelSize: 17 * theme.textScale
-        font.bold: true
+    ColumnLayout {
+        spacing: 0
+        RowLayout {
+            spacing: 10 * theme.textScale
+            Text {
+                text: game.modeLabel
+                color: theme.foreground
+                font.pixelSize: 17 * theme.textScale
+                font.bold: true
+            }
+            Text {
+                text: game.difficultyLabel
+                color: theme.mix(theme.background, theme.foreground, 0.6)
+                font.pixelSize: 14 * theme.textScale
+            }
+        }
+        Text {
+            visible: game.replaying
+            text: game.replayAgent !== "" ? qsTr("Replay · %1").arg(game.replayAgent) : qsTr("Replay")
+            color: theme.accent
+            font.pixelSize: 11 * theme.textScale
+        }
     }
-    Text {
-        text: game.difficultyLabel
-        color: theme.mix(theme.background, theme.foreground, 0.6)
-        font.pixelSize: 14 * theme.textScale
+
+    Row {
+        visible: game.replaying
+        spacing: 6 * theme.textScale
+        OmaBadge {
+            visible: game.paused
+            text: qsTr("Paused")
+            tint: theme.orange
+        }
+        OmaBadge {
+            text: game.replaySpeedLabel
+            tint: theme.cyan
+        }
     }
 
     Item { Layout.fillWidth: true }
@@ -91,6 +119,7 @@ RowLayout {
         }
         Text {
             Layout.alignment: Qt.AlignRight
+            visible: !game.replaying
             text: qsTr("Best %1").arg(game.best.toLocaleString(Qt.locale(), "f", 0))
             color: theme.mix(theme.background, theme.foreground, 0.55)
             font.pixelSize: 11 * theme.textScale

@@ -164,6 +164,8 @@ There is nothing to click during play.
 | `Y` / `Enter`, `N` / `Esc` | Confirm / cancel a dialog |
 | `Ctrl+Q` | Quit |
 
+Watching a replay, the keys are the replay's own (see Watching a replay).
+
 ## Layout
 
 The well is painted by one `FieldView` item at a whole number of pixels per
@@ -175,12 +177,111 @@ clock in Challenge. The window scales with the desktop text size; the
 minimum is 660 × 560 logical pixels at 100%, where the start screen scrolls
 rather than clip.
 
+## Agent environment
+
+`bin/build-env omatris` builds `build-env/omatris/libomatris_env.so`, the
+game as a program plays it, for training agents (`docs/AGENT-ENV.md`). It
+plays the same engine as the app but owns nothing else: no high scores, no
+handling, nothing written to `omatris.conf`. It always plays with an
+**instant soft drop**.
+
+### Config
+
+| Key | Default | Choices |
+|---|---|---|
+| `mode` | `marathon` | `marathon`, `sprint`, `zen`, `challenge` |
+| `actions` | `placement` | `placement`, `drop`, `raw` (below) |
+| `hold` | `true` | whether hold may be used |
+| `candidates` | 128 | 1–512: how many landings the placement space shows |
+| `frame_skip` | 1 | 1–60: ticks after each raw input |
+| `max_steps` | 0 | steps before an episode is cut short; 0 never |
+
+### Action spaces
+
+- **`placement`**: one action per **landing**, a distinct place the piece
+  (or, with hold, the held or next piece) can come to rest, found by trying
+  every shift, turn and one-tick sonic drop on a copy of the game. Tucks
+  and T-spins included. The piece goes there, is hard-dropped, and time
+  runs until the next piece is in play. Unused slots are masked.
+- **`drop`**: 80 actions, `hold × 40 + rotation × 10 + leftmost column`
+  (labels `r0c0` … `hold_r3c9`). The piece is turned at the top, slid there
+  and hard-dropped. One that can't get there is masked.
+- **`raw`**: `none`, `left`, `right`, `rotate_cw`, `rotate_ccw`,
+  `soft_drop` (held for this step's ticks, so a sonic drop), `hard_drop`,
+  `hold`; then `frame_skip` ticks. Only `hold` is ever masked.
+
+### Observation
+
+Pieces are numbered 1–7 in the order I, J, L, O, S, T, Z; 0 is nothing.
+
+| Tensor | Type | Shape | What |
+|---|---|---|---|
+| `board` | uint8 | 24 × 10 | the well, four hidden rows on top |
+| `piece` | int32 | 4 | piece, rotation, x, y of the falling piece's box |
+| `queue` | uint8 | 3 | the next three |
+| `hold` | uint8 | 2 | held piece, hold available |
+| `stats` | int32 | 11 | level, gravity_level, lines, score, combo, back_to_back, lock_ticks, lock_resets, ticks, lines_left, dealt_rows_left |
+| `candidates` | int32 | K × 9 | placement only: valid, hold, piece, rotation, column, row, lines, spin, topped_out (column is the landing's leftmost cell, row its lowest) |
+| `afterstates` | uint8 | K × 24 × 10 | placement only: 1 where the board is filled once that landing locks and its lines clear |
+
+The bag behind the next three is never shown.
+
+### Reward and signals
+
+The reward is the score gained, exactly as the game counts it. Each step
+also reports `score`, `lines`, `pieces` (pieces locked), `tspin` (1 mini,
+2 full), `holes`, `max_height`, `bumpiness` and `topped_out`, so a trainer
+can build its own reward. An episode ends when the run does: a top out, the
+Sprint's fortieth line, or a Challenge's last dealt row.
+
+### Rules version
+
+The env reports `rules_version` 1 (`Rules::kVersion`). It goes up with any
+change that makes the same calls play out differently (a rule constant, the
+lock delay, the kicks), so old replays and trained models are refused rather
+than misread. Bumping it means recording the sample below again.
+
+### Watching a replay
+
+Every game the env plays is recorded as a replay: the seed and every call
+it made, which is the whole game. The app plays one back:
+
+```sh
+bin/run omatris --replay games/omatris/replays/greedy-marathon.json
+```
+
+The sample is 300 pieces of Marathon placed by a greedy heuristic (117
+lines, level 12, 101,325 points), recorded through `libomatris_env.so`; a
+test plays it to the end and checks it still scores that. A file that is
+not an Omatris replay of these rules is refused on the command line, and
+nothing opens.
+
+The game on screen is the recorded one: the player's keys don't move it,
+it's never a high score, and it drops pieces with the soft drop it was
+recorded with, not the player's handling. The header says whose game it is
+and how fast it's shown. A placing agent moves its piece with no time
+between inputs, so each of those moves is shown for a frame of its own; an
+agent that pressed keys in real time is shown in real time at 1×.
+
+| Key | Action |
+|---|---|
+| `P` | Pause / play. Paused, the well stays in view |
+| `1` `2` `3` `4` | Speed: ¼×, ½× (the default, three or four pieces a second), 1×, 8×. Above 1× the bonus popups are skipped |
+| `→` | On to the next piece, paused or not |
+| `R` | Watch again from the start |
+| `G` | Ghost piece on / off |
+| `Esc` | Leave for the start screen |
+
+The replay can end before its game does (an agent cut short after a set
+number of pieces); the overlay then says "End of the replay".
+
 ## Build, test, run
 
 ```sh
 bin/build omatris
 bin/test omatris
 bin/run omatris
+bin/build-env omatris   # the agent environment library
 ```
 
 Settings live in `~/.config/Omacom/omatris.conf`.

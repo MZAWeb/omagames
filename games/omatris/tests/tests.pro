@@ -1,10 +1,13 @@
 include(../../../common/common-tests.pri)
+include(../../../common/env/env.pri)
 QT += testlib
 CONFIG += testcase c++17
 TEMPLATE = app
 TARGET = tst_omatris
 
-INCLUDEPATH += ../src
+INCLUDEPATH += ../src ../env
+# The recorded games in the repo, which the suite plays to the end.
+DEFINES += OMATRIS_REPLAYS=\\\"$$PWD/../replays\\\"
 
 HEADERS += \
     ../src/piece.h \
@@ -19,10 +22,16 @@ HEADERS += \
     ../src/dealtstack.h \
     ../src/lockdelay.h \
     ../src/game.h \
+    ../src/calls.h \
+    ../src/boardmetrics.h \
+    ../src/placements.h \
+    ../src/replayplayer.h \
     ../src/autoshift.h \
     ../src/handling.h \
     ../src/preferences.h \
     ../src/omatrisgame.h \
+    ../env/omatrisobservation.h \
+    ../env/omatrisenv.h \
     enginefixture.h \
     challengetests.h \
     difficultytests.h \
@@ -34,7 +43,11 @@ HEADERS += \
     handlingtests.h \
     bridgefixture.h \
     inputtests.h \
-    persistencetests.h
+    persistencetests.h \
+    boardmetricstests.h \
+    placementtests.h \
+    envtests.h \
+    replaytests.h
 
 SOURCES += \
     ../src/piece.cpp \
@@ -49,10 +62,17 @@ SOURCES += \
     ../src/dealtstack.cpp \
     ../src/lockdelay.cpp \
     ../src/game.cpp \
+    ../src/calls.cpp \
+    ../src/boardmetrics.cpp \
+    ../src/placements.cpp \
+    ../src/replayplayer.cpp \
     ../src/autoshift.cpp \
     ../src/handling.cpp \
     ../src/preferences.cpp \
     ../src/omatrisgame.cpp \
+    ../src/omatrisgamereplay.cpp \
+    ../env/omatrisobservation.cpp \
+    ../env/omatrisenv.cpp \
     piecetests.cpp \
     challengetests.cpp \
     difficultytests.cpp \
@@ -63,4 +83,8 @@ SOURCES += \
     handlingtests.cpp \
     inputtests.cpp \
     persistencetests.cpp \
+    boardmetricstests.cpp \
+    placementtests.cpp \
+    envtests.cpp \
+    replaytests.cpp \
     tst_omatris.cpp

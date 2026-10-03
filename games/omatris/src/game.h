@@ -80,6 +80,9 @@ public:
     const std::vector<int> &clearingRows() const { return m_clearingRows; }
     int lockTicks() const { return m_lockDelay.ticks(); }
     int lockResets() const { return m_lockDelay.resets(); }
+    // What the falling T would score as if it locked now: only a rotation
+    // can make it anything but None.
+    Spin spin() const { return m_spin; }
 
     void setPaused(bool paused) { m_paused = paused; }
     bool moveLeft() { return shift(-1); }
@@ -98,6 +101,10 @@ public:
     std::vector<Event> hardDrop();
     std::vector<Event> hold();
     std::vector<Event> tick();
+
+    // Redraws every piece the next queue does not show yet from `seed`, as a
+    // planner's copy of the game does so that it cannot read the future.
+    void reseedHidden(quint32 seed) { m_bag.reseedHidden(Rules::kNextQueue, seed); }
 
     // Scenario hooks for tests: the rules never call these.
     Board &mutableBoard() { return m_board; }

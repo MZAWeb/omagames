@@ -28,7 +28,8 @@ ApplicationWindow {
     // Leaving mid-game throws the run away, so it is confirmed; the game
     // holds still while the question is up.
     function leaveGame() {
-        if (game.phase === "playing") {
+        // Nothing is lost leaving a replay: the file is still there.
+        if (game.phase === "playing" && !game.replaying) {
             pausedBeforeLeaving = game.paused;
             game.pause();
             confirmLoader.active = true;
@@ -66,7 +67,8 @@ ApplicationWindow {
 
     Loader {
         anchors.fill: parent
-        active: game.paused && !confirmLoader.active && !win.showingHandling
+        // A paused replay keeps the well in view, to be stepped through.
+        active: game.paused && !game.replaying && !confirmLoader.active && !win.showingHandling
         sourceComponent: PauseOverlay {
             onLeaveRequested: win.leaveGame()
             onHandlingRequested: win.showingHandling = true
@@ -78,7 +80,7 @@ ApplicationWindow {
 
     Loader {
         anchors.fill: parent
-        active: game.phase === "gameover" || game.phase === "finished"
+        active: game.phase === "gameover" || game.phase === "finished" || game.replayEnded
         sourceComponent: ResultOverlay {}
         onLoaded: (item as Item).forceActiveFocus()
         onActiveChanged: if (!active) win.refocus()

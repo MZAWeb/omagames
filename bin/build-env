@@ -1,0 +1,26 @@
+#!/usr/bin/env sh
+# Build agent environment libraries (docs/AGENT-ENV.md): every game that has
+# an env/, or one: bin/build-env omatris. Libraries land in
+# build-env/<game>/lib<game>_env.so.
+set -eu
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+if command -v qmake6 >/dev/null 2>&1; then QMAKE=qmake6
+elif command -v qmake >/dev/null 2>&1; then QMAKE=qmake
+else echo "qmake6 or qmake is required." >&2; exit 1; fi
+JOBS="$(nproc 2>/dev/null || echo 1)"
+if [ $# -ge 1 ]; then
+  GAMES="$1"
+  [ -f "$ROOT/games/$GAMES/env/env.pro" ] || { echo "$GAMES has no env/env.pro" >&2; exit 1; }
+else
+  GAMES=""
+  for PRO in "$ROOT"/games/*/env/env.pro; do
+    [ -f "$PRO" ] && GAMES="$GAMES $(basename "$(dirname "$(dirname "$PRO")")")"
+  done
+  [ -n "$GAMES" ] || { echo "No game has an env/ yet."; exit 0; }
+fi
+for GAME in $GAMES; do
+  BUILD_DIR="$ROOT/build-env/$GAME"
+  mkdir -p "$BUILD_DIR" && cd "$BUILD_DIR"
+  "$QMAKE" "$ROOT/games/$GAME/env/env.pro" && make -j"$JOBS"
+  echo "Built $BUILD_DIR/lib${GAME}_env.so"
+done

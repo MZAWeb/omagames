@@ -2,14 +2,18 @@
 #include <QtTest>
 
 #include "autoshifttests.h"
+#include "boardmetricstests.h"
 #include "boardtests.h"
 #include "challengetests.h"
 #include "difficultytests.h"
+#include "envtests.h"
 #include "handlingtests.h"
 #include "lockdelaytests.h"
 #include "inputtests.h"
 #include "persistencetests.h"
 #include "piecetests.h"
+#include "placementtests.h"
+#include "replaytests.h"
 #include "scoringtests.h"
 
 // One binary runs every suite so each area keeps its own small file.
@@ -39,5 +43,13 @@ int main(int argc, char *argv[]) {
     status |= QTest::qExec(&input, argc, argv);
     PersistenceTests persistence;
     status |= QTest::qExec(&persistence, argc, argv);
+    BoardMetricsTests metrics;
+    status |= QTest::qExec(&metrics, argc, argv);
+    PlacementTests placements;
+    status |= QTest::qExec(&placements, argc, argv);
+    EnvTests env;
+    status |= QTest::qExec(&env, argc, argv);
+    ReplayTests replays;
+    status |= QTest::qExec(&replays, argc, argv);
     return status;
 }

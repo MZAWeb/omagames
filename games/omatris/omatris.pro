@@ -4,6 +4,9 @@ CONFIG += c++17 release
 TARGET = omatris
 TEMPLATE = app
 
+# replay/v1, the one piece of the agent environment the app reads.
+INCLUDEPATH += ../../common/env
+
 HEADERS += \
     src/piece.h \
     src/board.h \
@@ -17,6 +20,10 @@ HEADERS += \
     src/dealtstack.h \
     src/lockdelay.h \
     src/game.h \
+    src/calls.h \
+    src/replayplayer.h \
+    ../../common/env/replay.h \
+    ../../common/env/replaypace.h \
     src/autoshift.h \
     src/handling.h \
     src/preferences.h \
@@ -36,9 +43,14 @@ SOURCES += \
     src/dealtstack.cpp \
     src/lockdelay.cpp \
     src/game.cpp \
+    src/calls.cpp \
+    src/replayplayer.cpp \
+    ../../common/env/replay.cpp \
+    ../../common/env/replaypace.cpp \
     src/autoshift.cpp \
     src/handling.cpp \
     src/preferences.cpp \
     src/omatrisgame.cpp \
+    src/omatrisgamereplay.cpp \
     src/fieldview.cpp
 RESOURCES += src/resources.qrc

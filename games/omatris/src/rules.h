@@ -19,6 +19,12 @@ struct ModeParams {
 
 namespace Rules {
 
+// Bumped whenever the same calls on the same seed would play out
+// differently: a rule constant, the lock delay, a kick. Agents' replays and
+// trained models carry it, and the app refuses a replay recorded under
+// another one rather than show a game that never happened.
+constexpr int kVersion = 1;
+
 constexpr int kTicksPerSecond = 60;
 // Gravity accumulates in millionths of a cell per tick, so a level falls at
 // the same speed whatever a frame happens to cost.

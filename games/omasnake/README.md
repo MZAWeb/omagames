@@ -101,6 +101,8 @@ There is no mouse control at all — the field is not clickable.
 | `Y` / `Enter`, `N` / `Esc` | Confirm / cancel a dialog |
 | `Ctrl+Q` | Quit |
 
+Watching a replay, the keys are the replay's own (see Watching a replay).
+
 ## Layout
 
 The field is painted by one `FieldView` item at a whole number of pixels per
@@ -109,12 +111,93 @@ current speed and the best score for these edges and speed. The window
 scales with the desktop text size; the minimum is 640×520 logical pixels at
 100%, which still leaves at least 16 pixels a cell.
 
+## Agent environment
+
+`bin/build-env omasnake` builds `build-env/omasnake/libomasnake_env.so`,
+the game as a program plays it, for training agents (`docs/AGENT-ENV.md`).
+It plays the same engine as the app but owns nothing else: no high scores,
+nothing written to `omasnake.conf`.
+
+**One step is one move of the snake.** The agent's turn is queued and the
+game ticks until the head has moved, so the opening "Ready" beat and the
+ticks between moves at any speed are folded into the step; nothing done
+between moves could change anything.
+
+### Config
+
+| Key | Default | Choices |
+|---|---|---|
+| `mode` | `classic` | `classic` (walls kill), `wrap` |
+| `difficulty` | `normal` | `slow`, `normal`, `fast`: how many ticks a move takes, which is what a bonus's six seconds are counted against |
+| `actions` | `relative` | `relative`, `absolute` (below) |
+| `max_steps` | 0 | moves before an episode is cut short; 0 never |
+
+### Actions
+
+- **`relative`**: `straight`, `turn_left`, `turn_right`, against the
+  current heading. Never masked; the usual setup for a learner, since the
+  same action means the same thing whichever way the snake points.
+- **`absolute`**: `up`, `down`, `left`, `right`. The way back onto the neck
+  is masked, since the snake would ignore it.
+
+### Observation
+
+| Tensor | Type | Shape | What |
+|---|---|---|---|
+| `grid` | uint8 | 24 × 32 | 0 empty, 1 body, 2 head, 3 tail, 4 food, 5 bonus |
+| `state` | int32 | 12 | head_x, head_y, heading (0 up, 1 down, 2 left, 3 right), length, food_x, food_y, bonus_x, bonus_y (−1 when there is none), bonus_ticks left, score, multiplier, move_ticks |
+
+Where the next dot will appear is never shown: a planner's clone with
+`reseed_hidden` redraws it.
+
+### Reward and signals
+
+The reward is the score gained: 10 × the length multiplier for a food, 50
+for a bonus. Each step also reports `score`, `ate`, `bonus`, `length`,
+`food_distance` (moves from the head to the food, across an edge in Wrap),
+`died` and `filled` (the perfect game). The episode ends when the run does.
+
+The env reports `rules_version` 1 (`Rules::kVersion`), raised whenever the
+same turns would play out differently; bumping it means recording the sample
+below again. Its replays write each turn as `U`, `D`, `L` or `R` between runs
+of ticks.
+
+### Watching a replay
+
+Every game the env plays is recorded as a replay: the seed and every turn,
+each on the tick it was made, which is the whole game. The app plays one
+back:
+
+```sh
+bin/run omasnake --replay games/omasnake/replays/greedy-classic.json
+```
+
+The sample is the greedy "head for the food" player's longest of twenty
+Classic games at Normal speed: 74 dots, 81 long, 3,090 points, until it
+boxed itself in. A test plays it to the end and checks it still does. A
+file that is not an Omasnake replay of these rules is refused on the
+command line, and nothing opens.
+
+The game on screen is the recorded one: the arrows don't steer it, it's
+never a high score, and the walls and speed shown are the recording's, not
+the player's last choice. A Snake agent decides once a move and the game
+runs on its own clock between, so 1× is the speed it was played at.
+
+| Key | Action |
+|---|---|
+| `P` or `Space` | Pause / play. Paused, the field stays in view |
+| `1` `2` `3` `4` | Speed: ¼×, ½×, 1× (the default), 8×. Above 1× the score popups are skipped |
+| `→` | On to the snake's next move, paused or not |
+| `R` | Watch again from the start |
+| `Esc` | Leave for the start screen |
+
 ## Build, test, run
 
 ```sh
 bin/build omasnake
 bin/test omasnake
 bin/run omasnake
+bin/build-env omasnake   # the agent environment library
 ```
 
 Settings live in `~/.config/Omacom/omasnake.conf`.

@@ -40,16 +40,33 @@ inside `games/<game>/` unless you are deliberately changing shared code.
 - `OmaGames::Pacer` (`common/src/pacer.h`): the bridge's `QTimer` and its
   interval property, `Repeating` or `SingleShot`. Interval 0 means no timer,
   which is what lets tests drive the game themselves.
+- Agent environments (`common/env/`, `docs/AGENT-ENV.md`): the C ABI
+  (`omagames_env.h`) a trainer loads from `lib<game>_env.so`, and
+  `OmaGames::Env`, which a game's `env/` implements over its engine. An env
+  never touches `QSettings` or a bridge, and its observation shows only what a
+  player can see.
 - QML module `OmaGames` (`common/qml/OmaGames/`): `OmaButton`, `OmaPanel`,
   `OmaKeyHint` (keycap badge), `OmaHintButton` (button + badge), `PlayingCard`,
   `OmaOverlayPanel` (dimmed cover + centred panel), `OmaConfirmDialog`,
-  `OmaPauseOverlay`, `OmaKeyLegend`, `OmaScoresPanel`, `OmaBonusPopup`.
+  `OmaPauseOverlay`, `OmaKeyLegend`, `OmaScoresPanel`, `OmaBonusPopup`,
+  `OmaBadge` (a word in a tinted lozenge).
   Add new *generic* controls there
   (register in `qmldir` **and** `common/common.qrc`, append-only); game-specific
   controls stay in the game. A game's own `KeyLegend.qml` / scores panel should
   be the shared control plus that game's wording, nothing more.
 - Changing an existing `common/` API affects every game: build and test all of
   them (`bin/build && bin/test`) and keep the change backwards compatible when possible.
+
+## omagym (`omagym/`)
+- Not a game: the Python lab that trains agents on the games through their
+  env libraries (`omagym/README.md`). uv manages it; work from `omagym/` with
+  `uv run omagym ...` and `uv run pytest`. `bin/build` and `bin/test` don't
+  touch it, so a change there is checked with `uv run pytest`.
+- It talks to the games only through the env ABI (`omagym/src/omagym/native.py`),
+  never a bridge or QML. A new strategy is one file in `agents/`, listed in
+  `agents/__init__.py`.
+- `omagym/experiments/` and `omagym/.venv/` are local; never commit them.
+- Commits there are `"omagym: ..."`.
 
 ## Keyboard first
 - Everything must be playable without a mouse. Every action has a single-key

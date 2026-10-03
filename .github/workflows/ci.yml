@@ -71,6 +71,17 @@ jobs:
       - name: Test ${{ matrix.game }}
         run: bin/test ${{ matrix.game }}
 
+      # The agent environment library (docs/AGENT-ENV.md), for the games
+      # that have one. It is not packaged, but it must keep building.
+      - name: Build ${{ matrix.game }} env library
+        run: |
+          set -eu
+          if [ -f games/${{ matrix.game }}/env/env.pro ]; then
+            bin/build-env ${{ matrix.game }}
+          else
+            echo "${{ matrix.game }} has no env/."
+          fi
+
   shared-test:
     name: test (${{ matrix.suite }})
     needs: discover
@@ -91,6 +102,29 @@ jobs:
       # to build first: the suite's .pro compiles the sources it needs.
       - name: Test ${{ matrix.suite }}
         run: bin/test ${{ matrix.suite }}
+
+  # omagym is the Python lab that trains agents on the games (omagym/README.md).
+  # Its tests build the env libraries they play through, so they need the Qt
+  # toolchain as well as uv.
+  omagym:
+    name: omagym
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install Qt 6, toolchain and uv
+        run: pacman -Syu --noconfirm --needed $ARCH_PACKAGES uv python
+
+      - uses: actions/checkout@v7
+
+      # A run records the commit it ran; git refuses a checkout owned by
+      # another user unless told it is safe.
+      - name: Trust the checkout
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      # PyTorch is several GB; the tests that need it skip without it.
+      - name: Test omagym (without PyTorch)
+        working-directory: omagym
+        run: uv run --no-group learn pytest -q -rs
 
   quality:
     name: Code quality
@@ -157,6 +191,11 @@ jobs:
             suite="$(basename "$(dirname "$(dirname "$pro")")")"
             echo "== $suite tests"
             build "$pro" "build-strict/tests-$suite"
+          done
+          for pro in $(find games -path '*/env/env.pro' | sort); do
+            game="$(basename "$(dirname "$(dirname "$pro")")")"
+            echo "== $game env"
+            build "$pro" "build-strict/env-$game"
           done
 
   package:
