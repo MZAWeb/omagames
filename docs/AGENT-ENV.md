@@ -295,7 +295,15 @@ game, whose inputs each ride with a tick, plays at real speed. A placing
 agent's piece is about 8 beats, so the default ½× shows three or four pieces
 a second.
 
-The app links only `common/env/replay.cpp`, not the env ABI.
+Omasnake has the same viewer (`bin/run omasnake --replay
+games/omasnake/replays/greedy-classic.json`), with `→` stepping one move of
+the snake. A Snake replay is paced a tick a frame, so 1× is real time.
+
+What every viewer shares lives in `common/env/`: `Replay::readFile` and
+`Replay::playableBy` (the checks before anything is shown) and
+`ReplayPace` (the four speeds and the part of a beat owed between frames).
+Each game's `ReplayPlayer` decides what a beat is. An app links only those
+files, not the env ABI. The header badges are the shared `OmaBadge`.
 
 This gives you the "generation 1 vs generation 500" style of video: the
 trainer saves the best evaluation replay of each checkpoint, and you watch
@@ -336,8 +344,8 @@ Every env follows the same pattern. Each game keeps its spec in its README.
    with Tetris (real time, no placements or afterstates, a tiny action
    space) and because a correct learner is known to master it, so a flat
    learning curve points at a bug rather than at the game. It needed
-   nothing new from the shared layer. No replay viewer yet: that waits until
-   someone wants to watch a Snake agent.
+   nothing new from the shared layer, and has a replay viewer and sample
+   like Omatris's (`games/omasnake/README.md`, "Watching a replay").
 
 Steps 1 to 5 went up as one PR of atomic commits. `OG_ABI_VERSION` can
 still change freely until omagym depends on it.
