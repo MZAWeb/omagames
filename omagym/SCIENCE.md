@@ -460,3 +460,94 @@ thing you build.
     (2013), a good read on why it took RL so long to catch up with CEM.
 - For Trackmania: Yosh's videos, and the **Linesight** project's code and
   write-ups.
+
+## 8. Things to try, agent by agent
+
+Concrete next experiments for each agent here, most promising first. Each
+is a `--set` or `--env` away unless it says "code". Run it with a `--name`,
+`compare` it with the agent's current run, and change one thing at a time.
+
+### `greedy`
+
+1. **Tune one weight at a time** (`--set holes=-0.5`, `--set height=-0.3`)
+   and `compare` each with the default. It is the cheapest way to get a feel
+   for how much each feature matters.
+2. **Value a Tetris above four singles** (code: score `clear4` on its own,
+   as `cem`'s rich features do). Today its `lines` weight is linear, so it
+   never builds for one, which is most of the score it leaves behind.
+3. **Add a well feature** (code: `deepest_well` from `omatris.rich_features`)
+   with a positive weight for one deep well beside a flat stack.
+
+### `cem`
+
+1. **Train on the games it is tested on:** `--set episode_steps=2500`. It
+   trains on 300-piece games that never get past level 12, so it never
+   meets 20G, learns to stack high, and tops out at the high levels.
+2. **Fewer noisy scores:** `--set games=4` (every candidate plays four
+   games, not two) and `--set population=100`. Slower per generation, but
+   the elite are chosen for being good, not for being lucky.
+3. **An objective that counts survival:** `--set objective=lines` against
+   `score`, or (code) score with a large penalty for topping out.
+4. **Start from greedy** (code: initialise `mean` from greedy's weights in
+   rich units, as `lookahead._GREEDY` does) instead of from zero, and see
+   how many generations that saves.
+5. **Use your 20 cores** (code: score the population in a process pool). The
+   candidates are independent, so this is the biggest speed-up available.
+
+### `dqn`
+
+1. **What it sees:** `--set inputs=rich_hand` or `cnn_hand`, so it can
+   value the held and next pieces. The runs `dqn-rich`, `dqn-rich-hand`,
+   `dqn-cnn` and `dqn-cnn-hand` are this experiment.
+2. **Train longer, on more seeds:** `--steps 500000 --set
+   epsilon_steps=200000`, with `--seed 1`, `2` and `3`. 100,000 steps is
+   short, and one seed can't tell you much.
+3. **A longer horizon:** `--set gamma=0.99`. At 0.95 a reward 20 pieces away
+   is worth a third; a Tetris is set up over more pieces than that.
+4. **The improvements in its docstring, one at a time** (code): n-step
+   returns, then Double DQN targets, then the score as the reward.
+5. **Prioritised replay** (code): learn more often from the transitions it
+   predicted worst.
+
+### `lookahead`
+
+1. **Judge with a network:** `--set model=dqn` (or your best `dqn` run). It
+   has only been tried with greedy's and cem's weights, and `mcts` shows how
+   much a learned value adds to a search.
+2. **Deeper and wider:** `--set depth=3`, then `--set beam=16`. Note what it
+   costs in time as well as what it gains in score.
+3. **Average the unseen pieces** (code): beyond the preview, play each line
+   on a few reseeded copies and average them (expectimax), rather than
+   trusting one guess at the pieces to come.
+4. **A judge trained for long games:** a `cem` run with `episode_steps=2500`
+   as its `model`.
+
+### `mcts`
+
+1. **More thinking:** `--set simulations=64`, then `128`. It is the one agent
+   that gets stronger simply by searching more; see how far that goes.
+2. **A better starting network:** `--set model=<your best dqn>`, for
+   instance one trained with `inputs=rich_hand`.
+3. **Learn for longer:** `--steps 100000`. Its own training (the network
+   learning from the search) has only had 20,000 moves.
+4. **Tune the search:** `c_puct` (1.0, 2.5) and `prior_temperature` (0.25,
+   1.0) trade trusting the network against exploring.
+5. **Faster search** (code): rate the leaves of several simulations in one
+   network call on the GPU. Speed buys simulations, and simulations buy
+   score.
+
+### `ppo`
+
+1. **Far more steps:** `--steps 10000000 --set envs=32`. A million steps is
+   the very start for a policy learning Tetris from the raw well.
+2. **Shape the reward** (code, potential-based so it can't change what is
+   best, SCIENCE.md section 3): a little for each line, and a penalty that
+   grows with the holes and height.
+3. **See the board as a picture** (code): a CNN over the well instead of
+   one-hot cells into a plain network, as `dqn`'s `cnn` does.
+4. **The Trackmania rehearsal:** `--env actions=raw --env frame_skip=4`, a
+   key press every few frames, and watch how much harder credit assignment
+   gets.
+5. **Snake:** `--game omasnake` with a reward for getting closer to the food
+   (code). Without it, a random snake almost never finds a dot to learn
+   from.
