@@ -73,6 +73,7 @@ The QML module (`import OmaGames`) holds `OmaButton`, `OmaPanel`,
 | `OmaKeyLegend` | The wrapping row of keycaps, its `{key, label}` pairs a model. |
 | `OmaScoresPanel` | The kept tables side by side. It reads the flat list a bridge builds from `ScoreTable`, groups it by `categoryField`, and shows the ranked number as a score or a `m:ss` clock. Anything a game wants between the heading and the tables it adds as children. |
 | `OmaBonusPopup` | The label that rises and fades from the spot that earned it. |
+| `OmaBadge` | A word in a tinted lozenge for a state worth a glance: Omatris's back-to-back and combo, a replay's speed, "Paused". |
 
 Black Omack keeps its own `ConfirmDialog`: it is a modal `Popup` with a title,
 a body and an optional Cancel, so it dims the screen behind it the Material

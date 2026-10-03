@@ -10,3 +10,4 @@ OmaPauseOverlay 1.0 OmaPauseOverlay.qml
 OmaKeyLegend 1.0 OmaKeyLegend.qml
 OmaScoresPanel 1.0 OmaScoresPanel.qml
 OmaBonusPopup 1.0 OmaBonusPopup.qml
+OmaBadge 1.0 OmaBadge.qml

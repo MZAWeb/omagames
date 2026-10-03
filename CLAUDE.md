@@ -48,7 +48,8 @@ inside `games/<game>/` unless you are deliberately changing shared code.
 - QML module `OmaGames` (`common/qml/OmaGames/`): `OmaButton`, `OmaPanel`,
   `OmaKeyHint` (keycap badge), `OmaHintButton` (button + badge), `PlayingCard`,
   `OmaOverlayPanel` (dimmed cover + centred panel), `OmaConfirmDialog`,
-  `OmaPauseOverlay`, `OmaKeyLegend`, `OmaScoresPanel`, `OmaBonusPopup`.
+  `OmaPauseOverlay`, `OmaKeyLegend`, `OmaScoresPanel`, `OmaBonusPopup`,
+  `OmaBadge` (a word in a tinted lozenge).
   Add new *generic* controls there
   (register in `qmldir` **and** `common/common.qrc`, append-only); game-specific
   controls stay in the game. A game's own `KeyLegend.qml` / scores panel should

@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import OmaGames
 
 // Mode on the left, then the numbers that matter: score, level and lines in
 // Marathon and Zen; lines left and the clock in Sprint; the dealt rows still
@@ -33,28 +34,6 @@ RowLayout {
 
     TimeFormat { id: clock }
 
-    // A word in a tinted lozenge: the streaks a player is nursing, and how a
-    // replay is being shown.
-    component Badge: Rectangle {
-        id: badge
-        property string text
-        property color tint: theme.accent
-        implicitWidth: label.implicitWidth + 12 * theme.textScale
-        implicitHeight: label.implicitHeight + 5 * theme.textScale
-        radius: 4
-        color: theme.alpha(badge.tint, 0.18)
-        border.width: 1
-        border.color: theme.alpha(badge.tint, 0.5)
-        Text {
-            id: label
-            anchors.centerIn: parent
-            text: badge.text
-            color: badge.tint
-            font.pixelSize: 11 * theme.textScale
-            font.bold: true
-        }
-    }
-
     ColumnLayout {
         spacing: 0
         Text {
@@ -85,22 +64,22 @@ RowLayout {
     Row {
         spacing: 6 * theme.textScale
 
-        Badge {
+        OmaBadge {
             visible: game.replaying && game.paused
             text: qsTr("Paused")
             tint: theme.orange
         }
-        Badge {
+        OmaBadge {
             visible: game.replaying
             text: game.replaySpeedLabel
             tint: theme.cyan
         }
-        Badge {
+        OmaBadge {
             visible: game.backToBack
             text: qsTr("B2B")
             tint: theme.yellow
         }
-        Badge {
+        OmaBadge {
             visible: game.combo >= 1
             text: qsTr("Combo x%1").arg(game.combo)
         }
