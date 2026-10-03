@@ -113,7 +113,52 @@ Their settings are listed by `omagym agents` and changed with `--set`. For
 
 ## Results
 
-RESULTS
+Every run so far, with each agent's default training unless the name says
+otherwise. Marathon is 20 games cut at 2,500 pieces; Challenge is 20 dealt
+messes, capped at 1,000 pieces, a loss counting as the whole cap.
+
+| Run | Marathon score | Marathon lines (of 1,000) | Games survived (of 20) | Challenge won (of 20) | Challenge pieces per point of difficulty | Whole run |
+|---|---|---|---|---|---|---|
+| `dqn-rich-hand` | **10,516,885** | 992.6 | 19 | 20 | 3.7 | 9 min |
+| `dqn-rich` | 9,608,866 | 924.5 | 18 | 1 | 26.3 | 9 min |
+| `mcts` (from `dqn`'s network) | 9,384,719 | 996.6 | 20 | 19 | 7.5 | 27 min |
+| `dqn` | 8,462,525 | 977.9 | 19 | 13 | 12.5 | 8 min |
+| `greedy` | 6,390,662 | 998.5 | 20 | 20 | 1.3 | under a minute |
+| `lookahead` | 6,244,006 | 999.0 | 20 | 20 | **0.8** | 7 min |
+| `lookahead-cem` | 4,453,274 | 569.8 | 6 | 11 | 15.9 | 4 min |
+| `cem` | 3,672,947 | 542.7 | 6 | 15 | 10.6 | 15 min |
+| `dqn-hybrid` | 818 | 3.6 | 0 | 0 | 28.9 | 8 min |
+| `ppo` | 435 | 0.5 | 0 | 0 | 28.9 | 10 min |
+| `random` | 291 | 0.1 | 0 | 0 | 28.9 | seconds |
+
+`runs` shows what each one is (its notes). "Whole run" is training plus
+both tests, on a 20-core machine with an RTX 4090, several runs at once.
+
+What it shows:
+
+- **The two tests reward different players.** The learners score most on
+  Marathon by stacking up for multi-line clears. On a dealt mess they are
+  slow: `dqn-rich-hand` needs over four times the pieces `lookahead` does
+  for the same deals. `lookahead` and `greedy`, which punish height and
+  holes, dig the mess out fastest.
+- **Learners learn what they're paid for.** `dqn`'s reward pays a point for
+  every piece placed and squares the lines, so it learned to play long and
+  build for Tetrises, not to dig, which it never saw in training (Challenge
+  is test-only). A curriculum of Challenge boards, or a reward for each
+  dealt row cleared, would test whether it can learn to.
+- **What the network sees matters most.** With cem's features and the held
+  and next pieces (`rich_hand`), `dqn` beats plain `dqn` on all 20 Marathon
+  games and wins every Challenge; with the features alone (`rich`) it wins
+  only one.
+- **Search on a learned value helps.** `mcts` on plain `dqn`'s network beats
+  `dqn` itself on both tests, at three times the time.
+- **The CNNs haven't learned anything yet**, `hybrid` included: in 100,000
+  steps a network over raw cells gets nowhere. In `hybrid` the features may
+  be drowned out by the CNN's thousands of outputs.
+- **`cem` trains on short games** (300 pieces, never past level 12), so it
+  never meets the speed of later levels and tops out there.
+- **`ppo` has barely started**: a million steps is little for a policy
+  learning Tetris from the raw well.
 
 ## Commands
 
@@ -160,13 +205,13 @@ For an agent that learns:
 ## Reading `compare`
 
 ```
-ranked by score, higher is better: the 20 games of omatris every run played, each cut at 2500 steps
+ranked by pieces_per_difficulty, lower is better: the 20 games of omatris in the challenge test every run played, each cut at 1000 steps
 
-    run     agent   trained        score                  vs best: won-tied-lost  difference (95% range)                 verdict
---  ------  ------  -------------  ---------------------  ----------------------  -------------------------------------  -------
-1.  mcts    mcts    20,215 steps   9,384,719 ± 154,998
-2.  dqn     dqn     101,239 steps  8,462,525 ± 1,033,209  0-0-20                  -922,194 (-1,425,336 to -613,467)      worse
-3.  greedy  greedy  -              6,390,662 ± 59,334     0-0-20                  -2,994,057 (-3,072,794 to -2,915,761)  worse
+    run            agent      trained        pieces_per_difficulty  vs best: won-tied-lost  difference (95% range)  verdict
+--  -------------  ---------  -------------  ---------------------  ----------------------  ----------------------  -------
+1.  lookahead      lookahead  -              0.8 ± 0.3
+2.  greedy         greedy     -              1.3 ± 0.6              1-0-19                  +0.5 (+0.3 to +0.8)     worse
+3.  dqn-rich-hand  dqn        101,318 steps  3.7 ± 2.0              0-0-20                  +2.9 (+2.1 to +3.9)     worse
 ```
 
 Every run is set against the best **game by game**: on the same game, how
