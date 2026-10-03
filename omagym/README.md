@@ -111,6 +111,15 @@ Their settings are listed by `omagym agents` and changed with `--set`. For
 | `cnn_hand` | `cnn`, plus the held and next pieces |
 | `hybrid` | the cells through a CNN, beside the rich features and the hand |
 
+`dqn`'s reward is a sum of terms, each a setting to tweak, and what it is
+paid for is what it learns to do: `reward_piece` (per piece, so playing
+long pays), `reward_line` (times lines squared), `reward_top_out`,
+`reward_win` (clearing a Challenge), `reward_dealt_row` (per dealt row
+cleared: digging), `reward_tspin`, and two potential-based shapings that
+can't change the best play, `shaping_holes` and `shaping_height`. Mixing in
+Challenge games without `reward_win` or `reward_dealt_row` teaches it to
+avoid finishing them, since every extra piece pays: try both.
+
 ## Results
 
 Every run so far, with each agent's default training unless the name says
@@ -196,6 +205,10 @@ For an agent that learns:
 - `--eval-every N`, `--eval-episodes N`, `--quick-max-steps N`: the quick
   evaluations during training that draw its learning curve (every tenth of
   the run, 5 games, cut at 500 pieces; they only need the trend).
+- `--train-mix TEST=SHARE`: train on some games of another test too, e.g.
+  `--train-mix challenge=0.3` for three games in ten on a dealt mess. Each
+  training game picks its setup at random; the tests stay the same fixed
+  games. A run records its mix, and `show` and `diff` say it.
 - `--snapshots N`: games recorded along the way (default 10, evenly spaced
   from step 0 to the end). Each plays the same game with exploration off,
   so `watch R --training` shows that one deal played better and better.

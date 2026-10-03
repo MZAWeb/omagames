@@ -59,6 +59,8 @@ def _parser() -> argparse.ArgumentParser:
     learning.add_argument("--eval-episodes", type=int, default=5, help="games in each quick evaluation")
     learning.add_argument("--quick-max-steps", type=int, default=500,
                           help="steps the quick evaluations' games and the snapshots are cut at (0: as the final ones)")
+    learning.add_argument("--train-mix", action="append", default=[], metavar="TEST=SHARE",
+                          help="train on some games of another test, e.g. challenge=0.3 (repeatable)")
     learning.add_argument("--snapshots", type=int, default=10,
                           help="games recorded along the way, from step 0 to the end, for `watch --training`")
 
@@ -156,10 +158,16 @@ def _run(args) -> int:
         spec = probe.spec
     game_defaults = defaults(args.game)
     steps = (args.steps or cls.default_steps) if cls.trainable else None
+    mix = {name: float(share) for name, share in _pairs(args.train_mix).items()} if cls.trainable else {}
+    for name in mix:
+        if defaults(args.game).test(name) is None:
+            raise ValueError(f"{name} is the main test; --train-mix names another one")
+    if sum(mix.values()) > 1:
+        raise ValueError("the --train-mix shares add up to more than 1")
     run = store.new_run(
         "train" if cls.trainable else "eval", args.game, cls.name, name=args.name, notes=args.notes,
         agent_config=vars(config), env_config={k: v for k, v in spec.config.items() if k != "max_steps"},
-        seed=args.seed, device=_device(args.device), train_steps=steps,
+        seed=args.seed, device=_device(args.device), train_steps=steps, train_mix=mix,
         eval_episodes=args.episodes or game_defaults.eval_episodes,
         eval_max_steps=args.max_steps or game_defaults.eval_max_steps,
         rules_version=spec.rules_version, versions=provenance.versions(), code="pending", dirty=0,

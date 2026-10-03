@@ -85,12 +85,20 @@ class AfterstateDQN(Agent):
         target_sync: int = 1_000
         # A training game is cut short here; a good agent never tops out.
         episode_steps: int = 2_000
-        # The reward it learns from, built from the env's signals: a little
-        # for every piece placed, a lot for lines (squared, so a Tetris is
-        # worth sixteen singles), and a penalty for topping out.
-        reward_piece: float = 1.0
-        reward_line: float = 10.0
-        reward_top_out: float = -20.0
+        # The reward it learns from, a sum of terms, each a setting: what the
+        # agent is paid for is what it learns to do (see _reward()). The
+        # defaults are the original three; the others start at 0.
+        reward_piece: float = 1.0       # per piece placed: pays for playing long
+        reward_line: float = 10.0       # times lines squared: a Tetris is worth sixteen singles
+        reward_top_out: float = -20.0   # once, for losing
+        reward_win: float = 0.0         # once, for winning: a Challenge cleared (try 100)
+        reward_dealt_row: float = 0.0   # per dealt row of a Challenge cleared: digging (try 10)
+        reward_tspin: float = 0.0       # per T-spin
+        # Shaping, potential-based so it can't change what the best play is
+        # (SCIENCE.md, section 3): paid for the *change* in holes and in the
+        # stack's height after each piece, so a hole is felt when it is made.
+        shaping_holes: float = 0.0      # try 1: -1 for every hole made, +1 for every one opened
+        shaping_height: float = 0.0     # try 0.5, per row the tallest column grows
         seed: int = 0
 
     @classmethod
@@ -102,6 +110,8 @@ class AfterstateDQN(Agent):
         afterstate_value.check(config.inputs)
         torch.manual_seed(config.seed)
         self.rng = np.random.default_rng(config.seed)
+        # The board potential before the next move, for shaping; none at a game's start.
+        self._shape_before: float | None = None
         self.input_size = afterstate_value.input_size(config.inputs, spec)
         self.net = afterstate_value.network(config.inputs, spec, config.hidden, config.layers).to(device)
         self.target = copy.deepcopy(self.net)
@@ -134,10 +144,30 @@ class AfterstateDQN(Agent):
 
     # -- learning -------------------------------------------------------------
 
-    def _reward(self, step) -> float:
-        c = self.config
-        reward = c.reward_piece + c.reward_line * step.signals["lines"] ** 2
-        return reward + (c.reward_top_out if step.signals["topped_out"] else 0.0)
+    def _reward(self, step, before: dict | None = None) -> float:
+        """What the move just made earned, from the env's signals.
+
+        `before` is the observation the move was made from; without it (a
+        planner asking) the terms that compare before and after are left out.
+        """
+        c, s = self.config, step.signals
+        topped_out = s["topped_out"] > 0
+        # Each move places one piece in the placement space.
+        reward = c.reward_piece + c.reward_line * s["lines"] ** 2 + c.reward_tspin * (s["tspin"] > 0)
+        if topped_out:
+            reward += c.reward_top_out
+        elif step.terminated:
+            reward += c.reward_win   # it ended without topping out: the goal was reached
+        if before is not None:
+            stats = self.spec.tensors["stats"].column("dealt_rows_left")
+            reward += c.reward_dealt_row * float(before["stats"][stats] - step.obs["stats"][stats])
+            # Potential-based shaping: Phi(board) = -(holes * a + height * b);
+            # the reward is gamma * Phi(after) - Phi(before).
+            if self._shape_before is not None:
+                after = -(c.shaping_holes * s["holes"] + c.shaping_height * s["max_height"])
+                reward += c.gamma * after - self._shape_before
+        self._shape_before = None if step.done else -(c.shaping_holes * s["holes"] + c.shaping_height * s["max_height"])
+        return reward
 
     def train(self, ctx):
         c = self.config
@@ -159,7 +189,7 @@ class AfterstateDQN(Agent):
 
             step = env.step(action)
             self.steps += 1
-            reward = self._reward(step)
+            reward = self._reward(step, obs)
             episode_reward += reward
 
             if step.terminated:

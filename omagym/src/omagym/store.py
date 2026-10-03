@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS runs (
     eval_max_steps INTEGER,
     train_steps INTEGER,
     seed INTEGER,
+    train_mix TEXT,                -- JSON: the share of training games played as each other test
     device TEXT,
     code TEXT NOT NULL,            -- commit, plus the patch's hash when dirty
     commit_sha TEXT,
@@ -71,12 +72,15 @@ class Store:
         if "test" not in columns:
             self.db.execute("ALTER TABLE episodes ADD COLUMN test TEXT DEFAULT ''")
             self.db.commit()
+        if "train_mix" not in [row[1] for row in self.db.execute("PRAGMA table_info(runs)")]:
+            self.db.execute("ALTER TABLE runs ADD COLUMN train_mix TEXT")
+            self.db.commit()
 
     # -- writing --------------------------------------------------------------
 
     def new_run(self, kind: str, game: str, agent: str, **fields) -> dict:
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        for key in ("agent_config", "env_config", "versions"):
+        for key in ("agent_config", "env_config", "versions", "train_mix"):
             if isinstance(fields.get(key), dict):
                 fields[key] = json.dumps(fields[key], sort_keys=True)
         # Runs started in the same second (several trainings launched at once)
@@ -160,7 +164,7 @@ class Store:
         if row is None:
             raise KeyError(f"no run {ref!r}; see `omagym runs`")
         run = dict(row)
-        for key in ("agent_config", "env_config", "versions"):
+        for key in ("agent_config", "env_config", "versions", "train_mix"):
             run[key] = json.loads(run[key]) if run.get(key) else {}
         run["summary"] = self.summary(run["id"])
         return run

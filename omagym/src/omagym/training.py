@@ -23,6 +23,7 @@ import numpy as np
 from .agents import Agent
 from .env import Env
 from .evaluation import EVAL_SEED_BASE, evaluate, other_tests, play
+from .games import defaults
 from .store import Store
 
 
@@ -34,17 +35,52 @@ class TrainContext:
     env_config: dict
     seed: int
     device: str
+    # The training mix: for each of the game's other tests by name, the share
+    # of training games played its way (`--train-mix challenge=0.3`).
+    mix: dict[str, float] = field(default_factory=dict)
     rng: np.random.Generator = field(init=False)
 
     def __post_init__(self):
         self.rng = np.random.default_rng(self.seed)
 
     def make_env(self, **overrides) -> Env:
-        return Env(self.game, **{**self.env_config, **overrides})
+        """The game to train on: with a mix, one that picks its setup each game."""
+        base = Env(self.game, **{**self.env_config, **overrides})
+        if not self.mix:
+            return base
+        tests = {t.name: t for t in defaults(self.game).tests}
+        envs = [base] + [Env(self.game, **{**self.env_config, **tests[n].env, **overrides}) for n in self.mix]
+        return _MixedEnv(envs, [1.0 - sum(self.mix.values()), *self.mix.values()])
 
     def next_seed(self) -> int:
         """A fresh training game, never one of the evaluation games."""
         return int(self.rng.integers(EVAL_SEED_BASE))
+
+
+class _MixedEnv:
+    """Training games drawn from several setups (Marathon, Challenge...).
+
+    Every reset picks one setup at random, in the mix's proportions, and the
+    game is then played in it; everything else is passed to that game. The
+    pick comes from the game's seed, so the same seeds make the same mix.
+    All setups share one spec (they differ in mode, not in what is seen).
+    """
+
+    def __init__(self, envs: list[Env], shares: list[float]):
+        self._envs, self._shares = envs, np.array(shares) / sum(shares)
+        self._current = envs[0]
+
+    def reset(self, seed: int):
+        pick = np.random.default_rng(seed).choice(len(self._envs), p=self._shares)
+        self._current = self._envs[int(pick)]
+        return self._current.reset(seed)
+
+    def close(self) -> None:
+        for env in self._envs:
+            env.close()
+
+    def __getattr__(self, name):
+        return getattr(self._current, name)
 
 
 @dataclass
@@ -76,7 +112,7 @@ class Schedule:
 def train(store: Store, run: dict, agent: Agent, schedule: Schedule, echo=print) -> str:
     """Trains `agent` within `run`; returns the run's final status."""
     run_dir = Path(run["dir"])
-    ctx = TrainContext(run["game"], run["env_config"], run["seed"], run["device"])
+    ctx = TrainContext(run["game"], run["env_config"], run["seed"], run["device"], run.get("train_mix") or {})
     label = run["name"] or run["id"]
     best_score, next_eval = float("-inf"), schedule.eval_every
     upcoming, taken = schedule.snapshot_steps(), 0

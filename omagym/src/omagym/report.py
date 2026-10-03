@@ -55,6 +55,9 @@ def show(run: dict, curve: list[tuple[int, float]], patch_exists: bool, trained:
     if run["notes"]:
         out.append(f"notes     {run['notes']}")
     out += ["", "agent     " + _settings(run["agent_config"]), "env       " + _settings(run["env_config"])]
+    if run.get("train_mix"):
+        out.append("trained   on a mix: " + ", ".join(f"{share:.0%} {name}" for name, share in run["train_mix"].items())
+                   + ", the rest the main test's games")
     if run["summary"]:
         s = run["summary"]
         out += ["", f"evaluated on {number(s['episodes'])} fixed games, cut at {run['eval_max_steps']} steps "
@@ -160,7 +163,8 @@ def diff(runs: list[dict]) -> str:
     if len(tests) > 1:
         out += ["", "warning: these runs were not tested on the same games (game, episodes or step cap differ),",
                 "so their numbers are not directly comparable."]
-    for title, field in (("agent settings", "agent_config"), ("env settings", "env_config")):
+    for title, field in (("agent settings", "agent_config"), ("env settings", "env_config"),
+                         ("training mix", "train_mix")):
         differing = _differences([r[field] for r in runs])
         if differing:
             out += ["", f"{title} that differ:"]
