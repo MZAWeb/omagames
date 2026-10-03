@@ -8,6 +8,7 @@
 #include "envconfig.h"
 #include "observationlayout.h"
 #include "replay.h"
+#include "replaypace.h"
 
 using OmaGames::ObservationLayout;
 using OmaGames::Replay;
@@ -192,4 +193,38 @@ void EnvPartsTests::replayFilesAreRead() {
     const auto json = Replay::readFile(good.fileName(), &error);
     QVERIFY(json);
     QCOMPARE(json->value(QStringLiteral("seed")).toInt(), 9);
+}
+
+void EnvPartsTests::paceShowsBeatsAtEachSpeed() {
+    // Beats shown over eight frames: two, four, eight and sixty-four.
+    const int expected[] = {2, 4, 8, 64};
+    for (int speed = 1; speed <= OmaGames::ReplayPace::kSpeeds; ++speed) {
+        OmaGames::ReplayPace pace(speed);
+        int beats = 0;
+        for (int frame = 0; frame < 8; ++frame)
+            beats += pace.nextFrame();
+        QCOMPARE(beats, expected[speed - 1]);
+    }
+    OmaGames::ReplayPace quarter(1);
+    QCOMPARE(quarter.nextFrame(), 0);  // a quarter beat owed, nothing shown yet
+    QCOMPARE(quarter.nextFrame(), 0);
+    QCOMPARE(quarter.nextFrame(), 0);
+    QCOMPARE(quarter.nextFrame(), 1);
+}
+
+void EnvPartsTests::paceRefusesWhatIsNotASpeed() {
+    OmaGames::ReplayPace pace;
+    QCOMPARE(pace.speed(), OmaGames::ReplayPace::kRealSpeed);
+    QCOMPARE(pace.label(), QStringLiteral("1×"));
+    QVERIFY(!pace.fasterThanReal());
+    QVERIFY(!pace.setSpeed(3));
+    QVERIFY(!pace.setSpeed(0));
+    QVERIFY(!pace.setSpeed(5));
+    QVERIFY(pace.setSpeed(4));
+    QCOMPARE(pace.label(), QStringLiteral("8×"));
+    QVERIFY(pace.fasterThanReal());
+    QVERIFY(pace.setSpeed(1));
+    pace.nextFrame();
+    pace.restart();
+    QCOMPARE(pace.nextFrame() + pace.nextFrame() + pace.nextFrame(), 0);  // the owed quarter is gone
 }

@@ -22,4 +22,7 @@ private slots:
     void replayRefusesWhatItCannotPlay();
     void replayKnowsWhoCanPlayIt();
     void replayFilesAreRead();
+
+    void paceShowsBeatsAtEachSpeed();
+    void paceRefusesWhatIsNotASpeed();
 };

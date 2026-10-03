@@ -5,29 +5,18 @@
 
 namespace {
 
-// Beats per four frames, slowest first: a quarter, half, the same and eight
-// times one beat a tick. A placing agent's piece is about eight beats, so
-// half speed shows three or four pieces a second; at the same speed, an
-// agent that pressed keys in real time is seen in real time.
-const int kBeatsPerFourFrames[] = {1, 2, 4, 32};
-const char *const kSpeedLabels[] = {"¼×", "½×", "1×", "8×"};
-constexpr int kSpeedCount = 4;
+// A placing agent's piece is about eight beats, so half speed shows three or
+// four pieces a second.
 constexpr int kDefaultSpeed = 2;
-constexpr int kRealSpeed = 3;
 
 }  // namespace
-
-QString OmatrisGame::replaySpeedLabel() const {
-    return QString::fromUtf8(kSpeedLabels[m_replaySpeed - 1]);
-}
 
 bool OmatrisGame::loadReplay(const QString &path, QString *error) {
     auto player = ReplayPlayer::loadFile(path, error);
     if (!player)
         return false;
     m_replay = std::move(player);
-    m_replaySpeed = kDefaultSpeed;
-    m_beatCredit = 0;
+    m_pace = OmaGames::ReplayPace(kDefaultSpeed);
     show(std::make_unique<Game>(m_replay->deal()));
     emit replayChanged();
     return true;
@@ -37,7 +26,7 @@ void OmatrisGame::restartReplay() {
     if (!m_replay)
         return;
     m_replay->rewind();
-    m_beatCredit = 0;
+    m_pace.restart();
     show(std::make_unique<Game>(m_replay->deal()));
     emit replayChanged();
 }
@@ -46,26 +35,21 @@ void OmatrisGame::endReplay() {
     if (!m_replay)
         return;
     m_replay.reset();
-    m_replaySpeed = kDefaultSpeed;
+    m_pace = OmaGames::ReplayPace(kDefaultSpeed);
     emit replayChanged();
 }
 
 bool OmatrisGame::replayTooFastToRead() const {
-    return m_replay && m_replaySpeed > kRealSpeed;
+    return m_replay && m_pace.fasterThanReal();
 }
 
 void OmatrisGame::setReplaySpeed(int speed) {
-    if (!m_replay || speed == m_replaySpeed || speed < 1 || speed > kSpeedCount)
-        return;
-    m_replaySpeed = speed;
-    m_beatCredit = 0;
-    emit replayChanged();
+    if (m_replay && m_pace.setSpeed(speed))
+        emit replayChanged();
 }
 
 void OmatrisGame::replayBeats() {
-    m_beatCredit += kBeatsPerFourFrames[m_replaySpeed - 1];
-    const int beats = m_beatCredit / 4;
-    m_beatCredit %= 4;
+    const int beats = m_pace.nextFrame();
     if (beats == 0)
         return;
     playReplay([this, beats]() {

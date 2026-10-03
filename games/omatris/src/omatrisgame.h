@@ -14,6 +14,7 @@
 #include "modes.h"
 #include "pacer.h"
 #include "preferences.h"
+#include "replaypace.h"
 #include "replayplayer.h"
 #include "scoretable.h"
 
@@ -125,8 +126,8 @@ public:
 
     bool replaying() const { return m_replay.has_value(); }
     QString replayAgent() const { return m_replay ? m_replay->agent() : QString(); }
-    int replaySpeed() const { return m_replaySpeed; }
-    QString replaySpeedLabel() const;
+    int replaySpeed() const { return m_pace.speed(); }
+    QString replaySpeedLabel() const { return m_pace.label(); }
     bool replayEnded() const { return m_replay && m_replay->done(); }
     // Starts watching the replay in `path`; false and the reason when it is
     // not one this game can play.
@@ -246,7 +247,5 @@ private:
     Preferences m_preferences;
     int m_newHighScoreRank = -1;
     std::optional<ReplayPlayer> m_replay;
-    int m_replaySpeed = 2;
-    // Quarter beats owed, so a slow speed shows a beat every few frames.
-    int m_beatCredit = 0;
+    OmaGames::ReplayPace m_pace;
 };
