@@ -57,6 +57,8 @@ def _parser() -> argparse.ArgumentParser:
     learning.add_argument("--steps", type=int, help="env steps to train for (default per agent, see `agents`)")
     learning.add_argument("--eval-every", type=int, help="steps between quick evaluations (default steps/10)")
     learning.add_argument("--eval-episodes", type=int, default=5, help="games in each quick evaluation")
+    learning.add_argument("--quick-max-steps", type=int, default=500,
+                          help="steps the quick evaluations' games and the snapshots are cut at (0: as the final ones)")
     learning.add_argument("--snapshots", type=int, default=10,
                           help="games recorded along the way, from step 0 to the end, for `watch --training`")
 
@@ -186,6 +188,7 @@ def _train(store: Store, run: dict, agent, steps: int, args) -> str:
     schedule = Schedule(
         steps=steps, eval_every=args.eval_every or max(1, steps // 10), eval_episodes=args.eval_episodes,
         final_episodes=run["eval_episodes"], max_steps=run["eval_max_steps"], snapshots=args.snapshots,
+        quick_max_steps=args.quick_max_steps,
     )
     print(f"run {run['id']}: training {agent.name} on {run['game']} for {steps:,} steps on {run['device']}, "
           f"then {run['eval_episodes']} games cut at {run['eval_max_steps']} steps")

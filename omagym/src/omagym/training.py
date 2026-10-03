@@ -54,8 +54,16 @@ class Schedule:
     eval_episodes: int
     final_episodes: int
     max_steps: int
+    # Where the quick evaluations and the snapshots are cut: shorter than the
+    # final evaluation's games, since a learning curve only needs the trend
+    # and nobody watches a 2,500-piece snapshot. 0 means max_steps.
+    quick_max_steps: int = 500
     # Games recorded along the way, evenly spaced from step 0 to the end.
     snapshots: int = 10
+
+    @property
+    def quick_cap(self) -> int:
+        return min(self.quick_max_steps or self.max_steps, self.max_steps)
 
     def snapshot_steps(self) -> list[int]:
         if self.snapshots <= 0:
@@ -92,7 +100,7 @@ def train(store: Store, run: dict, agent: Agent, schedule: Schedule, echo=print)
             snapshot_due(steps)
             if steps >= next_eval or steps >= schedule.steps:
                 next_eval += schedule.eval_every
-                _, summary = evaluate(agent, run["game"], run["env_config"], schedule.eval_episodes, schedule.max_steps)
+                _, summary = evaluate(agent, run["game"], run["env_config"], schedule.eval_episodes, schedule.quick_cap)
                 store.log(run["id"], steps, {f"eval/{k}": v for k, v in summary.items()})
                 score = summary["score_mean"]
                 echo(f"{steps:>9} steps  eval score {score:>12,.1f}  {_highlights(progress)}")
@@ -124,7 +132,7 @@ def train(store: Store, run: dict, agent: Agent, schedule: Schedule, echo=print)
 def _snapshot(store: Store, run: dict, agent: Agent, schedule: Schedule, index: int, steps: int,
               label: str) -> None:
     """Records the agent as it plays now, on the first evaluation game."""
-    with Env(run["game"], **{**run["env_config"], "max_steps": schedule.max_steps}) as env:
+    with Env(run["game"], **{**run["env_config"], "max_steps": schedule.quick_cap}) as env:
         result = play(agent, env, EVAL_SEED_BASE)
         replay = env.replay()
     replay["agent"] = f"{label} after {steps:,} steps"
