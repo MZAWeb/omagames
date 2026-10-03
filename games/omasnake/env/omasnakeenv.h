@@ -38,8 +38,6 @@ public:
     const Game &game() const { return *m_game; }
     // The heading an action asks for; absolute actions are Direction order.
     Direction headingFor(int action) const;
-    // "U", "D", "L", "R": how a turn is written in the replay.
-    static QString token(Direction direction);
 
 private:
     QJsonObject m_config;

@@ -109,12 +109,6 @@ QStringList OmasnakeEnv::signalNames() const {
             QStringLiteral("died"),          QStringLiteral("filled")};
 }
 
-QString OmasnakeEnv::token(Direction direction) {
-    static const QString kTokens[] = {QStringLiteral("U"), QStringLiteral("D"), QStringLiteral("L"),
-                                      QStringLiteral("R")};
-    return kTokens[int(direction)];
-}
-
 Direction OmasnakeEnv::headingFor(int action) const {
     if (!m_relative)
         return Direction(action);
@@ -138,7 +132,7 @@ EnvStep OmasnakeEnv::step(int action) {
     const Direction wanted = headingFor(action);
     if (wanted != m_game->snake().heading()) {
         m_game->turn(wanted);
-        m_replay.input(token(wanted));
+        m_replay.input(directionToken(wanted));
     }
     const int score = m_game->score();
     const QPoint head = m_game->snake().head();

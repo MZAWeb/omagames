@@ -81,12 +81,11 @@ Game playBack(const OmaGames::Replay &replay) {
     Modes::fromId(replay.config().value(QStringLiteral("mode")).toString(), &mode);
     Difficulties::fromId(replay.config().value(QStringLiteral("difficulty")).toString(), &difficulty);
     Game game(mode, difficulty, replay.seed());
-    const QStringList turns {QStringLiteral("U"), QStringLiteral("D"), QStringLiteral("L"), QStringLiteral("R")};
     for (const OmaGames::Replay::Step &step : replay.steps()) {
         for (int i = 0; i < step.ticks; ++i)
             game.tick();
         if (!step.input.isEmpty())
-            game.turn(Direction(turns.indexOf(step.input)));
+            game.turn(*directionFromToken(step.input));
     }
     return game;
 }

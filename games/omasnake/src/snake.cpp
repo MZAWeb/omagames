@@ -28,6 +28,25 @@ Direction opposite(Direction direction) {
     return Direction::Left;
 }
 
+namespace {
+
+// In Direction order.
+const char *const kTokens[] = {"U", "D", "L", "R"};
+
+}  // namespace
+
+QString directionToken(Direction direction) {
+    return QString::fromLatin1(kTokens[int(direction)]);
+}
+
+std::optional<Direction> directionFromToken(const QString &token) {
+    for (int i = 0; i < 4; ++i) {
+        if (token == QLatin1String(kTokens[i]))
+            return Direction(i);
+    }
+    return std::nullopt;
+}
+
 Snake::Snake(QPoint head, int length, Direction heading) : m_heading(heading) {
     const QPoint back = delta(opposite(heading));
     for (int i = 0; i < length; ++i)

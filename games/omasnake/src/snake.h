@@ -1,12 +1,17 @@
 #pragma once
 
 #include <QPoint>
+#include <QString>
 #include <deque>
+#include <optional>
 
 enum class Direction { Up, Down, Left, Right };
 
 QPoint delta(Direction direction);
 Direction opposite(Direction direction);
+// "U", "D", "L", "R": how a turn is written in a replay.
+QString directionToken(Direction direction);
+std::optional<Direction> directionFromToken(const QString &token);
 
 // The snake itself: the cells it stands on (head first), where it is going
 // and the turns still waiting to be taken. It knows nothing about walls,
