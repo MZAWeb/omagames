@@ -95,6 +95,10 @@ def _parser() -> argparse.ArgumentParser:
     sub.add_argument("runs", nargs="+")
     sub.add_argument("--yes", action="store_true", help="don't ask first")
 
+    sub = command("web", _web, "browse runs, rankings and comparisons, and watch replays, in a browser (read-only)")
+    sub.add_argument("--port", type=int, default=8765)
+    sub.add_argument("--no-open", action="store_true", help="don't open a browser tab")
+
     sub = command("note", records.note, "name a run or write down what it was about")
     sub.add_argument("run")
     sub.add_argument("--name")
@@ -146,6 +150,12 @@ def _agents(args) -> None:
             print("    settings: " + ", ".join(settings))
     for module, reason in UNAVAILABLE.items():
         print(f"{module}: unavailable, {reason}")
+
+
+def _web(args) -> None:
+    from . import web
+
+    web.serve(args.port, not args.no_open)
 
 
 def _run(args) -> int:

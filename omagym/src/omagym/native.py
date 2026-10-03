@@ -88,6 +88,8 @@ class Library:
         lib.og_step.argtypes = [_P, ctypes.c_int32, ctypes.POINTER(StepResult)]
         lib.og_observe.argtypes = [_P, _P]
         lib.og_action_mask.argtypes = [_P, _P]
+        lib.og_replay_frames.restype = ctypes.c_char_p
+        lib.og_replay_frames.argtypes = [ctypes.c_char_p]
         lib.og_clone.restype = _P
         lib.og_clone.argtypes = [_P, ctypes.c_int, ctypes.c_uint32]
 
@@ -123,6 +125,13 @@ class Library:
 
     def action_mask(self, handle: int, address: int) -> None:
         self._lib.og_action_mask(handle, address)
+
+    def frames(self, replay: dict) -> dict:
+        """The replay drawn as the game's frames, for a viewer with no engine."""
+        text = self._lib.og_replay_frames(json.dumps(replay).encode())
+        if text is None:
+            raise EnvError(f"{self.game}: {self._error()}")
+        return json.loads(text)
 
     def clone(self, handle: int, reseed_hidden: bool, seed: int) -> int:
         return self._lib.og_clone(handle, int(reseed_hidden), seed)

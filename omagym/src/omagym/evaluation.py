@@ -80,7 +80,8 @@ def evaluate(
     """Plays `episodes` fixed games; their results and a summary.
 
     With `replays`, the best and worst games by `best_by` are written there
-    as best.json and worst.json, for `omagym watch`.
+    as best.json and worst.json, for `omagym watch`, and every game as
+    games/NN.json, so two runs can be watched playing the same deal.
     """
     sign = -1.0 if lower_is_better else 1.0
     env = Env(game, **{**env_config, "max_steps": max_steps})
@@ -97,6 +98,10 @@ def evaluate(
             result["pieces_per_difficulty"] = result["steps_to_win"] / result["difficulty"]
         results.append(result)
         if replays is not None:
+            replay = {**env.replay(), "agent": label, "episode": i}
+            games = replays / "games"
+            games.mkdir(parents=True, exist_ok=True)
+            (games / f"{i:02d}.json").write_text(json.dumps(replay) + "\n")
             goodness = sign * result[best_by]
             if best is None or goodness > best[0]:
                 best = (goodness, env.replay())

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>omagym</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="bar">
+    <a class="brand" href="#/">omagym</a>
+    <nav>
+      <a href="#/" data-nav="rankings">Rankings</a>
+      <a href="#/runs" data-nav="runs">Runs</a>
+      <a href="#/compare" data-nav="compare">Compare <span class="count" id="picked-count"></span></a>
+    </nav>
+    <span class="read-only">read-only</span>
+  </header>
+  <main id="view"><p class="muted">Loading…</p></main>
+  <div id="tooltip" role="tooltip" hidden></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

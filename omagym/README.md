@@ -81,6 +81,34 @@ uv run omagym watch dqn
 uv run omagym watch dqn --training
 ```
 
+## Browsing it all: `omagym web`
+
+```sh
+uv run omagym web          # opens http://127.0.0.1:8765/ in your browser
+```
+
+A read-only page over everything recorded, nicer to explore than the
+terminal:
+
+- **Rankings**: every run on every test, best first, and a map of the
+  Marathon score against Challenge, one dot per run.
+- **Runs**: the whole list, sortable, filtered by agent, by whether it
+  trained on a mix, or by text in its name and notes.
+- **A run**: its results, what it was paid for (the reward settings, first),
+  every other setting, the commit and any uncommitted changes it ran with,
+  its learning curve, every test game, and a player for its replays and
+  snapshots.
+- **Compare**: tick any number of runs. They are ranked game by game with
+  the same verdicts as `omagym compare`, a heatmap shows who did best on
+  each game, the settings that differ are listed, their learning curves are
+  overlaid, and clicking a game plays it for up to four runs side by side,
+  piece by piece. (Every test game's replay is kept from now on; older runs
+  only kept their best and worst.)
+
+The player draws frames the game's own engine computes (`og_replay_frames`),
+so what it shows is exactly what the app would. Nothing on the page writes:
+naming, noting and deleting stay on the command line.
+
 ## The agents
 
 In the order worth reading them. Each file explains its method where it
@@ -317,6 +345,7 @@ src/omagym/
   comparison.py          which run played better, game by game, and how sure that is
   report.py              the tables the commands print
   cli.py                 the `omagym` command, and `run`
+  web/                   `omagym web`: the JSON API, and the page in static/
   records.py             the commands on recorded runs
 experiments/             your runs (not in git)
 ```
