@@ -39,6 +39,23 @@ This is a monorepo: games live under `games/`, everything shared (theming,
 fonts, app bootstrap, common QML controls) lives under `common/` and is compiled
 into each game. Each game ships as its own Arch package.
 
+### `omagym/` is not a game
+
+`omagym/` is a lab for teaching programs to play these games: a Python
+project (managed with [uv](https://docs.astral.sh/uv/)) that plays the real
+engines headless, much faster than real time, and trains and compares
+strategies, from hand-written heuristics to neural networks. It is not
+packaged or installed with the games, and `bin/build`/`bin/test` leave it
+alone. Omatris and Omasnake can replay what an agent played
+(`bin/run omatris --replay <file>`).
+
+```sh
+cd omagym && uv sync && uv run omagym eval --agent greedy
+```
+
+`omagym/README.md` explains how it works and how to add a strategy;
+`docs/AGENT-ENV.md` explains how the games expose themselves to it.
+
 ## Install
 
 One line per game, on Omarchy (or any Arch):
@@ -63,6 +80,7 @@ bin/build omadoku    # build one game
 bin/run omadoku      # build + launch
 bin/test             # run every QtTest suite headlessly (bin/test omadoku or bin/test common for one)
 bin/install omadoku  # build + makepkg -fsi the Arch package
+bin/build-env omatris  # the library agents play a game through (omagym builds it itself)
 ```
 
 Requirements: Qt 6 (`qt6-base`, `qt6-declarative`), `xdg-desktop-portal` and a
@@ -76,8 +94,9 @@ Omarchy theme.
 ```
 common/        shared C++ (OmarchyTheme, SystemTheme, OmaGames::setupApplication), QML module `OmaGames`, fonts, tests/
 games/<name>/  <name>.pro, src/ (engine + QML), tests/, pkgbuild/, README.md
-docs/          ARCHITECTURE.md, NEW-GAME.md, PARALLEL-AGENTS.md
-bin/           build / run / test / install
+docs/          ARCHITECTURE.md, NEW-GAME.md, PARALLEL-AGENTS.md, AGENT-ENV.md, OMAGYM.md
+omagym/        not a game: the Python lab that trains and compares agents playing the games
+bin/           build / run / test / install / build-env
 install.sh     the one-line installer above
 screenshots/   images used by this README
 ```

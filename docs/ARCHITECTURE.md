@@ -38,6 +38,8 @@ games/<game>/
   env/                  optional: lib<game>_env.so for training agents (bin/build-env)
   README.md             what it is, rules, keys — the spec for that game
 docs/
+omagym/                 not a game: the Python (uv) lab that trains and compares agents
+                        playing the games through their env libraries (omagym/README.md)
 ```
 
 ### Why `common/` is compiled into each game instead of a library

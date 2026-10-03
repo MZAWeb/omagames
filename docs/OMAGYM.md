@@ -1,9 +1,20 @@
 # Omagym: training agents to play omagames
 
-Status: **design draft.** This file is the seed for a separate repository,
-`omagym`. It lives here until that repository exists so that
-it can be reviewed next to `docs/AGENT-ENV.md`, the omagames side it depends
-on.
+Status: **built, first version, in `omagym/`** of this repository.
+`omagym/README.md` is the reference for how it works and how to use it. This
+file is the original design and the roadmap, kept for the reasoning behind
+them. Where the two differ, the README is right. The differences so far:
+
+- It lives here, beside the games, rather than in a repository of its own.
+- Results go to one SQLite database (plus a folder per run), not JSONL and
+  TensorBoard, so `compare` can query them. Every run records its exact code:
+  the commit, and a patch of anything uncommitted.
+- There are no TOML config files yet: settings are `--set KEY=VALUE` on the
+  command line, and every run stores them all.
+- Policies and learning algorithms are both *agents*. One that learns sets
+  `trainable` and implements `train()`, the generator described below.
+- Built so far from the roadmap below: #0 (`random`, `greedy`) and a basic
+  #2 (`dqn` on afterstates). CEM, PPO and MCTS are next.
 
 ## Goal
 

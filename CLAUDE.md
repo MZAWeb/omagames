@@ -57,6 +57,17 @@ inside `games/<game>/` unless you are deliberately changing shared code.
 - Changing an existing `common/` API affects every game: build and test all of
   them (`bin/build && bin/test`) and keep the change backwards compatible when possible.
 
+## omagym (`omagym/`)
+- Not a game: the Python lab that trains agents on the games through their
+  env libraries (`omagym/README.md`). uv manages it; work from `omagym/` with
+  `uv run omagym ...` and `uv run pytest`. `bin/build` and `bin/test` don't
+  touch it, so a change there is checked with `uv run pytest`.
+- It talks to the games only through the env ABI (`omagym/src/omagym/native.py`),
+  never a bridge or QML. A new strategy is one file in `agents/`, listed in
+  `agents/__init__.py`.
+- `omagym/experiments/` and `omagym/.venv/` are local; never commit them.
+- Commits there are `"omagym: ..."`.
+
 ## Keyboard first
 - Everything must be playable without a mouse. Every action has a single-key
   shortcut and the UI shows it (`OmaHintButton`, or an `OmaKeyHint` badge on a
