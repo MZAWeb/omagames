@@ -13,6 +13,7 @@ import numpy as np
 from ..env import EnvSpec
 
 if TYPE_CHECKING:
+    from ..env import Env
     from ..training import TrainContext
 
 
@@ -48,6 +49,17 @@ class Agent:
     def act(self, obs: dict[str, np.ndarray], mask: np.ndarray, explore: bool = False) -> int:
         """The action to take. `explore` is True while training, False when evaluated."""
         raise NotImplementedError
+
+    def decide(self, env: Env, obs: dict[str, np.ndarray], mask: np.ndarray, explore: bool = False) -> int:
+        """What the framework calls to get an action: act(), unless the agent plans.
+
+        A planning agent (lookahead, mcts) overrides this to try moves out
+        on copies of the game, `env.clone(reseed_hidden=True)`, before
+        choosing. The reseed keeps it honest: a copy deals its own pieces
+        beyond the ones a player can see, so a search can't peek at the real
+        ones. Every other agent decides from what it sees alone.
+        """
+        return self.act(obs, mask, explore)
 
     def train(self, ctx: TrainContext) -> Iterator[dict[str, float]]:
         """Learns, forever, yielding progress as {"steps": n, ...} every so often.

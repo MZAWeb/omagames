@@ -18,7 +18,7 @@ def test_every_agent_only_ever_picks_legal_actions(cls):
             obs = env.reset(7)
             for _ in range(60):
                 mask = env.mask()
-                action = agent.act(obs, mask)
+                action = agent.decide(env, obs, mask)
                 assert mask[action]
                 step = env.step(action)
                 if step.done:

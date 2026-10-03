@@ -26,7 +26,7 @@ def play(agent: Agent, env: Env, seed: int, explore: bool = False) -> dict:
     totals = {name: 0.0 for name in env.spec.signals}
     reward, steps = 0.0, 0
     while True:
-        step = env.step(agent.act(obs, env.mask(), explore=explore))
+        step = env.step(agent.decide(env, obs, env.mask(), explore=explore))
         steps += 1
         reward += step.reward
         for name, value in step.signals.items():
