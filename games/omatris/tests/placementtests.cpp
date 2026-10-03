@@ -238,3 +238,47 @@ void PlacementTests::aLandingThatLocksOutSaysSo() {
     for (const Landing &landing : landings)
         QVERIFY(landing.toppedOut);
 }
+
+void PlacementTests::timedLandingsAreWhereTheirCallsLeadThem() {
+    // The ragged stack again, at a third of a second a press: a second of
+    // level 1 gravity drops a row, so the piece falls while it is moved.
+    Game game = gameWith(PieceType::L);
+    Board &board = game.mutableBoard();
+    fillRow(board, kBottom, {2, 7});
+    fillRow(board, kBottom - 1, {1, 2, 3, 6, 7, 8, 9});
+    fillRow(board, kBottom - 2, {0, 1, 2, 3, 6, 7, 8, 9});
+    const int ticksPerInput = 20;
+    const std::vector<Landing> timed = Placements::find(game, true, ticksPerInput);
+    QVERIFY(!timed.empty());
+    QVERIFY(timed.size() <= Placements::find(game, true).size());
+    for (const Landing &landing : timed) {
+        Game played = game;
+        for (Call call : landing.calls)
+            Calls::apply(played, call);
+        QCOMPARE(played.piece().cells(), landing.placement.cells());
+        QCOMPARE(played.ghost().origin, played.piece().origin);
+    }
+    // Time passed on the way: a landing several presses away took their ticks.
+    const auto far = std::max_element(timed.begin(), timed.end(), [](const Landing &a, const Landing &b) {
+        return a.calls.size() < b.calls.size();
+    });
+    QVERIFY(std::count(far->calls.begin(), far->calls.end(), Call::Tick) >= ticksPerInput);
+}
+
+void PlacementTests::aSlowPlayerOnlyReachesWhatItHasTimeFor() {
+    // Fifty seconds a press: level 1 gravity drops a row a second, so after
+    // the first press the piece is on the floor and has locked. The one
+    // landing left is dropping it where it spawned.
+    const Game game = gameWith(PieceType::T);
+    const int slow = 50 * Rules::kTicksPerSecond;
+    const std::vector<Landing> landings = Placements::find(game, false, slow);
+    QCOMPARE(landings.size(), size_t(1));
+    const auto straight = Placements::drop(game, false, 0, Placements::leftColumn(game.piece()));
+    QVERIFY(straight);
+    QCOMPARE(landings.front().placement.cells(), straight->placement.cells());
+
+    // A drop that needs presses to get there can't be made in time.
+    QVERIFY(Placements::drop(game, false, 0, 0));
+    QVERIFY(!Placements::drop(game, false, 0, 0, slow));
+    QVERIFY(Placements::drop(game, false, 0, Placements::leftColumn(game.piece()), slow));
+}

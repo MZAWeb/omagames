@@ -58,6 +58,28 @@ bool live(const Game &game) {
     return game.phase() == Phase::Playing && game.hasPiece();
 }
 
+// The rest of a press's time, after its own calls: `ticks` minus what the
+// press already took (a sonic drop's tick).
+int waitAfter(Move move, int ticks) {
+    return ticks == 0 ? 0 : std::max(0, ticks - (move == Move::SonicDrop ? 1 : 0));
+}
+
+// Lets `ticks` pass; false if the piece locked meanwhile (its lock delay ran
+// out), since what is in play afterwards is the next piece, not this one.
+bool wait(Game &game, int ticks, std::vector<Call> *calls = nullptr) {
+    for (int i = 0; i < ticks; ++i) {
+        if (calls)
+            calls->push_back(Call::Tick);
+        for (const Event &event : Calls::apply(game, Call::Tick)) {
+            if (event.type == Event::Locked)
+                return false;
+        }
+        if (!live(game))
+            return false;
+    }
+    return true;
+}
+
 bool resting(const Game &game) {
     return game.ghost().origin == game.piece().origin;
 }
@@ -112,17 +134,22 @@ struct Node {
     Move move;
 };
 
-std::vector<Call> pathTo(const std::vector<Node> &nodes, int index, const std::vector<Call> &prefix) {
+// The calls from the start to node `index`, each press followed by its wait.
+std::vector<Call> pathTo(const std::vector<Node> &nodes, int index, const std::vector<Call> &prefix,
+                         int ticksPerInput) {
     std::vector<Move> moves;
     for (int i = index; nodes[size_t(i)].parent >= 0; i = nodes[size_t(i)].parent)
         moves.push_back(nodes[size_t(i)].move);
     std::vector<Call> calls = prefix;
-    for (auto it = moves.rbegin(); it != moves.rend(); ++it)
+    for (auto it = moves.rbegin(); it != moves.rend(); ++it) {
         appendCalls(calls, *it);
+        calls.insert(calls.end(), size_t(waitAfter(*it, ticksPerInput)), Call::Tick);
+    }
     return calls;
 }
 
-void search(const Game &start, bool hold, const std::vector<Call> &prefix, std::vector<Landing> &landings) {
+void search(const Game &start, bool hold, const std::vector<Call> &prefix, std::vector<Landing> &landings,
+            int ticksPerInput) {
     std::vector<char> seen(kStateKeys, 0);
     std::unordered_set<quint64> landed;
     std::vector<Node> nodes;
@@ -131,13 +158,24 @@ void search(const Game &start, bool hold, const std::vector<Call> &prefix, std::
     nodes.reserve(512);
     nodes.push_back({start, -1, Move::Left});
     seen[size_t(stateKey(start))] = 1;
+    if (resting(start) && landed.insert(landingKey(start)).second)
+        landings.push_back(land(start, hold, prefix));
+    // Breadth-first, so states are reached in order of presses, which with
+    // every press taking the same time is also the order of time spent: a
+    // state is first reached as early as it can be.
     for (size_t next = 0; next < nodes.size(); ++next) {
-        if (resting(nodes[next].game) && landed.insert(landingKey(nodes[next].game)).second)
-            landings.push_back(land(nodes[next].game, hold, pathTo(nodes, int(next), prefix)));
         for (Move move : kMoves) {
             Game moved = nodes[next].game;
             perform(moved, move);
             if (!live(moved))
+                continue;
+            // At rest after the press itself: a landing, before any wait.
+            if (resting(moved) && landed.insert(landingKey(moved)).second) {
+                std::vector<Call> calls = pathTo(nodes, int(next), prefix, ticksPerInput);
+                appendCalls(calls, move);
+                landings.push_back(land(moved, hold, std::move(calls)));
+            }
+            if (!wait(moved, waitAfter(move, ticksPerInput)))
                 continue;
             char &visited = seen[size_t(stateKey(moved))];
             if (visited)
@@ -150,50 +188,54 @@ void search(const Game &start, bool hold, const std::vector<Call> &prefix, std::
 
 }  // namespace
 
-std::vector<Landing> find(const Game &game, bool withHold) {
+std::vector<Landing> find(const Game &game, bool withHold, int ticksPerInput) {
     Q_ASSERT(game.softDropFactor() == Handling::kInstantSoftDrop);
     std::vector<Landing> landings;
     if (!live(game))
         return landings;
-    search(game, false, {}, landings);
+    search(game, false, {}, landings, ticksPerInput);
     if (withHold && game.holdAvailable()) {
         Game held = game;
-        held.hold();
-        if (live(held))
-            search(held, true, {Call::Hold}, landings);
+        std::vector<Call> prefix = {Call::Hold};
+        Calls::apply(held, Call::Hold);
+        // The hold is a press too.
+        if (live(held) && wait(held, ticksPerInput, &prefix))
+            search(held, true, prefix, landings, ticksPerInput);
     }
     return landings;
 }
 
-std::optional<Landing> drop(const Game &game, bool hold, int rotation, int column) {
+std::optional<Landing> drop(const Game &game, bool hold, int rotation, int column, int ticksPerInput) {
     Q_ASSERT(game.softDropFactor() == Handling::kInstantSoftDrop);
     if (!live(game) || (hold && !game.holdAvailable()))
         return std::nullopt;
     Game moving = game;
     std::vector<Call> calls;
-    auto call = [&moving, &calls](Call c) {
+    // A press, then its wait; false if the piece locked or the run ended.
+    auto press = [&moving, &calls, ticksPerInput](Call c) {
         calls.push_back(c);
         Calls::apply(moving, c);
+        return live(moving) && wait(moving, ticksPerInput, &calls);
     };
-    if (hold) {
-        call(Call::Hold);
-        if (!live(moving))
-            return std::nullopt;
-    }
+    if (hold && !press(Call::Hold))
+        return std::nullopt;
     // Three turns clockwise are one the other way, as a player would do it.
     const int quarters = ((rotation % Piece::kStates) + Piece::kStates) % Piece::kStates;
-    for (int i = 0; i < (quarters == 3 ? 1 : quarters); ++i)
-        call(quarters == 3 ? Call::RotateCCW : Call::RotateCW);
+    for (int i = 0; i < (quarters == 3 ? 1 : quarters); ++i) {
+        if (!press(quarters == 3 ? Call::RotateCCW : Call::RotateCW))
+            return std::nullopt;
+    }
     if (moving.piece().rotation != quarters)
         return std::nullopt;
     while (leftColumn(moving.piece()) != column) {
         const int before = leftColumn(moving.piece());
-        call(before < column ? Call::Right : Call::Left);
-        if (leftColumn(moving.piece()) == before)
+        if (!press(before < column ? Call::Right : Call::Left) || leftColumn(moving.piece()) == before)
             return std::nullopt;
     }
-    for (Call c : {Call::SoftDropOn, Call::Tick, Call::SoftDropOff})
-        call(c);
+    for (Call c : {Call::SoftDropOn, Call::Tick, Call::SoftDropOff}) {
+        calls.push_back(c);
+        Calls::apply(moving, c);
+    }
     if (!live(moving))
         return std::nullopt;
     return land(moving, hold, std::move(calls));

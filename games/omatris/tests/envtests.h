@@ -16,6 +16,7 @@ private slots:
     void dropMasksWhatCannotBeReached();
     void rawInputsMoveThePiece();
     void frameSkipLetsTimePass();
+    void placingTakesTimeAtAnInputRate();
     void aRunEndsWhenItTopsOut();
     void theModeIsTheOneConfigured();
     void theSameSeedAndActionsPlayTheSameGame();

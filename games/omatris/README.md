@@ -194,6 +194,7 @@ handling, nothing written to `omatris.conf`. It always plays with an
 | `hold` | `true` | whether hold may be used |
 | `candidates` | 128 | 1–512: how many landings the placement space shows |
 | `frame_skip` | 1 | 1–60: ticks after each raw input |
+| `input_rate` | 0 | 0–60: key presses a second when placing (`placement`, `drop`); 0 is infinitely fast |
 | `max_steps` | 0 | steps before an episode is cut short; 0 never |
 
 ### Action spaces
@@ -209,6 +210,18 @@ handling, nothing written to `omatris.conf`. It always plays with an
 - **`raw`**: `none`, `left`, `right`, `rotate_cw`, `rotate_ccw`,
   `soft_drop` (held for this step's ticks, so a sonic drop), `hard_drop`,
   `hold`; then `frame_skip` ticks. Only `hold` is ever masked.
+
+### Placing at a human's speed
+
+With `input_rate` 0, a placement or drop moves the piece with no time
+between key presses, so gravity never touches a piece in motion and level
+100 plays like level 1. With `input_rate` N, every press takes 60/N ticks
+(a sonic drop's own tick included), during which gravity pulls the piece
+and the lock delay runs, as for a human. At high gravity a piece can't be
+carried over a tall stack in time, and the landings it can't reach are
+neither offered nor in the drop mask. A landing counts the moment the piece
+comes to rest there, since the hard drop that follows needs no wait.
+omagym evaluates every agent at 10, a fast human.
 
 ### Observation
 

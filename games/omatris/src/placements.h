@@ -30,21 +30,29 @@ struct Landing {
 //
 // The moves are a shift, a turn either way, and a "sonic drop": one tick of
 // an instant soft drop, which is what a player with Instant soft drop does
-// with one tap of the key. With no other time passing, that is a player of
-// infinite speed — exact at low gravity, generous near level 20. The game
-// must play with an instant soft drop for the calls to mean the same thing.
+// with one tap of the key. The game must play with an instant soft drop for
+// the calls to mean the same thing.
+//
+// `ticksPerInput` is how long each key press takes. At 0 no time passes
+// between them: a player of infinite speed, for whom gravity never matters.
+// Above 0, that many ticks pass after every press (a sonic drop's own tick
+// included), so the piece falls and the lock delay runs while it is being
+// moved, as for a human: at high gravity a piece can no longer be carried
+// over a tall stack, and the landings it can't reach in time aren't offered.
+// A landing is taken the moment the piece comes to rest there, since a hard
+// drop needs no wait.
 namespace Placements {
 
 // Every distinct resting place, by the cells the piece would fill and how it
 // would spin, each with its shortest sequence of calls; the held piece's
 // too, when `withHold` and the game allows a hold. Breadth-first, so the
 // order is the same every time for the same game.
-std::vector<Landing> find(const Game &game, bool withHold);
+std::vector<Landing> find(const Game &game, bool withHold, int ticksPerInput = 0);
 
 // The landing a plain hard drop reaches: turned `rotation` quarter turns
 // clockwise at the top, slid until its leftmost cell is in `column`, then
 // dropped straight down. Nothing when it cannot get there.
-std::optional<Landing> drop(const Game &game, bool hold, int rotation, int column);
+std::optional<Landing> drop(const Game &game, bool hold, int rotation, int column, int ticksPerInput = 0);
 
 // The leftmost column and the lowest row a placement fills.
 int leftColumn(const Placement &placement);

@@ -199,6 +199,23 @@ void EnvTests::frameSkipLetsTimePass() {
     QCOMPARE(env.game().piece().origin.y(), row + 1);  // a second of level 1 gravity
 }
 
+void EnvTests::placingTakesTimeAtAnInputRate() {
+    // The same far landing, placed by an infinitely fast player and by one
+    // pressing ten keys a second: the second spends six ticks a press on it.
+    auto farthest = [](const OmatrisEnv &env) {
+        const std::vector<Landing> &landings = env.landings();
+        return int(std::max_element(landings.begin(), landings.end(), [](const Landing &a, const Landing &b) {
+                       return a.calls.size() < b.calls.size();
+                   }) - landings.begin());
+    };
+    OmatrisEnv instant = makeEnv();
+    OmatrisEnv human = makeEnv({{QStringLiteral("input_rate"), 10}});
+    const qint64 instantTicks = instant.step(farthest(instant)).ticks;
+    const qint64 humanTicks = human.step(farthest(human)).ticks;
+    QVERIFY2(humanTicks >= instantTicks + 6 * 3, qPrintable(QStringLiteral("%1 vs %2").arg(humanTicks).arg(instantTicks)));
+    QVERIFY(human.game().phase() == Phase::Playing);
+}
+
 void EnvTests::aRunEndsWhenItTopsOut() {
     OmatrisEnv env = makeEnv({{QStringLiteral("hold"), false}});
     // Always the highest landing there is: the stack reaches the top fast.

@@ -21,4 +21,6 @@ private slots:
     void dropReachesTheColumnItNames();
     void anAfterstateHasItsLinesCleared();
     void aLandingThatLocksOutSaysSo();
+    void timedLandingsAreWhereTheirCallsLeadThem();
+    void aSlowPlayerOnlyReachesWhatItHasTimeFor();
 };

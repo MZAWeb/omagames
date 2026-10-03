@@ -48,6 +48,10 @@ QJsonObject OmaGames::envGameSpec() {
              // has a hundred, and the afterstates are 240 bytes each.
              {QStringLiteral("candidates"), range(128, 1, 512)},
              {QStringLiteral("frame_skip"), range(1, 1, 60)},
+             // Key presses a second when placing (placement, drop): 0 is
+             // infinitely fast, so gravity never acts on a piece in motion;
+             // 10 is a fast human, for whom high levels are hard.
+             {QStringLiteral("input_rate"), range(0, 0, 60)},
          }},
     };
 }
@@ -66,6 +70,8 @@ void OmatrisEnv::configure(const QJsonObject &config) {
     m_holdAllowed = config.value(QStringLiteral("hold")).toBool();
     m_candidates = config.value(QStringLiteral("candidates")).toInt();
     m_frameSkip = config.value(QStringLiteral("frame_skip")).toInt();
+    const int rate = config.value(QStringLiteral("input_rate")).toInt();
+    m_ticksPerInput = rate > 0 ? (Rules::kTicksPerSecond + rate / 2) / rate : 0;
     m_observation.emplace(m_space == Space::Placement ? m_candidates : 0);
 }
 
@@ -195,7 +201,7 @@ void OmatrisEnv::offerActions() {
     m_drops.clear();
     m_unoffered = 0;
     if (m_space == Space::Placement) {
-        m_landings = Placements::find(*m_game, m_holdAllowed);
+        m_landings = Placements::find(*m_game, m_holdAllowed, m_ticksPerInput);
         m_unoffered = std::max(0, int(m_landings.size()) - m_candidates);
         if (m_unoffered > 0)
             m_landings.resize(size_t(m_candidates));
@@ -205,7 +211,7 @@ void OmatrisEnv::offerActions() {
             for (int rotation = 0; rotation < Piece::kStates; ++rotation) {
                 for (int column = 0; column < Board::kWidth; ++column) {
                     m_drops[size_t(dropAction(hold, rotation, column))] =
-                        Placements::drop(*m_game, hold, rotation, column);
+                        Placements::drop(*m_game, hold, rotation, column, m_ticksPerInput);
                 }
             }
         }

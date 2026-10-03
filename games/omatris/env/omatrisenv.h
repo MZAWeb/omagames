@@ -58,6 +58,8 @@ private:
     bool m_holdAllowed = true;
     int m_candidates = 0;
     int m_frameSkip = 1;
+    // Ticks each key press takes when placing; 0 for none (see Placements).
+    int m_ticksPerInput = 0;
     std::optional<OmatrisObservation> m_observation;
     std::optional<Game> m_game;
     std::vector<Landing> m_landings;
