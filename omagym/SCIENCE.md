@@ -463,8 +463,9 @@ thing you build.
 
 ## 8. Things to try, agent by agent
 
-Concrete next experiments for each agent here, most promising first. Each
-is a `--set` or `--env` away unless it says "code". Run it with a `--name`,
+Concrete next experiments for each agent here: first the ones a `--set` or
+`--env` away, most promising first, then the algorithmic ones that change
+the code (marked "code"). Run it with a `--name`,
 `compare` it with the agent's current run, and change one thing at a time.
 
 ### `greedy`
@@ -477,6 +478,14 @@ is a `--set` or `--env` away unless it says "code". Run it with a `--name`,
    never builds for one, which is most of the score it leaves behind.
 3. **Add a well feature** (code: `deepest_well` from `omatris.rich_features`)
    with a positive weight for one deep well beside a flat stack.
+4. **Dellacherie's features** (code): landing height and *eroded cells*
+   (lines cleared times the piece's own cells in them), the two that let
+   his hand-tuned controller clear hundreds of thousands of lines.
+5. **A T-slot feature** (code): reward leaving a slot a T can spin into, so
+   it sets up T-spins, which score more per line than anything but a Tetris.
+6. **Learn its weights from a stronger player** (code): record `mcts`'s
+   choices and fit greedy's weights to them (a linear ranking model). It's
+   imitation, and it shows how much of mcts's play a linear rule can capture.
 
 ### `cem`
 
@@ -493,6 +502,16 @@ is a `--set` or `--env` away unless it says "code". Run it with a `--name`,
    how many generations that saves.
 5. **Use your 20 cores** (code: score the population in a process pool). The
    candidates are independent, so this is the biggest speed-up available.
+6. **CMA-ES instead of CEM** (code): it also learns how the weights vary
+   *together* (a full covariance, not one spread per weight), so it handles
+   features that trade off against each other, like height and holes.
+7. **Weight the elite by rank** (code): the best candidate counts more than
+   the tenth best in the refit, rather than all elite counting the same.
+8. **Mirrored sampling** (code): for every candidate mean + noise, also try
+   mean - noise on the same games. It halves the noise in comparing them.
+9. **Evolve a small network, not a weighted sum** (code): the same method
+   over the weights of a tiny MLP (neuroevolution), so the evaluation can
+   say "holes matter more when the stack is high", which a sum can't.
 
 ### `dqn`
 
@@ -508,6 +527,20 @@ is a `--set` or `--env` away unless it says "code". Run it with a `--name`,
    returns, then Double DQN targets, then the score as the reward.
 5. **Prioritised replay** (code): learn more often from the transitions it
    predicted worst.
+6. **Shape the reward** (code), potential-based so it can't change what the
+   best play is (section 3): reward the change in a board potential,
+   r + gamma * Phi(s') - Phi(s), with Phi = -(holes * a + height * b). The
+   agent hears about a hole the moment it makes one, not twenty pieces later
+   when it tops out.
+7. **A true max target** (code): store every landing on offer next, not
+   just the one played, and bootstrap from the best of them. That's real
+   Q-learning on afterstates, rather than the one-sample version it does now.
+8. **Learn the spread, not just the mean** (code): a distributional value
+   (quantile regression, as in QR-DQN or IQN, which Linesight uses). Topping
+   out is rare but ruinous, and a mean hides how often it happens.
+9. **A curriculum** (code): start some training games from messy mid-game
+   boards (Challenge mode's dealt rows) or at high gravity, so it learns to
+   recover from trouble instead of only avoiding it.
 
 ### `lookahead`
 
@@ -521,6 +554,15 @@ is a `--set` or `--env` away unless it says "code". Run it with a `--name`,
    trusting one guess at the pieces to come.
 4. **A judge trained for long games:** a `cem` run with `episode_steps=2500`
    as its `model`.
+5. **Merge lines that reach the same board** (code): two orders of the same
+   two pieces often end on the same board; keep one, and spend the beam on
+   genuinely different futures (a transposition table).
+6. **An adaptive beam** (code): wide when the stack is high or the board is
+   messy, narrow when it is calm, so the time goes where mistakes cost.
+7. **Count the hold in the leaf** (code): rate a line's last board together
+   with what is held then, for instance with a `dqn` judge trained on
+   `rich_hand`, so lines that keep an I for later stop looking the same as
+   lines that waste it.
 
 ### `mcts`
 
@@ -535,6 +577,19 @@ is a `--set` or `--env` away unless it says "code". Run it with a `--name`,
 5. **Faster search** (code): rate the leaves of several simulations in one
    network call on the GPU. Speed buys simulations, and simulations buy
    score.
+6. **A policy head** (code): train a second output to predict the search's
+   visit counts and use it as the prior, as AlphaZero does, instead of
+   priors made from the value ratings. The search then gets better at
+   knowing where to look, not just at judging what it finds.
+7. **Better value targets** (code): mix the searched value with the
+   rewards that actually followed in the game (n-step returns or TD(lambda)),
+   rather than the search's estimate alone.
+8. **Chance nodes beyond the preview** (code): there, expand each landing on
+   several reseeded copies and average them, so the tree stops treating one
+   guess at the hidden pieces as the future.
+9. **Gumbel root selection** (code, Danihelka et al., 2022): sequential
+   halving among the root's best few landings. It is designed for small
+   simulation budgets like this one, where plain PUCT wastes visits.
 
 ### `ppo`
 
@@ -551,3 +606,15 @@ is a `--set` or `--env` away unless it says "code". Run it with a `--name`,
 5. **Snake:** `--game omasnake` with a reward for getting closer to the food
    (code). Without it, a random snake almost never finds a dot to learn
    from.
+6. **Score the landings, not 80 fixed drops** (code): in the placement
+   action space, let the policy be a softmax over a network's rating of each
+   landing's board (an afterstate policy). It inherits the trick that makes
+   dqn work, and is the biggest lever here.
+7. **Start from a demonstration** (code): behavioural cloning on `greedy`'s
+   or `mcts`'s replays first, then PPO from there. It starts competent and
+   only has to improve, rather than discover Tetris from scratch.
+8. **Curiosity for sparse rewards** (code): an intrinsic reward for reaching
+   states it can't yet predict (RND, Burda et al., 2018). The textbook fix
+   for Snake, where real rewards are too rare to stumble on.
+9. **Memory for raw keys** (code): stack the last few frames, or give the
+   policy a recurrent layer, so it knows which way it was moving the piece.
