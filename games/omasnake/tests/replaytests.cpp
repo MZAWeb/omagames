@@ -223,3 +223,46 @@ void ReplayTests::aFileThatIsNotAReplayDoesNotLoad() {
     QVERIFY(!game.replaying());
     QCOMPARE(game.phase(), QStringLiteral("start"));
 }
+
+void ReplayTests::severalReplaysAreSteppedThrough() {
+    OmasnakeGame game;
+    game.setStepInterval(0);
+    QJsonObject early = played(40).replay().toJson();
+    early.insert(QStringLiteral("agent"), QStringLiteral("dqn after 0 steps"));
+    QString error;
+    QVERIFY2(game.loadReplays({write(early), kSample}, &error), qPrintable(error));
+    QCOMPARE(game.replayAgent(), QStringLiteral("dqn after 0 steps"));
+    QCOMPARE(game.mode(), QStringLiteral("wrap"));
+    QCOMPARE(game.replayPosition(), QStringLiteral("1 of 2"));
+    QVERIFY(game.hasNextReplay() && !game.hasPreviousReplay());
+
+    game.setReplaySpeed(4);
+    game.nextReplay();
+    QCOMPARE(game.replayAgent(), QStringLiteral("greedy toward the food"));
+    QCOMPARE(game.mode(), QStringLiteral("classic"));  // each replay's own game
+    QCOMPARE(game.replayPosition(), QStringLiteral("2 of 2"));
+    QCOMPARE(game.replaySpeed(), 4);                    // at the speed picked
+    QVERIFY(!game.hasNextReplay() && game.hasPreviousReplay());
+    game.nextReplay();
+    QCOMPARE(game.replayPosition(), QStringLiteral("2 of 2"));
+
+    game.previousReplay();
+    QCOMPARE(game.replayPosition(), QStringLiteral("1 of 2"));
+    QCOMPARE(game.score(), 0);
+
+    game.backToStart();
+    QVERIFY(!game.replaying());
+    QCOMPARE(game.replayPosition(), QString());
+    QVERIFY(game.loadReplay(kSample, &error));
+    QCOMPARE(game.replayPosition(), QString());  // one replay is not a list
+}
+
+void ReplayTests::oneBadReplayAmongSeveralOpensNone() {
+    OmasnakeGame game;
+    QString error;
+    const QString junk = write({{QStringLiteral("format"), QStringLiteral("replay/v1")}});
+    QVERIFY(!game.loadReplays({kSample, junk}, &error));
+    QVERIFY(!error.isEmpty());
+    QVERIFY(!game.replaying());
+    QVERIFY(!game.loadReplays({}, &error));
+}

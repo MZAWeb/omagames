@@ -15,6 +15,7 @@ HEADERS += \
     src/replayplayer.h \
     ../../common/env/replay.h \
     ../../common/env/replaypace.h \
+    ../../common/env/replayplaylist.h \
     src/omasnakegame.h \
     src/fieldview.h
 SOURCES += \
@@ -26,6 +27,7 @@ SOURCES += \
     src/replayplayer.cpp \
     ../../common/env/replay.cpp \
     ../../common/env/replaypace.cpp \
+    ../../common/env/replayplaylist.cpp \
     src/omasnakegame.cpp \
     src/omasnakegamemodel.cpp \
     src/omasnakegamereplay.cpp \

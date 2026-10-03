@@ -21,6 +21,8 @@ private slots:
     void popupsOnlyAtSpeedsThatCanReadThem();
     void watchAgainAndLeave();
     void aFileThatIsNotAReplayDoesNotLoad();
+    void severalReplaysAreSteppedThrough();
+    void oneBadReplayAmongSeveralOpensNone();
 
 private:
     QString m_settingsDir;

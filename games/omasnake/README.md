@@ -189,7 +189,13 @@ runs on its own clock between, so 1× is the speed it was played at.
 | `1` `2` `3` `4` | Speed: ¼×, ½×, 1× (the default), 8×. Above 1× the score popups are skipped |
 | `→` | On to the snake's next move, paused or not |
 | `R` | Watch again from the start |
+| `N` / `B` | The next / previous replay, given several |
 | `Esc` | Leave for the start screen |
+
+Given several, `--replay a.json --replay b.json ...`, the app opens the
+first, the header says which it is ("3 of 10"), and `N` and `B` step between
+them at the speed picked. At the end of one, Enter goes on to the next.
+Every file is checked before anything opens.
 
 ## Build, test, run
 

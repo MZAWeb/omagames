@@ -20,8 +20,14 @@ OmaOverlayPanel {
         return game.replaying ? qsTr("It hit the wall.") : qsTr("You hit the wall.");
     }
 
+    // Given several replays, the next one is the natural thing to watch.
     Keys.onPressed: function(event) {
-        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space || event.key === Qt.Key_R)
+        const confirm = event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space;
+        if ((event.key === Qt.Key_N || confirm) && game.hasNextReplay)
+            game.nextReplay();
+        else if (event.key === Qt.Key_B && game.hasPreviousReplay)
+            game.previousReplay();
+        else if (confirm || event.key === Qt.Key_R)
             game.restart();  // a replay's R is "watch again"
         else if (event.key === Qt.Key_Escape)
             game.backToStart();
@@ -79,10 +85,26 @@ OmaOverlayPanel {
     OmaHintButton {
         Layout.fillWidth: true
         Layout.topMargin: 6 * theme.textScale
-        text: game.replaying ? qsTr("Watch again") : qsTr("Play again")
+        visible: game.hasNextReplay
+        text: qsTr("Next replay")
         primary: true
         hint: qsTr("Enter")
+        onClicked: game.nextReplay()
+    }
+    OmaHintButton {
+        Layout.fillWidth: true
+        Layout.topMargin: game.hasNextReplay ? 0 : 6 * theme.textScale
+        text: game.replaying ? qsTr("Watch again") : qsTr("Play again")
+        primary: !game.hasNextReplay
+        hint: game.hasNextReplay ? qsTr("R") : qsTr("Enter")
         onClicked: game.restart()
+    }
+    OmaHintButton {
+        Layout.fillWidth: true
+        visible: game.hasPreviousReplay
+        text: qsTr("Previous replay")
+        hint: qsTr("B")
+        onClicked: game.previousReplay()
     }
     OmaHintButton {
         Layout.fillWidth: true

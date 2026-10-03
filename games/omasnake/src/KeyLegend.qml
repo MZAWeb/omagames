@@ -7,10 +7,14 @@ OmaKeyLegend {
         { key: qsTr("P"), label: game.paused ? qsTr("play") : qsTr("pause") },
         { key: qsTr("1-4"), label: qsTr("speed") },
         { key: qsTr("→"), label: qsTr("next move") },
-        { key: qsTr("R"), label: qsTr("watch again") },
+        { key: qsTr("R"), label: qsTr("watch again") }
+    ].concat(game.replayPosition === "" ? [] : [
+        { key: qsTr("N"), label: qsTr("next replay") },
+        { key: qsTr("B"), label: qsTr("previous replay") }
+    ]).concat([
         { key: qsTr("Esc"), label: qsTr("leave") },
         { key: qsTr("Ctrl+Q"), label: qsTr("quit") }
-    ] : [
+    ]) : [
         { key: qsTr("←↑↓→"), label: qsTr("or hjkl to turn") },
         { key: qsTr("Space"), label: qsTr("pause") },
         { key: qsTr("R"), label: qsTr("restart") },
