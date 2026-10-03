@@ -10,26 +10,21 @@ if it learns, and compare it with everything you tried before. Every run is
 recorded with the code it ran, so a number in a table can always be traced
 back to the change that produced it.
 
-Today it plays **Omatris** and **Omasnake**, and ships three agents:
+Today it plays **Omatris** and **Omasnake**. The agents, in the order worth
+reading them (each file explains its method where it happens):
 
 | Agent | Games | Learns | What |
 |---|---|---|---|
-| `random` | any | no | Any legal action. The floor. |
-| `greedy` | Omatris | no | Scores the board each landing leaves with four weighted features, takes the best |
+| `random` | any | no | Any legal action. The floor |
+| `greedy` | Omatris | no | Rates the board each landing leaves with four weighted features and takes the best. **Read this first**: every Tetris agent below is this loop with a better rating |
 | `greedy` | Omasnake | no | Steps toward the food, avoiding walls and its body one move ahead |
-| `dqn` | Omatris | yes | A small neural network that learns how good a board is (deep Q-learning on afterstates) |
+| `cem` | Omatris | yes | The cross-entropy method: evolves the weights of 15 board features. No PyTorch |
+| `dqn` | Omatris | yes | A neural network that learns how good a board is (deep Q-learning on afterstates), with n-step returns, Double DQN, score rewards and a CNN to switch on |
+| `lookahead` | Omatris | no | Beam search over the next pieces on copies of the game, judging boards with greedy's weights, a `cem` run's or a `dqn` run's network |
+| `mcts` | Omatris | yes | Monte Carlo tree search with a value network that learns from the search (AlphaZero-style) |
+| `ppo` | any | yes | Proximal policy optimisation: learns the policy itself from the raw observation. The general one, and the road to Trackmania |
 
-On the default evaluation games (20 Tetris games cut at 500 pieces, 50
-Snake games):
-
-| | Omatris lines (of 200 possible) | Omasnake dots |
-|---|---|---|
-| `random` | 0.1, topping out after 24 pieces | 0.2 |
-| `greedy` | 198.7 | 37.6, then it boxes itself in |
-| `dqn`, 30,000 training steps (about 2 minutes on a CPU) | about 196 | |
-
-The `cautious` example under "Adding a strategy" clears about 30 lines
-before it tops out: a fair first agent to beat.
+RESULTS_TABLE
 
 New to the field? `SCIENCE.md` maps it: the families of algorithms, the
 techniques they share, how to compare them fairly, and which suit which game.
@@ -58,64 +53,71 @@ it are then listed as unavailable.
 ## A first session
 
 ```sh
-# Test the dumb strategy: 20 fixed games of Tetris, each cut at 2,500 pieces (about level 100).
-uv run omagym eval --game omatris --agent greedy --name greedy-baseline
+# The dumb strategy on the 20 fixed games of Tetris, each cut at 2,500 pieces (about level 100).
+uv run omagym run --agent greedy --name greedy
 
-# Train the neural one for 100k steps, evaluating every 10k.
-uv run omagym train --game omatris --agent dqn --steps 100000 --name dqn-first
+# One that learns: it trains (100k steps for dqn), then plays the same games.
+uv run omagym run --agent dqn --name dqn
 
 # Which played better, and is the difference real?
-uv run omagym compare greedy-baseline dqn-first
+uv run omagym compare greedy dqn
 uv run omagym compare --game omatris        # every agent's best run, ranked
 
 # Watch the trained agent's best game in the real app.
-uv run omagym watch dqn-first
+uv run omagym watch dqn
 
 # Or watch it learn: the same game at ten points of its training, N for the next.
-uv run omagym watch dqn-first --training
+uv run omagym watch dqn --training
 ```
 
 ## Commands
 
 Every command takes `--help`. A *run* can be named by its id, a unique prefix
-of its id, its `--name`, or `last`. A *trained model* is a training run with a checkpoint,
-so every command that takes a run takes a model: `show` one for its
-checkpoint, snapshots and every test of it, `watch` it, `eval --run` it,
-`delete` it.
+of its id, its `--name`, or `last`.
+
+A run is one agent, on the code as it is now, playing the evaluation games.
+If the agent learns, the run trains it first, and keeps what it learned
+(checkpoints, snapshots) in its folder. Change the code and you run again:
+a result belongs to the code that produced it.
 
 | Command | What it does |
 |---|---|
 | `omagym agents` | Lists agents, the games they play, and every setting with its default |
-| `omagym eval --game G --agent A` | Tests an agent on the evaluation games and records it as a run |
-| `omagym eval --run R` | Tests the best checkpoint of training run R (on more games, say) |
-| `omagym train --game G --agent A --steps N` | Trains a learning agent, evaluating as it goes, and records it |
-| `omagym runs [--game G] [--agent A] [--kind train\|eval]` | Lists runs, newest first, with their score |
-| `omagym models [--game G] [--agent A]` | Lists trained models (training runs with a checkpoint): steps trained, score, how often tested, snapshots |
-| `omagym show R` | Everything about a run: settings, code, results, learning curve |
+| `omagym run --game G --agent A [--steps N]` | Trains the agent if it learns (for N steps, or its default), then plays the evaluation games; recorded as a run |
+| `omagym runs [--game G] [--agent A] [--trained]` | Lists runs, newest first, with how long they trained and their score |
+| `omagym show R` | Everything about a run: settings, code, results, learning curve, what it trained into |
 | `omagym compare [R1 R2 ...] [--by M] [--lower]` | Ranks runs by score (or `--by lines`, `ate`, `steps`...; `--lower` when less is better, as for `holes`) and says which beat which beyond doubt. With no runs, ranks each agent's best run of `--game` |
 | `omagym diff R1 R2 ...` | Runs side by side, plus every setting that differs between them: for runs of one agent |
 | `omagym watch R [--worst \| --training]` | Plays the run's best (or worst) evaluation game in the app; `--training`, its snapshots in order, stepped through with `N` and `B` |
 | `omagym note R --name N --notes "..."` | Names a run, or writes down what it was about, afterwards |
-| `omagym delete R1 R2 ... [--yes] [--with-tests]` | Forgets runs: their results, checkpoints and replays. Asks first. A trained model goes only together with the tests of its checkpoint: name them, or pass `--with-tests` |
+| `omagym delete R1 R2 ... [--yes]` | Forgets runs: their results, checkpoints and replays. Asks first |
 
-Options shared by `train` and `eval`:
+Options of `run`:
 
 - `--set KEY=VALUE` changes an agent setting (repeatable): `--set holes=-1.0`,
   `--set lr=3e-4 --set hidden=128`. `omagym agents` lists them.
 - `--env KEY=VALUE` changes a game setting: `--env mode=sprint`. The game's
-  README ("Agent environment") lists them.
+  README ("Agent environment") lists them. Omatris is played at
+  `input_rate=10` unless this says otherwise: ten key presses a second, a
+  fast human, so gravity pulls a piece while it is placed and high levels
+  are hard. `--env input_rate=0` is the infinitely fast player.
 - `--episodes N` and `--max-steps N` set the evaluation games: how many, and
   where each is cut (defaults: 20 × 2,500 for Omatris, 50 × 3000 for Omasnake).
 - `--name`, `--notes`: say what you were trying. Future you will thank you.
 - `--seed N`: the agent's own randomness (training games, exploration).
 
-`train` also takes `--eval-every N` (steps between quick evaluations, default
-a tenth of the run) and `--eval-episodes N` (games in each quick one,
-default 5). Ctrl+C stops a training run early; what it learned so far is
-still evaluated and recorded, as `interrupted`.
+For an agent that learns, `--steps N` is how long it trains (`omagym agents`
+shows each one's default), `--eval-every N` the steps between quick
+evaluations (default a tenth of the run, which draw the learning curve) and
+`--eval-episodes N` the games in each quick one (default 5), cut at
+`--quick-max-steps N` (default 500: the curve only needs the trend, so
+they are shorter than the final evaluation's games). Ctrl+C stops
+training early; what it learned so far still plays the evaluation games,
+and the run is recorded as `interrupted`.
 
-A training run also records `--snapshots N` games (default 10) evenly
-spaced from step 0, before it learned anything, to the end. Every snapshot
+Training also records `--snapshots N` games (default 10, cut at
+`--quick-max-steps` too) evenly spaced from step 0, before it learned
+anything, to the end. Every snapshot
 plays the same game, the first evaluation game with exploration off, so
 `watch R --training` shows that one deal played better and better. The
 header says how far into training each was taken.
@@ -198,7 +200,7 @@ cleared one at a time.
 
 ### A way of working
 
-1. **Get a baseline.** `eval` the agent as it is, with a `--name`.
+1. **Get a baseline.** `run` the agent as it is, with a `--name`.
 2. **Change one thing**: a setting (`--set`), the reward, the network, a
    new agent.
 3. **Commit, or don't.** A run on a dirty tree still records the exact code
@@ -211,8 +213,7 @@ cleared one at a time.
    shows what changed between them.
 6. **For learners, use more than one seed** before believing a difference:
    `--seed 1`, `--seed 2`, `--seed 3` and compare all of them. Training is
-   noisy. Then test the winner's checkpoint on more games with
-   `eval --run R --episodes 100`.
+   noisy.
 
 ## Layout
 
@@ -223,21 +224,26 @@ src/omagym/
   native.py              loads lib<game>_env.so through ctypes, building it first
   env.py                 Env: reset / step / observe / mask, any game
   games/                 what omagym knows per game: evaluation defaults,
-    omatris.py             board features of each landing
+    omatris.py             board features of each landing: greedy's five, and the fifteen richer ones
     omasnake.py            the snake's state, safe moves
   agents/
     base.py              Agent, the interface every strategy implements
     __init__.py          the registry: register(), resolve(), the list of agent modules
     random_agent.py      random
-    greedy.py            greedy, for Tetris and for Snake
-    dqn.py               dqn: the neural example to copy from
+    greedy.py            greedy, for Tetris and for Snake: start reading here
+    cem.py               cem: the cross-entropy method
+    afterstate_value.py  the network that rates boards, shared by dqn and mcts
+    dqn.py               dqn: deep Q-learning on afterstates
+    lookahead.py         lookahead: beam search on copies of the game
+    mcts.py              mcts: tree search with a value network that learns from it
+    ppo.py               ppo: a policy-gradient learner for any game
   evaluation.py          the fixed evaluation games, and their summary
   training.py            the loop around an agent's training: budget, evaluations, checkpoints
   store.py               the experiment database
   provenance.py          which code a run ran
   comparison.py          which run played better, game by game, and how sure that is
   report.py              the tables `runs`, `show`, `diff` and `compare` print
-  cli.py                 the `omagym` command: its options, training and testing
+  cli.py                 the `omagym` command: its options, and `run`
   records.py             the commands on recorded runs: runs, show, compare, watch, delete...
 experiments/             your runs (not in git)
 ```
@@ -282,8 +288,8 @@ An agent is one class in one file. To add one:
 2. Add `"my_agent"` to the module list at the bottom of
    `agents/__init__.py`.
 
-3. `uv run omagym agents` lists it, and `uv run omagym eval --agent cautious`
-   tests it on the evaluation games.
+3. `uv run omagym agents` lists it, and `uv run omagym run --agent cautious`
+   plays it on the evaluation games.
 
 What an agent sees is the game's observation: a dict of NumPy arrays named
 in the game's README (`board`, `candidates`, `afterstates` for Omatris;
@@ -292,8 +298,9 @@ in the game's README (`board`, `candidates`, `afterstates` for Omatris;
 
 ### Making it learn
 
-Set `trainable = True` and implement three more methods. `dqn.py` is the
-worked example, with comments on every step.
+Set `trainable = True` (and `default_steps`, how long `run` trains it) and
+implement three more methods. `cem.py` is the simplest worked example,
+`dqn.py` the neural one.
 
 - `train(self, ctx)` is a generator that learns forever. Make your games
   with `ctx.make_env()`, deal them with `ctx.next_seed()`, and
@@ -306,11 +313,23 @@ worked example, with comments on every step.
   reward, and also a set of named signals per step (lines, holes, height,
   topped out, dots eaten...). `dqn._reward()` builds its own reward from those.
 
-Things worth trying from `dqn`: `--set inputs=board` (learn from raw cells
-rather than hand-made features), a bigger network (`hidden`, `layers`),
-the reward weights, `gamma`. Or copy it to a new agent: a policy-gradient
-learner (PPO) in the `drop` action space, a Snake DQN, a cross-entropy-method
-search over the greedy weights.
+An agent that plans (looks ahead on copies of the game, like `lookahead` and
+`mcts`) overrides `decide(env, obs, mask)` instead of `act()`, and copies the
+game with `env.clone(reseed_hidden=True)`.
+
+Things worth trying:
+
+- `dqn`: each improvement on its own (`--set n_step=3`, `target=best`,
+  `reward=score`, `inputs=cnn`), then together; `gamma`; a bigger network.
+- `cem`: `--set objective=lines` against `score`; more `games` per
+  candidate; no noise (`noise=0`) to see the search stall.
+- `lookahead`: `depth=3`, a wider `beam`, and judging with your best `cem`
+  or `dqn` run (`--set model=<run>`).
+- `mcts`: more `simulations`; starting from a `dqn` run (`model=<run>`)
+  against from nothing.
+- `ppo`: raw key presses (`--env actions=raw --env frame_skip=4`), and
+  Snake (`--game omasnake`), where its reward is so sparse a random snake
+  almost never finds it: a place to try reward shaping.
 
 ## Changing a game or its env
 

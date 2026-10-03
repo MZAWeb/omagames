@@ -149,7 +149,7 @@ def _run(args) -> int:
     store = Store()
     cls = resolve(args.agent, args.game)
     config = make_config(cls, _pairs(args.set))
-    env_config = {**cls.env_config(args.game), **_env_values(_pairs(args.env))}
+    env_config = {**defaults(args.game).env, **cls.env_config(args.game), **_env_values(_pairs(args.env))}
     with Env(args.game, **env_config) as probe:
         spec = probe.spec
     game_defaults = defaults(args.game)

@@ -3,7 +3,7 @@ fairly and which numbers to put beside the score when comparing runs."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
@@ -17,10 +17,16 @@ class GameDefaults:
     eval_max_steps: int
     # Signals summed over an episode that `compare` shows beside the score.
     headline: tuple[str, ...]
+    # Env settings every agent plays with, unless it or --env says otherwise.
+    env: dict = field(default_factory=dict)
 
 
 _DEFAULTS = {
-    "omatris": GameDefaults(eval_episodes=20, eval_max_steps=2500, headline=("lines",)),
+    # Ten key presses a second, a fast human: placing takes time, so gravity
+    # pulls a piece while it moves and high levels are hard (the game's
+    # README, "Placing at a human's speed"). Raw key presses keep their own
+    # pace, frame_skip, and ignore it.
+    "omatris": GameDefaults(eval_episodes=20, eval_max_steps=2500, headline=("lines",), env={"input_rate": 10}),
     "omasnake": GameDefaults(eval_episodes=50, eval_max_steps=3000, headline=("ate",)),
 }
 
