@@ -33,6 +33,11 @@ Five words carry everything else in this file.
     overhangs, won when the mess is cleared. Fewer pieces is better, counted
     per point of the deal's Difficulty (the 1-100 number the app shows), so
     a hard mess is allowed more pieces than an easy one.
+
+  Oma2048 has `standard` (20 games played to the end; more points is
+  better) and `reach2048` (the same games stopped at the first 2048 tile;
+  fewer moves is better, a game that never gets there counting as the
+  whole cap).
 - **The standard**: every test game is dealt from a fixed seed that
   training never uses, so every agent plays exactly the same games (the
   same Challenge messes, the same pieces) and none has seen them before. In
@@ -123,6 +128,9 @@ loop ("rate every landing, take the best") with a better way of rating.
 | `random` | any | plays | Any legal action. The floor |
 | `greedy` | Omatris | plays | Rates the board each landing leaves with four hand-tuned weights (lines, holes, bumpiness, height) |
 | `greedy` | Omasnake | plays | Steps toward the food, avoiding walls and its body one move ahead |
+| `greedy` | Oma2048 | plays | Rates the board each slide leaves (free cells, the big tile in a corner, order, smoothness, merges) plus its points |
+| `expectimax` | Oma2048 | plans | Looks a few slides ahead: the best of its slides, the average of sampled spawns played on copies of the game |
+| `ntuple` | Oma2048 | learns | An n-tuple network learning afterstate values by TD (Szubert and Jaśkowski's 2048 learner) |
 | `cem` | Omatris | learns | The cross-entropy method: evolves the weights of 15 board features. No PyTorch |
 | `dqn` | Omatris | learns | A neural network that learns how good a board is (deep Q-learning on afterstates) |
 | `lookahead` | Omatris | plans | Beam search over the next pieces on copies of the game, judging boards with greedy's weights or a `cem` or `dqn` run's |
@@ -228,7 +236,8 @@ of its id, its `--name`, or `last`.
   environment", lists them). Omatris is played at `input_rate=10` unless
   this says otherwise; `--env input_rate=0` is a player of infinite speed.
 - `--episodes N`, `--max-steps N`: the main test's games, how many and where
-  each is cut (20 × 2,500 for Omatris, 50 × 3,000 for Omasnake).
+  each is cut (20 × 2,500 for Omatris, 50 × 3,000 for Omasnake, 20 ×
+  20,000 for Oma2048).
 - `--seed N`: the agent's own randomness (training games, exploration).
 - `--seeds N`: the same run N times, seeds 0 to N-1, in parallel, named
   `<name>-s0`, `<name>-s1`... and kept as one **group**, `<name>`. `compare
@@ -340,6 +349,7 @@ src/omagym/
     __init__.py            per game: its tests, and the settings every agent plays with
     omatris.py             board features of each landing, and the pieces in hand
     omasnake.py            the snake's state, safe moves
+    oma2048.py             the afterstates on offer, and the classic 2048 board features
   agents/
     base.py              Agent, the interface every strategy implements
     __init__.py          the registry, and the list of agent modules
@@ -355,6 +365,10 @@ src/omagym/
       xgb.py               xgb
     omasnake/
       greedy.py            greedy for Snake
+    oma2048/
+      greedy.py            greedy for 2048
+      expectimax.py        expectimax, with sampled chance nodes
+      ntuple.py            ntuple
   evaluation.py          playing the tests' games, and summarising them
   training.py            everything around an agent's training: budget, curve, checkpoints, snapshots
   store.py               the experiment database
