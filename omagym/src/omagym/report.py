@@ -1,7 +1,8 @@
-"""Turning runs into text: the tables `runs`, `show` and `compare` print."""
+"""Turning runs into text: what `runs`, `show`, `diff` and `compare` print."""
 
 from __future__ import annotations
 
+from .comparison import Ranking
 from .games import defaults
 
 
@@ -65,7 +66,65 @@ def show(run: dict, curve: list[tuple[int, float]], patch_exists: bool) -> str:
     return "\n".join(out)
 
 
-def compare(runs: list[dict]) -> str:
+def ranking(result: Ranking) -> str:
+    """The `compare` table: best first, each run against the best, and what that means."""
+    standings = result.standings
+    first = standings[0].run
+    label = _labels([s.run for s in standings])
+    metric = result.metric
+    better = "lower" if result.lower_is_better else "higher"
+    out = [f"ranked by {metric}, {better} is better: the {len(result.seeds)} games of {first['game']} every run "
+           f"played, each cut at {first['eval_max_steps']} steps", ""]
+    rows = []
+    for place, s in enumerate(standings, 1):
+        versus = ["", "", ""] if s.verdict == "best" else [
+            f"{s.wins}-{s.ties}-{s.losses}",
+            f"{_signed(s.difference)} ({_signed(s.low)} to {_signed(s.high)})",
+            s.verdict,
+        ]
+        rows.append([f"{place}.", label[s.run["id"]], s.run["agent"], _trained(s.run),
+                     f"{number(s.mean)} ± {number(s.std)}", *versus])
+    out.append(table(["", "run", "agent", "trained", metric, "vs best: won-tied-lost",
+                      "difference (95% range)", "verdict"], rows))
+    out += ["", *_conclusion(standings, label)]
+    differing = _differences([s.run["env_config"] for s in standings])
+    if differing:
+        out += ["", f"note: env settings differ ({', '.join(differing)}). Fine when that is part of an agent's",
+                "design (its action space), not when it changes the game itself (mode)."]
+    return "\n".join(out)
+
+
+def _conclusion(standings, label: dict[str, str]) -> list[str]:
+    best = label[standings[0].run["id"]]
+    lines = [f"{best} played best."]
+    named = lambda verdict: [label[s.run["id"]] for s in standings if s.verdict == verdict]  # noqa: E731
+    worse, unclear, same = named("worse"), named("can't tell"), named("same")
+    if worse:
+        lines.append(f"Worse than {best}, beyond doubt on these games: {', '.join(worse)}.")
+    if unclear:
+        lines.append(f"Can't be told apart from {best} on these games: {', '.join(unclear)}. "
+                     "Testing on more games (--episodes) would settle it.")
+    if same:
+        lines.append(f"Scored exactly what {best} did on every game: {', '.join(same)}.")
+    return lines
+
+
+def _labels(runs: list[dict]) -> dict[str, str]:
+    """What to call each run: its name, unless another run shown has the same one."""
+    names = [r["name"] for r in runs]
+    return {r["id"]: r["name"] if r["name"] and names.count(r["name"]) == 1 else r["id"] for r in runs}
+
+
+def _trained(run: dict) -> str:
+    steps = run.get("trained_steps")
+    return f"{number(steps)} steps" if steps else "-"
+
+
+def _signed(value: float) -> str:
+    return ("+" if value > 0 else "") + number(value)
+
+
+def diff(runs: list[dict]) -> str:
     game = runs[0]["game"]
     keys = headline_keys(game)
     rows = [[r["id"], r["kind"], r["agent"], r["name"] or "", r["code"], number(r["summary"].get("episodes")),
