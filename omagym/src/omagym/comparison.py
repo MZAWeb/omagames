@@ -136,3 +136,34 @@ def style(runs: list[dict], test: str, columns: tuple, main: bool) -> list[dict]
         known = [v for v in row["values"] if v is not None]
         row["best"] = (min(known) if row["lower"] else max(known)) if known else None
     return [row for row in rows if any(v is not None for v in row["values"])]
+
+
+def combine(name: str, members: list[dict], episodes: list[list[dict]]) -> tuple[dict, list[dict]]:
+    """A group of runs (the seeds of one setup) as if it were one run.
+
+    On each game every seed played, the group's result is the seeds' mean,
+    so a group is ranked game by game like any run, with the luck of any one
+    seed averaged out. Its summary is the mean of theirs, its trained steps
+    their mean; settings are the first seed's (the seeds differ only in seed).
+    """
+    first = members[0]
+    by_seed = [{e["seed"]: e for e in played} for played in episodes]
+    seeds = sorted(set.intersection(*(set(s) for s in by_seed))) if by_seed else []
+    games = []
+    for seed in seeds:
+        rows = [s[seed] for s in by_seed]
+        game = {"seed": seed, "episode": rows[0].get("episode", 0), "ended": rows[0].get("ended")}
+        for key, value in rows[0].items():
+            if isinstance(value, (int, float)) and key not in ("seed", "episode") and all(key in r for r in rows):
+                game[key] = sum(r[key] for r in rows) / len(rows)
+        games.append(game)
+    summary = {}
+    for key in first["summary"]:
+        values = [m["summary"][key] for m in members if key in m["summary"]]
+        if len(values) == len(members):
+            summary[key] = sum(values) / len(values)
+    steps = [m.get("trained_steps") for m in members if m.get("trained_steps")]
+    run = {**first, "id": f"group:{name}", "name": f"{name} ({len(members)} seeds)", "group_name": name,
+           "summary": summary, "trained_steps": sum(steps) / len(steps) if steps else None,
+           "notes": first["notes"], "members": [m["id"] for m in members]}
+    return run, games

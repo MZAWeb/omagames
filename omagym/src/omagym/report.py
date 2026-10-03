@@ -31,9 +31,9 @@ def headline_keys(game: str) -> list[str]:
 
 
 def runs_table(runs: list[dict]) -> str:
-    rows = [[r["id"], r["name"] or "", r["status"], _trained(r), spread(r["summary"], "score"), _short(r["notes"])]
-            for r in runs]
-    return table(["run", "name", "status", "trained", "score", "notes"], rows)
+    rows = [[r["id"], r["name"] or "", " ".join(f"[{t}]" for t in r["tags"]), r.get("group_name") or "", r["status"],
+             _trained(r), spread(r["summary"], "score"), _short(r["notes"], 50)] for r in runs]
+    return table(["run", "name", "tags", "group", "status", "trained", "score", "notes"], rows)
 
 
 def _short(text: str | None, width: int = 70) -> str:

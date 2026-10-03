@@ -215,6 +215,7 @@ of its id, its `--name`, or `last`.
 | `omagym diff R1 R2 ...` | Runs side by side with every setting that differs: for runs of one agent |
 | `omagym watch R [--test T] [--worst \| --training]` | Plays the run's best (or worst) game of a test in the app; `--training`, its snapshots, stepped through with `N` and `B` |
 | `omagym note R [--name N] [--notes "..."]` | Names a run, or writes down what it was, afterwards |
+| `omagym tag R1 R2 ... --add T [--remove T]` | Labels runs ("great", "baseline"); `runs --tag T` and the web lists filter by them |
 | `omagym delete R1 R2 ... [--yes]` | Forgets runs: results, checkpoints and replays. Asks first |
 
 ### Options of `run`
@@ -229,6 +230,13 @@ of its id, its `--name`, or `last`.
 - `--episodes N`, `--max-steps N`: the main test's games, how many and where
   each is cut (20 × 2,500 for Omatris, 50 × 3,000 for Omasnake).
 - `--seed N`: the agent's own randomness (training games, exploration).
+- `--seeds N`: the same run N times, seeds 0 to N-1, in parallel, named
+  `<name>-s0`, `<name>-s1`... and kept as one **group**, `<name>`. `compare
+  <name>` ranks a group by its seeds' mean on every game, and the web
+  Rankings can combine each group into one row. **Use this for anything that
+  learns**: one seed can settle into a different style of play from the
+  next (one `dqn-rich-hand` seed builds Tetrises, another plays clean
+  doubles), so a single run says little about a setup.
 
 For an agent that learns:
 
@@ -291,8 +299,10 @@ for an agent's action space, not for the game itself.
 4. **Run it**, with a name and a note saying what changed.
 5. **Compare** it with the baseline, on both tests. Believe `worse`; treat
    `can't tell` as no difference yet. `diff` shows what changed.
-6. **For learners, try more than one seed** (`--seed 1`, `2`, `3`) before
-   believing a difference: training is noisy.
+6. **For learners, always several seeds**: `run --seeds 3` (5 when a
+   difference matters), and compare the groups, not single runs. Training
+   is noisy enough that one seed per setup has already misled us: what
+   looked like "training on Challenge kills Tetrises" was the seed.
 
 ## How runs are kept
 

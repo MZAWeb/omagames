@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import argparse
+import subprocess
 import sys
 from pathlib import Path
 
@@ -52,6 +53,9 @@ def _parser() -> argparse.ArgumentParser:
     sub.add_argument("--name", help="a label for the run, usable wherever a run id is")
     sub.add_argument("--notes", help="what you were trying")
     sub.add_argument("--seed", type=int, default=0)
+    sub.add_argument("--seeds", type=int, metavar="N",
+                     help="N runs of the same setup with seeds 0..N-1, side by side, kept as one group (--name)")
+    sub.add_argument("--group", help=argparse.SUPPRESS)
     sub.add_argument("--device", default="auto", help="auto, cpu or cuda")
     learning = sub.add_argument_group("for agents that learn")
     learning.add_argument("--steps", type=int, help="env steps to train for (default per agent, see `agents`)")
@@ -68,6 +72,7 @@ def _parser() -> argparse.ArgumentParser:
     sub.add_argument("--game")
     sub.add_argument("--agent")
     sub.add_argument("--trained", action="store_true", help="only runs that trained (and so left a model)")
+    sub.add_argument("--tag", help="only runs with this tag")
     sub.add_argument("--limit", type=int, default=30)
 
     sub = command("show", records.show, "everything about one run")
@@ -98,6 +103,11 @@ def _parser() -> argparse.ArgumentParser:
     sub = command("web", _web, "browse runs, rankings and comparisons, and watch replays, in a browser (read-only)")
     sub.add_argument("--port", type=int, default=8765)
     sub.add_argument("--no-open", action="store_true", help="don't open a browser tab")
+
+    sub = command("tag", records.tag, "label runs (\"great\", \"baseline\"); runs --tag lists them")
+    sub.add_argument("runs", nargs="+")
+    sub.add_argument("--add", action="append", default=[], metavar="TAG")
+    sub.add_argument("--remove", action="append", default=[], metavar="TAG")
 
     sub = command("note", records.note, "name a run or write down what it was about")
     sub.add_argument("run")
@@ -158,8 +168,55 @@ def _web(args) -> None:
     web.serve(args.port, not args.no_open)
 
 
+def _seeds(args, argv: list[str]) -> int:
+    """`run --seeds N`: the same run N times with seeds 0..N-1, in parallel.
+
+    A difference between two setups means little until it holds across
+    seeds: one seed of the same training can learn a different style of play
+    altogether. Each seed is its own run, `<name>-s<seed>`, and together they
+    form the group `<name>`, which `compare` ranks by its seeds' mean on
+    every game.
+    """
+    if not args.name:
+        raise ValueError("--seeds needs a --name for the group")
+    cls = resolve(args.agent, args.game)
+    has_seed = "seed" in cls.Config.__dataclass_fields__ and not any(s.startswith("seed=") for s in args.set)
+    logs = Store().root / "logs"
+    logs.mkdir(exist_ok=True)
+    base = _without(argv, ("--seeds", "--name", "--seed"))
+    children = []
+    for seed in range(args.seeds):
+        command = [sys.executable, "-m", "omagym.cli", *base, "--seed", str(seed), "--name", f"{args.name}-s{seed}",
+                   "--group", args.name, *(["--set", f"seed={seed}"] if has_seed else [])]
+        log = logs / f"{args.name}-s{seed}.log"
+        children.append((seed, log, subprocess.Popen(command, stdout=log.open("w"), stderr=subprocess.STDOUT)))
+        print(f"seed {seed}: {args.name}-s{seed}, log in {log}")
+    failed = 0
+    for seed, log, child in children:
+        if child.wait() != 0:
+            failed += 1
+            print(f"seed {seed} failed; see {log}")
+    print(f"\n{args.seeds - failed} of {args.seeds} seeds done. Compare the group: omagym compare {args.name} ...")
+    return 1 if failed else 0
+
+
+def _without(argv: list[str], options: tuple[str, ...]) -> list[str]:
+    """argv with these options and their values taken out."""
+    out, skip = [], False
+    for item in argv:
+        if skip:
+            skip = False
+        elif item in options:
+            skip = True
+        elif not any(item.startswith(o + "=") for o in options):
+            out.append(item)
+    return out
+
+
 def _run(args) -> int:
     """One run: build the agent, train it if it learns, then play the evaluation games."""
+    if args.seeds:
+        return _seeds(args, sys.argv[1:])
     store = Store()
     cls = resolve(args.agent, args.game)
     config = make_config(cls, _pairs(args.set))
@@ -177,7 +234,7 @@ def _run(args) -> int:
     run = store.new_run(
         "train" if cls.trainable else "eval", args.game, cls.name, name=args.name, notes=args.notes,
         agent_config=vars(config), env_config={k: v for k, v in spec.config.items() if k != "max_steps"},
-        seed=args.seed, device=_device(args.device), train_steps=steps, train_mix=mix,
+        seed=args.seed, device=_device(args.device), train_steps=steps, train_mix=mix, group_name=args.group,
         eval_episodes=args.episodes or game_defaults.eval_episodes,
         eval_max_steps=args.max_steps or game_defaults.eval_max_steps,
         rules_version=spec.rules_version, versions=provenance.versions(), code="pending", dirty=0,

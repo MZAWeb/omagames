@@ -63,6 +63,8 @@ inside `games/<game>/` unless you are deliberately changing shared code.
   `uv run omagym ...`. `bin/build` and `bin/test` don't touch it.
 - It is a playground, so it has **no tests**: don't write any. Check a
   change by running it (`uv run omagym ...`). The games keep their tests.
+- Anything that learns is run with several seeds (`run --seeds 3` or more)
+  and compared as groups: one seed per setup has given the wrong answer.
 - It talks to the games only through the env ABI (`omagym/src/omagym/native.py`),
   never a bridge or QML. A new strategy is one file in `agents/`, listed in
   `agents/__init__.py`.

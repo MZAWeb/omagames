@@ -17,7 +17,7 @@ from .training import snapshot_files
 
 def runs(args) -> None:
     store = Store()
-    found = store.runs(args.game, args.agent, "train" if args.trained else None, args.limit)
+    found = store.runs(args.game, args.agent, "train" if args.trained else None, args.limit, args.tag)
     for run in found:
         run["trained_steps"] = store.trained_steps(run["id"])
     print(report.runs_table(found) if found else "no runs yet: try `omagym run --agent greedy`")
@@ -38,18 +38,42 @@ def show(args) -> None:
     print(details(store, store.run(args.run)))
 
 
+def resolve(store: Store, ref: str, test: str) -> tuple[dict, list[dict]]:
+    """A run, or a group of seeds (by its group name, or `group:<name>`),
+    with its games of `test` ("" for the main one)."""
+    name = ref.removeprefix("group:")
+    if not ref.startswith("group:"):
+        try:
+            run = store.run(ref)
+            run["trained_steps"] = _trained_steps(store, run)
+            return run, store.episodes(run["id"], test)
+        except KeyError:
+            if name not in store.groups():
+                raise
+    members = store.group(name)
+    if not members:
+        raise KeyError(f"no run or group {ref!r}; see `omagym runs`")
+    for member in members:
+        member["trained_steps"] = _trained_steps(store, member)
+    return comparison.combine(name, members, [store.episodes(m["id"], test) for m in members])
+
+
 def compare(args) -> None:
     store = Store()
-    game = store.run(args.runs[0])["game"] if args.runs else args.game
+    game = resolve(store, args.runs[0], "")[0]["game"] if args.runs else args.game
     test = defaults(game).test(args.test)
     # The test says what better means there, unless --by says otherwise.
     metric = args.by or (test.metric if test else "score")
     lower = args.lower or (test is not None and args.by is None and test.lower_is_better)
     name = test.name if test else ""
-    runs = [store.run(ref) for ref in args.runs] if args.runs else _best_per_agent(store, game, metric, lower, name)
-    for run in runs:
-        run["trained_steps"] = _trained_steps(store, run)
-    episodes = {run["id"]: store.episodes(run["id"], name) for run in runs}
+    if args.runs:
+        resolved = [resolve(store, ref, name) for ref in args.runs]
+        runs, episodes = [r for r, _ in resolved], {r["id"]: e for r, e in resolved}
+    else:
+        runs = _best_per_agent(store, game, metric, lower, name)
+        for run in runs:
+            run["trained_steps"] = _trained_steps(store, run)
+        episodes = {run["id"]: store.episodes(run["id"], name) for run in runs}
     ranking = comparison.rank(runs, episodes, metric, lower, name, test.max_steps if test else None)
     print(report.ranking(ranking))
     ordered = [s.run for s in ranking.standings]
@@ -131,6 +155,14 @@ def _confirm(question: str) -> bool:
     except EOFError:
         # No one to ask (a script, a pipe): the safe answer.
         return False
+
+
+def tag(args) -> None:
+    store = Store()
+    for ref in args.runs:
+        run = store.run(ref)
+        tags = store.tag(run["id"], args.add, args.remove)
+        print(f"{run['name'] or run['id']}: {', '.join(tags) or 'no tags'}")
 
 
 def note(args) -> None:

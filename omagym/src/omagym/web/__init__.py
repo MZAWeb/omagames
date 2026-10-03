@@ -17,7 +17,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from .. import comparison, native
+from .. import comparison, native, records
 from ..games import defaults
 from ..store import Store
 from ..training import snapshot_files
@@ -88,6 +88,8 @@ def _route(path: str, query: dict):
     store = Store()
     if path == "runs":
         return [_listing(store, run) for run in store.runs(limit=None)]
+    if path == "groups":
+        return [_group(store, name) for name in store.groups()]
     if path.startswith("run/"):
         return _details(store, store.run(path.removeprefix("run/")))
     if path == "compare":
@@ -133,7 +135,25 @@ def _listing(store: Store, run: dict) -> dict:
         "status": run["status"], "started": run["started"], "finished": run["finished"], "code": run["code"],
         "trained_steps": store.trained_steps(run["id"]) if run["kind"] == "train" else None,
         "train_mix": run.get("train_mix") or {}, "results": _results(run),
+        "tags": run.get("tags", []), "group": run.get("group_name"),
     }
+
+
+def _group(store: Store, name: str) -> dict:
+    """A group of seeds as one row: their mean results, and who is in it."""
+    members = store.group(name)
+    for member in members:
+        member["trained_steps"] = store.trained_steps(member["id"]) if member["kind"] == "train" else None
+    run, _ = comparison.combine(name, members, [[] for _ in members])
+    spread = {}
+    for test in _tests(run["game"]):
+        key = f"{test['prefix']}{comparison.metric_key(test['metric'])}_mean"
+        values = [m["summary"][key] for m in members if key in m["summary"]]
+        if values:
+            mean = sum(values) / len(values)
+            spread[test["name"]] = (sum((v - mean) ** 2 for v in values) / len(values)) ** 0.5
+    return {**_listing(store, run), "id": run["id"], "name": name, "seeds": len(members),
+            "members": [m["id"] for m in members], "trained_steps": run["trained_steps"], "seed_spread": spread}
 
 
 def _details(store: Store, run: dict) -> dict:
@@ -177,15 +197,14 @@ def _commit_message(sha: str | None) -> str:
 def _compare(store: Store, refs: list[str], query: dict) -> dict:
     if not refs:
         raise ValueError("pick some runs to compare")
-    runs = [store.run(ref) for ref in refs]
-    game = runs[0]["game"]
+    game = records.resolve(store, refs[0], "")[0]["game"]
     test = defaults(game).test(query.get("test"))
     metric = query.get("by") or (test.metric if test else "score")
     lower = query.get("lower") == "1" if "lower" in query else (test.lower_is_better if test and "by" not in query else False)
     name = test.name if test else ""
-    for run in runs:
-        run["trained_steps"] = store.trained_steps(run["id"]) if run["kind"] == "train" else None
-    episodes = {run["id"]: store.episodes(run["id"], name) for run in runs}
+    # Runs, or groups of seeds (`group:<name>`), each with its games of the test.
+    resolved = [records.resolve(store, ref, name) for ref in refs]
+    runs, episodes = [r for r, _ in resolved], {r["id"]: e for r, e in resolved}
     ranking = comparison.rank(runs, episodes, metric, lower, name, test.max_steps if test else None)
     key = comparison.metric_key(metric)
     per_game = {run["id"]: {e["seed"]: e.get(key) for e in episodes[run["id"]]} for run in runs}

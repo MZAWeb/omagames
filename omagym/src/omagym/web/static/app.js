@@ -33,10 +33,20 @@ document.getElementById("picked-count").textContent = picked.size || "";
 // -- the runs, fetched once a page --------------------------------------------
 
 let runsCache = null;
+let groupsCache = null;
 async function runs() {
   runsCache ??= await api("runs");
   return runsCache;
 }
+// Groups of seeds (`run --seeds`), each as one row: its seeds' mean results.
+async function groups() {
+  groupsCache ??= await api("groups");
+  return groupsCache;
+}
+const isGroup = (r) => String(r.id).startsWith("group:");
+const href = (r) => isGroup(r) ? `#/compare?runs=${r.members.join(",")}` : `#/run/${r.id}`;
+const tagBadges = (r) => (r.tags || []).map((t) => `<span class="badge tag">★ ${esc(t)}</span>`).join(" ");
+const seedsBadge = (r) => isGroup(r) ? `<span class="badge">${r.seeds} seeds</span>` : "";
 const testsOf = (list) => {
   const names = [];
   for (const r of list) for (const t of Object.keys(r.results)) if (!names.includes(t)) names.push(t);
@@ -46,18 +56,31 @@ const mainValue = (r, test) => r.results[test]?.mean ?? null;
 
 // -- filters shared by the list views -------------------------------------------
 
-const filters = load("filters", {agents: [], mix: "any", text: ""});
+const filters = {agents: [], mix: "any", text: "", tags: [], combine: false, ...load("filters", {})};
 function filterBar(list, onChange) {
   const agents = [...new Set(list.map((r) => r.agent))].sort();
   const bar = document.createElement("div");
   bar.className = "filters";
+  const tags = [...new Set(list.flatMap((r) => r.tags || []))].sort();
   bar.innerHTML = `<label>agent</label>` + agents.map((a) =>
       `<span class="chip ${filters.agents.includes(a) ? "on" : ""}" data-agent="${a}">${a}</span>`).join("") +
     `<label style="margin-left:12px">training</label>
      <select data-mix><option value="any">any</option><option value="mix">on a mix</option><option value="plain">main test only</option></select>
-     <input type="search" placeholder="name or notes" value="${esc(filters.text)}" data-text>`;
+     <input type="search" placeholder="name or notes" value="${esc(filters.text)}" data-text>
+     ${tags.length ? `<label style="margin-left:12px">tag</label>` + tags.map((t) =>
+       `<span class="chip ${filters.tags.includes(t) ? "on" : ""}" data-tag="${esc(t)}">★ ${esc(t)}</span>`).join("") : ""}
+     <label style="margin-left:12px" title="One row per group of seeds (run --seeds), their mean">
+       <input type="checkbox" data-combine ${filters.combine ? "checked" : ""}> combine seeds</label>`;
   bar.querySelector("[data-mix]").value = filters.mix;
   bar.addEventListener("click", (e) => {
+    const tag = e.target.closest("[data-tag]");
+    if (tag) {
+      const t = tag.dataset.tag;
+      filters.tags = filters.tags.includes(t) ? filters.tags.filter((x) => x !== t) : [...filters.tags, t];
+      tag.classList.toggle("on");
+      save("filters", filters); onChange();
+      return;
+    }
     const chip = e.target.closest("[data-agent]");
     if (!chip) return;
     const a = chip.dataset.agent;
@@ -67,11 +90,15 @@ function filterBar(list, onChange) {
   });
   bar.querySelector("[data-mix]").onchange = (e) => { filters.mix = e.target.value; save("filters", filters); onChange(); };
   bar.querySelector("[data-text]").oninput = (e) => { filters.text = e.target.value; save("filters", filters); onChange(); };
+  bar.querySelector("[data-combine]").onchange = (e) => { filters.combine = e.target.checked; save("filters", filters); onChange(); };
   return bar;
 }
-function applyFilters(list) {
+function applyFilters(list, groupList = []) {
   const text = filters.text.toLowerCase();
+  // Combined, a group's seeds give way to the group's own row.
+  if (filters.combine) list = [...list.filter((r) => !r.group), ...groupList];
   return list.filter((r) =>
+    (!filters.tags.length || filters.tags.some((t) => (r.tags || []).includes(t))) &&
     (!filters.agents.length || filters.agents.includes(r.agent)) &&
     (filters.mix === "any" || (filters.mix === "mix") === Object.keys(r.train_mix).length > 0) &&
     (!text || `${r.name} ${r.notes} ${r.id}`.toLowerCase().includes(text)));
@@ -89,12 +116,13 @@ function wirePicks(root) {
 
 async function rankings() {
   const all = await runs();
+  const groupList = await groups();
   view.innerHTML = `<h1>Rankings</h1><p class="muted">Every run on every test, best first. Tick runs to compare them.</p>`;
   const body = document.createElement("div");
   view.appendChild(filterBar(all, () => draw()));
   view.appendChild(body);
   function draw() {
-    const list = applyFilters(all.filter((r) => r.status !== "running"));
+    const list = applyFilters(all.filter((r) => r.status !== "running"), groupList);
     const tests = testsOf(list);
     const tables = tests.map((test) => {
       const ranked = list.filter((r) => mainValue(r, test) !== null);
@@ -108,8 +136,8 @@ async function rankings() {
           const t = r.results[test];
           const kept = test === tests[0] ? `${fmt(t.survived)} survived` : `${fmt(t.won)} won`;
           return `<tr><td>${pickBox(r)}</td><td class="rank">${i + 1}</td>
-            <td><a href="#/run/${r.id}">${esc(label(r))}</a> ${mixBadge(r)}</td><td>${r.agent}</td><td class="num">${trained(r)}</td>
-            <td class="num">${fmt(t.mean, 2)} <span class="muted">± ${fmt(t.std, 1)}</span></td>
+            <td><a href="${href(r)}">${esc(label(r))}</a> ${seedsBadge(r)} ${mixBadge(r)} ${tagBadges(r)}</td><td>${r.agent}</td><td class="num">${trained(r)}</td>
+            <td class="num">${fmt(t.mean, 2)} <span class="muted">± ${fmt(isGroup(r) ? r.seed_spread[test] : t.std, 1)}${isGroup(r) ? " across seeds" : ""}</span></td>
             <td class="num">${kept} <span class="muted">/ ${fmt(t.games)}</span></td></tr>`;
         }).join("")}</tbody></table></div>`;
     }).join("");
@@ -119,7 +147,7 @@ async function rankings() {
     wirePicks(body);
     if (tests.length >= 2) {
       const points = list.filter((r) => mainValue(r, tests[0]) > 0 && mainValue(r, tests[1]) > 0).map((r) => ({
-        x: mainValue(r, tests[0]), y: mainValue(r, tests[1]), label: label(r), href: `#/run/${r.id}`,
+        x: mainValue(r, tests[0]), y: mainValue(r, tests[1]), label: label(r), href: href(r),
         tip: `<b>${esc(label(r))}</b><div class="muted">${esc(r.notes || r.agent)}</div>
               <div>${tests[0]}: <b>${fmt(mainValue(r, tests[0]))}</b></div><div>${tests[1]}: <b>${fmt(mainValue(r, tests[1]), 2)}</b></div>`,
       }));
@@ -135,6 +163,7 @@ async function rankings() {
 const sort = load("sort", {key: "started", dir: -1});
 async function runList() {
   const all = await runs();
+  const groupList = await groups();
   view.innerHTML = `<div class="row spread"><h1>Runs</h1><button class="primary" data-compare>Compare picked</button></div>`;
   view.querySelector("[data-compare]").onclick = () => { location.hash = `#/compare?runs=${[...picked].join(",")}`; };
   const card = document.createElement("div");
@@ -146,7 +175,7 @@ async function runList() {
                    ...tests.map((t) => [`test:${t}`, t]), ["started", "started"]];
   const value = (r, key) => key.startsWith("test:") ? mainValue(r, key.slice(5)) : r[key];
   function draw() {
-    const list = applyFilters(all);
+    const list = applyFilters(all, groupList);
     list.sort((a, b) => {
       const va = value(a, sort.key), vb = value(b, sort.key);
       if (va === vb) return 0;
@@ -158,7 +187,7 @@ async function runList() {
       <table><thead><tr><th><input type="checkbox" data-all aria-label="pick all shown"></th>
         ${columns.map(([k, t]) => `<th class="sort ${k.startsWith("test:") || k === "trained_steps" ? "num" : ""}" data-sort="${k}">${t}${sort.key === k ? (sort.dir > 0 ? " ↑" : " ↓") : ""}</th>`).join("")}
         <th>notes</th></tr></thead><tbody>
-      ${list.map((r) => `<tr><td>${pickBox(r)}</td><td><a href="#/run/${r.id}">${esc(label(r))}</a> ${mixBadge(r)}</td>
+      ${list.map((r) => `<tr><td>${pickBox(r)}</td><td><a href="${href(r)}">${esc(label(r))}</a> ${seedsBadge(r)} ${mixBadge(r)} ${tagBadges(r)}</td>
         <td>${r.agent}</td><td>${r.status}</td><td class="num">${trained(r)}</td>
         ${tests.map((t) => `<td class="num">${fmt(mainValue(r, t), 2)}</td>`).join("")}
         <td class="muted">${(r.started || "").slice(0, 16).replace("T", " ")}</td><td class="notes">${esc(r.notes)}</td></tr>`).join("")}
@@ -193,8 +222,8 @@ async function runPage(id, query = new URLSearchParams()) {
   const run = await api(`run/${id}`);
   const tests = run.tests.filter((t) => run.results[t.name]);
   view.innerHTML = `
-    <div class="row spread"><div><h1>${esc(label(run))} ${mixBadge(run)}</h1>
-      <div class="muted">${run.agent} on ${run.game} · ${run.status} · ${trained(run)} · ${run.id}</div></div>
+    <div class="row spread"><div><h1>${esc(label(run))} ${mixBadge(run)} ${tagBadges(run)}</h1>
+      <div class="muted">${run.agent} on ${run.game} · ${run.status} · ${trained(run)} · ${run.id}${run.group ? ` · one seed of <a href="#/compare?runs=group:${encodeURIComponent(run.group)}">${esc(run.group)}</a>` : ""}</div></div>
       <label class="chip">${pickBox(run)} compare</label></div>
     <p>${esc(run.notes) || '<span class="muted">No notes.</span>'}</p>
     <div class="grid3">${tests.map((t) => {
@@ -282,17 +311,20 @@ async function watchMany(run, files) {
 // -- comparing runs -------------------------------------------------------------------
 
 async function comparePage(query) {
-  const all = await runs();
+  const all = [...await runs(), ...await groups()];
   // Runs by id or by name, as everywhere in omagym.
   const refs = (query.get("runs") || [...picked].join(",")).split(",").filter(Boolean);
-  const chosen = refs.map((ref) => all.find((r) => r.id === ref) || all.find((r) => r.name === ref)).filter(Boolean);
+  const chosen = refs.map((ref) => all.find((r) => r.id === ref) || all.find((r) => r.name === ref && !isGroup(r))
+    || all.find((r) => isGroup(r) && r.name === ref)).filter(Boolean);
   const ids = chosen.map((r) => r.id);
   const tests = testsOf(chosen.length ? chosen : all);
   const test = query.get("test") || tests[0];
   view.innerHTML = `<h1>Compare</h1>
     <div class="card"><div class="filters"><label>runs</label>
       ${chosen.map((r, i) => `<span class="chip" data-drop="${r.id}"><span class="dot" style="background:${SERIES[i % 8]}"></span>${esc(label(r))} <span class="x">✕</span></span>`).join("")}
-      <select data-add><option value="">+ add a run…</option>${all.filter((r) => !ids.includes(r.id)).map((r) => `<option value="${r.id}">${esc(label(r))} (${r.agent})</option>`).join("")}</select>
+      <select data-add><option value="">+ add a run or a group…</option>
+        <optgroup label="groups of seeds">${all.filter((r) => isGroup(r) && !ids.includes(r.id)).map((r) => `<option value="${r.id}">${esc(r.name)} (${r.seeds} seeds, ${r.agent})</option>`).join("")}</optgroup>
+        <optgroup label="runs">${all.filter((r) => !isGroup(r) && !ids.includes(r.id)).map((r) => `<option value="${r.id}">${esc(label(r))} (${r.agent})</option>`).join("")}</optgroup></select>
       <label style="margin-left:12px">test</label><select data-test>${tests.map((t) => `<option ${t === test ? "selected" : ""}>${t}</option>`).join("")}</select>
       <label>rank by</label><select data-by><option value="">the test's measure</option>
         ${["score", "sum_lines", "steps", "won", "steps_to_win", "pieces_per_difficulty", "sum_holes", "sum_max_height"].map((m) => `<option value="${m.replace("sum_", "")}" ${query.get("by") === m.replace("sum_", "") ? "selected" : ""}>${m.replace("sum_", "")}</option>`).join("")}</select>
@@ -328,7 +360,7 @@ async function comparePage(query) {
       <table><thead><tr><th class="rank">#</th><th>run</th><th>trained</th><th class="num">${result.metric}</th>
         <th class="num">vs best: won–tied–lost</th><th class="num">difference (95% range)</th><th>verdict</th><th>notes</th></tr></thead><tbody>
       ${result.standings.map((s, i) => `<tr><td class="rank">${i + 1}</td>
-        <td><span class="dot" style="background:${colorOf[s.id]}"></span><a href="#/run/${s.id}">${esc(s.name || s.id)}</a></td>
+        <td><span class="dot" style="background:${colorOf[s.id]}"></span><a href="${s.id.startsWith("group:") ? `#/compare?runs=${s.id}` : `#/run/${s.id}`}">${esc(s.name || s.id)}</a></td>
         <td>${s.trained_steps ? fmt(s.trained_steps) + " steps" : "–"}</td>
         <td class="num">${fmt(s.mean, 2)} <span class="muted">± ${fmt(s.std, 1)}</span></td>
         <td class="num">${s.verdict === "best" ? "" : `${s.wins}–${s.ties}–${s.losses}`}</td>
@@ -340,9 +372,11 @@ async function comparePage(query) {
       <div style="overflow-x:auto">${heatmap(result, colorOf)}</div></div>
     <div class="card"><h2>Watch them play the same game</h2><div id="side-by-side"><p class="muted">Click a column above.</p></div></div>
     ${differs(result, colorOf, all)}
-    <div class="card"><h2>Learning curves</h2><p class="muted">The quick evaluations during training (score on short games), for the runs that trained. The first eight are drawn.</p><div id="curves"></div></div>`;
+    <div class="card"><h2>Learning curves</h2><p class="muted">The quick evaluations during training (score on short games), for the runs that trained (groups of seeds aren't drawn: open one to see its seeds). The first eight are drawn.</p><div id="curves"></div></div>`;
   wireHeatmap(body, result, all);
-  const details = await Promise.all(ids.filter((id) => all.find((r) => r.id === id)?.trained_steps).slice(0, 8).map((id) => api(`run/${id}`)));
+  // Curves are a run's: a group's seeds each have their own, so groups are left out here.
+  const details = await Promise.all(ids.filter((id) => !id.startsWith("group:") && all.find((r) => r.id === id)?.trained_steps)
+    .slice(0, 8).map((id) => api(`run/${id}`)));
   lineChart(body.querySelector("#curves"), details.filter((d) => d.curves["eval/score_mean"]).map((d) => ({
     name: label(d), color: colorOf[d.id], points: d.curves["eval/score_mean"]})), {xLabel: "training steps", yLabel: "quick evaluation score", empty: "None of these runs trained."});
 }
@@ -395,7 +429,7 @@ function heatmap(result, colorOf) {
       return {v, step: steps[Math.round(t * (steps.length - 1))], ink: t > 0.55 ? "#fff" : "var(--ink)"};
     });
   });
-  const name = (id) => esc((runsCache.find((r) => r.id === id) || {}).name || id);
+  const name = (id) => esc(([...runsCache, ...(groupsCache || [])].find((r) => r.id === id) || {}).name || id);
   return `<table class="heat"><thead><tr><th></th>${result.seeds.map((_, g) => `<th class="num">${g + 1}</th>`).join("")}</tr></thead><tbody>
     ${result.runs.map((id, r) => `<tr><td class="name"><span class="dot" style="background:${colorOf[id]}"></span>${name(id)}</td>
       ${cells.map((col, g) => col[r] ? `<td data-game="${g}" data-run="${id}" style="background:var(${col[r].step});color:${col[r].ink};cursor:pointer">${fmt(col[r].v, 1)}</td>` : "<td></td>").join("")}</tr>`).join("")}
@@ -420,8 +454,11 @@ async function sideBySide(result, game, all) {
   const replays = [], missing = [];
   for (const id of result.runs.slice(0, 4)) {
     const run = all.find((r) => r.id === id);
+    // A group has no replays of its own: its first seed plays for it.
+    const source = isGroup(run) ? run.members[0] : id;
     try {
-      replays.push({title: esc(label(run)), data: await api(`frames?run=${encodeURIComponent(id)}&file=${encodeURIComponent(file)}`)});
+      replays.push({title: esc(label(run)) + (isGroup(run) ? ' <span class="muted">(its first seed)</span>' : ""),
+                    data: await api(`frames?run=${encodeURIComponent(source)}&file=${encodeURIComponent(file)}`)});
     } catch { missing.push(label(run)); }
   }
   holder.innerHTML = (missing.length ? `<p class="muted">No replay of every game for ${missing.map(esc).join(", ")}: runs from before they were kept only have their best and worst.</p>` : "") +

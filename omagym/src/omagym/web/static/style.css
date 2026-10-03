@@ -89,6 +89,7 @@ td.notes { color: var(--ink-2); max-width: 420px; }
 .badge.worse { border-color: var(--bad); color: var(--bad); }
 .badge.same, .badge.tell { color: var(--ink-2); }
 .badge.mix { color: var(--series-7); border-color: var(--series-7); }
+.badge.tag { color: var(--ink); border-color: var(--axis); background: var(--accent-wash); }
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
 
 .kv { display: grid; grid-template-columns: max-content 1fr; gap: 3px 14px; }

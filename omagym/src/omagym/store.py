@@ -33,6 +33,8 @@ CREATE TABLE IF NOT EXISTS runs (
     train_steps INTEGER,
     seed INTEGER,
     train_mix TEXT,                -- JSON: the share of training games played as each other test
+    tags TEXT,                     -- JSON: labels of your own ("great", "baseline")
+    group_name TEXT,               -- the setup it is one seed of, for runs made with --seeds
     device TEXT,
     code TEXT NOT NULL,            -- commit, plus the patch's hash when dirty
     commit_sha TEXT,
@@ -72,16 +74,18 @@ class Store:
         if "test" not in columns:
             self.db.execute("ALTER TABLE episodes ADD COLUMN test TEXT DEFAULT ''")
             self.db.commit()
-        if "train_mix" not in [row[1] for row in self.db.execute("PRAGMA table_info(runs)")]:
-            self.db.execute("ALTER TABLE runs ADD COLUMN train_mix TEXT")
-            self.db.commit()
+        have = [row[1] for row in self.db.execute("PRAGMA table_info(runs)")]
+        for column in ("train_mix", "tags", "group_name"):
+            if column not in have:
+                self.db.execute(f"ALTER TABLE runs ADD COLUMN {column} TEXT")
+        self.db.commit()
 
     # -- writing --------------------------------------------------------------
 
     def new_run(self, kind: str, game: str, agent: str, **fields) -> dict:
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         for key in ("agent_config", "env_config", "versions", "train_mix"):
-            if isinstance(fields.get(key), dict):
+            if isinstance(fields.get(key), (dict, list)):
                 fields[key] = json.dumps(fields[key], sort_keys=True)
         # Runs started in the same second (several trainings launched at once)
         # want the same id. The insert is what claims one: whoever loses the
@@ -134,6 +138,21 @@ class Store:
             self.db.execute("UPDATE runs SET notes = ? WHERE id = ?", (notes, run_id))
         self.db.commit()
 
+    def tag(self, run_id: str, add: list[str] = (), remove: list[str] = ()) -> list[str]:
+        tags = [t for t in self.run(run_id)["tags"] if t not in remove]
+        tags += [t for t in add if t not in tags]
+        self.db.execute("UPDATE runs SET tags = ? WHERE id = ?", (json.dumps(tags), run_id))
+        self.db.commit()
+        return tags
+
+    def group(self, name: str) -> list[dict]:
+        """The runs made together as seeds of one setup (`run --seeds`), oldest first."""
+        rows = self.db.execute("SELECT id FROM runs WHERE group_name = ? ORDER BY started, id", (name,))
+        return [self.run(r["id"]) for r in rows]
+
+    def groups(self) -> list[str]:
+        return [r[0] for r in self.db.execute("SELECT DISTINCT group_name FROM runs WHERE group_name IS NOT NULL")]
+
     def delete(self, run_id: str) -> None:
         """Forgets a run: its rows, and its folder of checkpoints and replays."""
         with self.db:
@@ -166,16 +185,20 @@ class Store:
         run = dict(row)
         for key in ("agent_config", "env_config", "versions", "train_mix"):
             run[key] = json.loads(run[key]) if run.get(key) else {}
+        run["tags"] = json.loads(run["tags"]) if run.get("tags") else []
         run["summary"] = self.summary(run["id"])
         return run
 
     def runs(self, game: str | None = None, agent: str | None = None, kind: str | None = None,
-             limit: int | None = 30):
+             limit: int | None = 30, tag: str | None = None):
         query, params = "SELECT id FROM runs WHERE 1 = 1", []
         for column, value in (("game", game), ("agent", agent), ("kind", kind)):
             if value:
                 query += f" AND {column} = ?"
                 params.append(value)
+        if tag:
+            query += " AND EXISTS (SELECT 1 FROM json_each(runs.tags) WHERE value = ?)"
+            params.append(tag)
         query += " ORDER BY started DESC, id DESC"
         if limit is not None:
             query += " LIMIT ?"
