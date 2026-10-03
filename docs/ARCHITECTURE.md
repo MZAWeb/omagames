@@ -13,7 +13,7 @@
 
 ```
 omagames.pro            subdirs project: builds every game
-bin/build|run|test|install
+bin/build|run|test|install|build-env
 install.sh              one-line installer: clone, makepkg -si one game
 common/
   common.pri            included by each game's .pro (compiled in, no static lib)
@@ -25,6 +25,8 @@ common/
   src/scoretable.*      OmaGames::ScoreTable: the top-N table every game keeps
   src/windowgeometry.*  OmaGames::WindowGeometry: where the window was
   src/pacer.*           OmaGames::Pacer: the QTimer a bridge drives its engine with
+  env/                  agent environments: the C ABI a trainer loads, OmaGames::Env,
+                        replay/v1 (docs/AGENT-ENV.md)
   qml/OmaGames/         qmldir + generic controls (see below)
   fonts/                iA Writer Mono S (OFL)
   tests/                one file per area, `bin/test common`, like a game's suite
@@ -33,6 +35,7 @@ games/<game>/
   src/                  engine (QtCore only) + <Game>Game QObject bridge + QML
   tests/tests.pro, tst_<game>.cpp
   pkgbuild/PKGBUILD, <game>.desktop, <game>.install, <game>.svg
+  env/                  optional: lib<game>_env.so for training agents (bin/build-env)
   README.md             what it is, rules, keys — the spec for that game
 docs/
 ```
@@ -125,7 +128,7 @@ against the packages a player actually has.
 | Job | What it does |
 |---|---|
 | **Discover games** | Lists `games/*` into a JSON matrix, and every other top-level directory with its own `tests/tests.pro` (`common/`) into a second one. Adding a game or a shared suite needs no workflow edit. |
-| **build & test (`<game>`)** | One job per game: `bin/build <game>` then `bin/test <game>` (headless, `QT_QPA_PLATFORM=offscreen`). |
+| **build & test (`<game>`)** | One job per game: `bin/build <game>` then `bin/test <game>` (headless, `QT_QPA_PLATFORM=offscreen`), then `bin/build-env <game>` when the game has an `env/`. |
 | **test (`<suite>`)** | One job per shared suite: `bin/test <suite>`. `common/` has no binary of its own, so there is nothing to build first. |
 | **Code quality** | Four named steps, below. |
 | **package (`<game>`)** | One job per game: `makepkg` on `games/<game>/pkgbuild/PKGBUILD`, uploading `*.pkg.tar.zst` as an artifact. `makepkg` refuses to run as root, so the job creates a `builder` user and gives it the workspace. |
@@ -142,7 +145,7 @@ The quality steps, each failing on its own so the log names the problem:
    properties injected at runtime and therefore invisible to static analysis,
    and qmllint cannot whitelist individual identifiers.
 4. **C++ builds clean with `-Wall -Wextra -Werror`** — rebuilds the games and
-   every test suite with `qmake6 … QMAKE_CXXFLAGS+=`. The flags also carry
+   every test suite and env library with `qmake6 … QMAKE_CXXFLAGS+=`. The flags also carry
    `-isystem /usr/include/qt6` so Qt's own headers are exempt: the gate is on
    our code, not on what the current GCC has learned to say about Qt.
 

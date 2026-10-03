@@ -40,6 +40,11 @@ inside `games/<game>/` unless you are deliberately changing shared code.
 - `OmaGames::Pacer` (`common/src/pacer.h`): the bridge's `QTimer` and its
   interval property, `Repeating` or `SingleShot`. Interval 0 means no timer,
   which is what lets tests drive the game themselves.
+- Agent environments (`common/env/`, `docs/AGENT-ENV.md`): the C ABI
+  (`omagames_env.h`) a trainer loads from `lib<game>_env.so`, and
+  `OmaGames::Env`, which a game's `env/` implements over its engine. An env
+  never touches `QSettings` or a bridge, and its observation shows only what a
+  player can see.
 - QML module `OmaGames` (`common/qml/OmaGames/`): `OmaButton`, `OmaPanel`,
   `OmaKeyHint` (keycap badge), `OmaHintButton` (button + badge), `PlayingCard`,
   `OmaOverlayPanel` (dimmed cover + centred panel), `OmaConfirmDialog`,

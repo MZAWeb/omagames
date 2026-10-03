@@ -64,105 +64,127 @@ These extend `CLAUDE.md` and are not negotiable:
 
 ## Shape
 
+Built in step 1 (`common/env/`):
+
 ```
 common/env/
-  env.h            OmaGames::Env: the abstract C++ interface every game implements
-  envspec.h/.cpp   builder for the JSON spec and the observation layout
-  omagames_env.h   the C ABI (the only header the trainer depends on)
-  envabi.cpp       the C shim: forwards the ABI onto any OmaGames::Env
-  replay.h/.cpp    replay/v1: seed + engine calls, read and written
-  env.pri          included by each game's env.pro
-games/<game>/env/
-  <game>env.h/.cpp the game's Env: observation, actions, reward signals
-  env.pro          TEMPLATE = lib, CONFIG += shared, QT = core; lists the
-                   engine sources the same way tests/tests.pro does
-bin/build-env      bin/build-env omatris → build-env/omatris/libomatris_env.so
+  omagames_env.h          the C ABI: the only header a trainer depends on
+  env.h                   OmaGames::Env, the C++ interface a game implements,
+                          and the two functions each env library defines
+  envabi.cpp              the C shim: checks every call, then forwards it to the Env
+  observationlayout.h/.cpp named, typed, aligned tensors in one flat buffer
+  envconfig.h/.cpp        resolves a config against the game's schema
+  replay.h/.cpp           replay/v1: seed + engine inputs, written and read
+  env.pri                 included by a game's env.pro and by test suites
+common/tests/walkenv.*    a toy game the common suite drives the ABI through
+bin/build-env             bin/build-env omatris → build-env/omatris/libomatris_env.so
 ```
 
-The env's tests live in the game's existing suite (`bin/test omatris`). They
-test `OmatrisEnv` through its C++ interface, and the C shim gets one
-round-trip test in `common/tests`. CI builds `env/` for every game that has
-one, using the same discovery matrix it already uses. Env libraries are not
-shipped in the PKGBUILDs.
+Each game adds:
+
+```
+games/<game>/env/
+  <game>env.h/.cpp        the game's Env: observation, actions, signals
+  env.pro                 include(../../../common/env/env.pri), TEMPLATE = lib,
+                          CONFIG += plugin (a plain lib<game>_env.so), QT = core;
+                          lists the engine sources the same way tests/tests.pro does
+```
+
+The env's tests live in the game's existing suite (`bin/test omatris`) and
+drive its `Env` directly. The ABI itself is tested once, in `common/tests`,
+over the toy `WalkEnv`. CI builds `env/` for every game that has one and
+includes it in the `-Werror` gate. Env libraries are not shipped in the
+PKGBUILDs.
 
 Adding an env to another game means writing one class, about 200 lines,
 plus its tests. The ABI, batching, replays and the Python side are shared.
 
 ### `OmaGames::Env` (C++)
 
+`common/env/env.h` is the reference. In short:
+
 ```cpp
 class Env {
 public:
-    virtual ~Env() = default;
-    // JSON: observation layout, action spaces, signals, config schema,
-    // rules_version. Static per game, so the trainer can size buffers first.
-    virtual QJsonObject spec() const = 0;
-    virtual bool configure(const QJsonObject &config) = 0;   // mode, action space, frame skip…
+    virtual void configure(const QJsonObject &config) = 0;   // already resolved and valid
+    virtual const ObservationLayout &observationLayout() const = 0;
+    virtual int actionCount() const = 0;
+    virtual QStringList actionLabels() const;                // optional
+    virtual QStringList signalNames() const = 0;             // at most OG_MAX_SIGNALS
     virtual void reset(quint32 seed) = 0;
-    virtual StepResult step(int action) = 0;
-    virtual void observe(std::byte *out) const = 0;          // spec().observation layout
-    virtual void actionMask(quint8 *out) const = 0;          // 1 = legal
-    // A deep copy. `reseedHidden` reshuffles whatever the player cannot see
-    // (the bag past the next queue, an unplaced mine, the shoe) from `seed`,
-    // so a planner's rollouts are honest.
+    virtual EnvStep step(int action) = 0;                    // only legal actions arrive
+    virtual void observe(std::byte *buffer) const = 0;       // the buffer arrives zeroed
+    virtual void actionMask(quint8 *mask) const = 0;
     virtual std::unique_ptr<Env> clone(bool reseedHidden, quint32 seed) const = 0;
-    virtual Replay replay() const = 0;                       // the episode so far
-    virtual QJsonObject info() const = 0;                    // human-readable stats, for debugging
+    virtual Replay replay() const = 0;
+    virtual QJsonObject info() const;                        // optional
 };
+
+// Defined once in each env library.
+QJsonObject envGameSpec();          // {game, rules_version, config: schema}
+std::unique_ptr<Env> createEnv();
 ```
+
+A config schema maps each key to `{default, choices}` (a string),
+`{default, min, max}` (an integer) or `{default}` (a bool). The type of the
+default is the type of the key. Unknown keys are refused, so a typo in a
+trainer config fails instead of quietly training on the default.
 
 ### The C ABI (`omagames_env.h`)
 
-```c
-#define OG_ABI_VERSION 1
-#define OG_MAX_SIGNALS 16
+`common/env/omagames_env.h` is the reference. The functions:
 
-typedef struct OgEnv OgEnv;
+| Function | What it does |
+|---|---|
+| `og_abi_version()` | `OG_ABI_VERSION` (1) |
+| `og_game_spec()` | `{abi, game, rules_version, config: schema}`; needs no env |
+| `og_create(config_json)` | a new env, or NULL and `og_last_error()` |
+| `og_env_spec(env)` | `{config, observation: {size, tensors: [{name, dtype, shape, offset}]}, actions: {count, labels}, signals}` |
+| `og_reset(env, seed)` | starts an episode |
+| `og_step(env, action, &result)` | 0, or -1 when the action is out of range or masked, or the episode has not started or is over |
+| `og_observe(env, buffer)` | writes `size` bytes |
+| `og_action_mask(env, mask)` | writes `count` bytes; all zero outside an episode |
+| `og_clone(env, reseed_hidden, seed)` | a deep copy, optionally with the hidden randomness redrawn |
+| `og_replay_json(env)`, `og_info_json(env)` | the episode as replay/v1; free-form debug state |
+| `og_step_batch(envs, n, actions, seeds, results, obs, final_obs, masks)` | steps n envs in one call; resets ended ones in place from `seeds` |
+| `og_destroy(env)`, `og_last_error()` | |
 
-typedef struct {
-    double  reward;                  /* the game's default reward (Omatris: score gained) */
-    int32_t terminated;              /* the rules ended the run: top out, goal reached */
-    int32_t truncated;               /* the env's own step limit */
-    int64_t ticks;                   /* engine ticks this step consumed */
-    double  signals[OG_MAX_SIGNALS]; /* named in the spec: lines, pieces, holes… */
-} OgStepResult;
+`OgStepResult` is `{reward, terminated, truncated, ticks,
+signal_values[16]}`. The field isn't called `signals` because that's a Qt
+keyword.
 
-int          og_abi_version(void);
-const char  *og_spec(void);                          /* JSON, static */
-OgEnv       *og_create(const char *config_json);     /* NULL + og_last_error() on bad config */
-void         og_destroy(OgEnv *env);
-void         og_reset(OgEnv *env, uint32_t seed);
-void         og_step(OgEnv *env, int32_t action, OgStepResult *out);
-void         og_observe(const OgEnv *env, void *buffer);
-void         og_action_mask(const OgEnv *env, uint8_t *mask);
-OgEnv       *og_clone(const OgEnv *env, int reseed_hidden, uint32_t seed);
-const char  *og_replay_json(const OgEnv *env);      /* valid until the next call on env */
-const char  *og_info_json(const OgEnv *env);
-const char  *og_last_error(void);
+What the shim does, so no game has to:
 
-/* N envs in one call: one foreign call per batch instead of per env.
-   An env that terminates is reset in place from the next of `seeds` and
-   its terminal observation is written to `final_obs`, Gymnasium-style. */
-void og_step_batch(OgEnv **envs, int n, const int32_t *actions,
-                   const uint32_t *seeds, OgStepResult *results,
-                   void *obs, void *final_obs, uint8_t *masks);
-```
+- **Config:** resolves it against the schema, and adds `max_steps` (0 means
+  no cap) to every game's schema. Truncation is counted in the shim.
+- **Stepping out of turn is an error, not undefined:** before a reset, after
+  the episode ends, out of range, or masked. A masked action is refused
+  rather than ignored, which catches agent bugs on the first step instead of
+  after a day of training.
+- **Batches are all or nothing:** every action is checked before any env
+  moves, and envs with a different config from env 0 are refused.
+- **Observations are deterministic:** the buffer is zeroed before
+  `observe()`, so alignment padding is always zero.
 
-The observation is one contiguous buffer. The spec gives each tensor's name,
-dtype, shape and byte offset, so Python builds zero-copy numpy views over a
-buffer it owns. Envs share no global state, so different envs can be stepped
-on different threads.
+The observation is one contiguous buffer. Every tensor offset, and the total
+size, is a multiple of 8, so the rows of a batch stay aligned for any dtype.
+Dtype names are numpy's (`uint8`, `int32`, `float32`), so Python lays
+zero-copy views over a buffer it owns. Envs share no global state, so
+different envs can be stepped on different threads.
 
 `rules_version` in the spec is bumped whenever a rule constant or behaviour
 changes. That covers, for example, `kMaxLockResets` and anything else that
 changes what a sequence of actions does. Replays and trained models record
 it, so a stale checkpoint is refused instead of quietly scoring worse.
 
+Measured on the toy env from Python through ctypes: about 200,000 calls a
+second on one thread, before batching.
+
 ### Rewards are signals, not opinions
 
 The env reports what happened, and the trainer decides what that's worth.
 `reward` is the game's own score delta, so a trainer works out of the box.
-Each env also declares named `signals` (for Omatris: score gained, lines
+Each env also declares named signals (for Omatris: score gained, lines
 cleared, pieces placed, T-spin, holes and max height after the step, game
 over). Reward shaping depends on the experiment, so it lives in the trainer.
 Signals that are expensive to recompute in Python, like holes, are computed
@@ -229,7 +251,9 @@ back the same whether the agent used `placement`, `drop` or `raw`:
 
 ```json
 {
-  "game": "omatris", "rules_version": 3, "mode": "marathon", "seed": 1234,
+  "format": "replay/v1",
+  "game": "omatris", "rules_version": 3, "seed": 1234,
+  "config": {"mode": "marathon", "actions": "placement"},
   "agent": "cem-gen42",
   "calls": "t60 L L CW t1 HD t9 …"
 }
@@ -275,8 +299,8 @@ Every env follows the same pattern. Each game keeps its spec in its README.
 
 ## Plan
 
-1. `common`: `Env`, spec builder, C ABI, `replay/v1`, `env.pri`,
-   `bin/build-env`, CI job. Tests for the shim.
+1. **Done.** `common`: `Env`, observation layout, config resolution, C ABI,
+   `replay/v1`, `env.pri`, `bin/build-env`, CI. Tested over a toy env.
 2. `omatris`: `Game` copy test, `BoardMetrics`, `Placements`.
 3. `omatris`: `OmatrisEnv` with the three action spaces, plus env tests
    (determinism, masks match `Placements`, replay round trip, no
