@@ -9,6 +9,7 @@ everything above it talks to `omagym.env.Env`.
 from __future__ import annotations
 
 import ctypes
+import fcntl
 import functools
 import json
 import os
@@ -49,9 +50,16 @@ def build(game: str) -> None:
     run always plays the engine as the checkout has it: the code recorded with
     a run is the code that ran.
     """
-    result = subprocess.run(
-        [str(REPO_ROOT / "bin" / "build-env"), game], capture_output=True, text=True
-    )
+    # Several runs started together would all build into the same folder at
+    # once and trip over each other's files; a lock makes them take turns
+    # (the first builds, the rest find nothing to do).
+    lock = REPO_ROOT / "build-env" / f".{game}.lock"
+    lock.parent.mkdir(exist_ok=True)
+    with open(lock, "w") as held:
+        fcntl.flock(held, fcntl.LOCK_EX)
+        result = subprocess.run(
+            [str(REPO_ROOT / "bin" / "build-env"), game], capture_output=True, text=True
+        )
     if result.returncode != 0:
         tail = "\n".join((result.stdout + result.stderr).splitlines()[-30:])
         raise EnvError(f"bin/build-env {game} failed:\n{tail}")
