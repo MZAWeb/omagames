@@ -13,7 +13,10 @@ omagym = "omagym.cli:main"
 # group installed by default, so `uv run` brings it in; `--no-group learn`
 # leaves it out.
 [dependency-groups]
-learn = ["torch>=2.4"]
+learn = [
+    "torch>=2.4",
+    "xgboost>=2.0",
+]
 
 [tool.uv]
 default-groups = ["learn"]
