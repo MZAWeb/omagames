@@ -78,7 +78,10 @@ uv run omagym watch dqn-first --training
 ## Commands
 
 Every command takes `--help`. A *run* can be named by its id, a unique prefix
-of its id, its `--name`, or `last`.
+of its id, its `--name`, or `last`. A *trained model* is a training run with a checkpoint,
+so every command that takes a run takes a model: `show` one for its
+checkpoint, snapshots and every test of it, `watch` it, `eval --run` it,
+`delete` it.
 
 | Command | What it does |
 |---|---|
@@ -87,12 +90,13 @@ of its id, its `--name`, or `last`.
 | `omagym eval --run R` | Tests the best checkpoint of training run R (on more games, say) |
 | `omagym train --game G --agent A --steps N` | Trains a learning agent, evaluating as it goes, and records it |
 | `omagym runs [--game G] [--agent A] [--kind train\|eval]` | Lists runs, newest first, with their score |
+| `omagym models [--game G] [--agent A]` | Lists trained models (training runs with a checkpoint): steps trained, score, how often tested, snapshots |
 | `omagym show R` | Everything about a run: settings, code, results, learning curve |
 | `omagym compare [R1 R2 ...] [--by M] [--lower]` | Ranks runs by score (or `--by lines`, `ate`, `steps`...; `--lower` when less is better, as for `holes`) and says which beat which beyond doubt. With no runs, ranks each agent's best run of `--game` |
 | `omagym diff R1 R2 ...` | Runs side by side, plus every setting that differs between them: for runs of one agent |
 | `omagym watch R [--worst \| --training]` | Plays the run's best (or worst) evaluation game in the app; `--training`, its snapshots in order, stepped through with `N` and `B` |
 | `omagym note R --name N --notes "..."` | Names a run, or writes down what it was about, afterwards |
-| `omagym delete R1 R2 ... [--yes]` | Forgets runs: their results, checkpoints and replays. Asks first. A training run goes only together with the tests of its checkpoint |
+| `omagym delete R1 R2 ... [--yes] [--with-tests]` | Forgets runs: their results, checkpoints and replays. Asks first. A trained model goes only together with the tests of its checkpoint: name them, or pass `--with-tests` |
 
 Options shared by `train` and `eval`:
 

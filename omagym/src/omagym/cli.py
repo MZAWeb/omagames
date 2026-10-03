@@ -19,7 +19,7 @@ from .env import Env
 from .evaluation import evaluate
 from .games import defaults
 from .store import Store
-from .training import Schedule, snapshot_files, train
+from .training import Schedule, train
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -71,7 +71,11 @@ def _parser() -> argparse.ArgumentParser:
     sub.add_argument("--kind", choices=("train", "eval"))
     sub.add_argument("--limit", type=int, default=30)
 
-    sub = command("show", records.show, "everything about one run")
+    sub = command("models", records.models, "list trained models: training runs with a checkpoint")
+    sub.add_argument("--game")
+    sub.add_argument("--agent")
+
+    sub = command("show", records.show, "everything about one run, or one trained model")
     sub.add_argument("run", help="run id, a unique prefix of one, its name, or 'last'")
 
     sub = command("compare", records.compare, "which runs played best, and whether the difference is real")
@@ -93,6 +97,8 @@ def _parser() -> argparse.ArgumentParser:
     sub = command("delete", records.delete, "forget runs: their results, checkpoints and replays")
     sub.add_argument("runs", nargs="+")
     sub.add_argument("--yes", action="store_true", help="don't ask first")
+    sub.add_argument("--with-tests", action="store_true",
+                     help="a trained model goes with the runs that tested its checkpoint")
 
     sub = command("note", records.note, "name a run or write down what it was about")
     sub.add_argument("run")
@@ -195,7 +201,8 @@ def _train(args) -> int:
         raise
     print(f"\n{status}.\n")
     trained = store.run(run["id"])
-    print(report.show(trained, store.series(run["id"], "eval/score_mean"), False, len(snapshot_files(trained))))
+    print(report.show(trained, store.series(run["id"], "eval/score_mean"), False,
+                      records.model(store, trained), records.checkpoints(trained)))
     return 0
 
 

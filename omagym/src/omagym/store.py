@@ -180,6 +180,11 @@ class Store:
         rows = self.db.execute("SELECT data FROM episodes WHERE run = ? ORDER BY episode", (run_id,))
         return [json.loads(r["data"]) for r in rows]
 
+    def trained_steps(self, run_id: str) -> int | None:
+        """Steps a training run actually took: its budget, unless it stopped early."""
+        row = self.db.execute("SELECT MAX(step) FROM metrics WHERE run = ? AND key LIKE 'train/%'", (run_id,)).fetchone()
+        return row[0]
+
     def series(self, run_id: str, key: str) -> list[tuple[int, float]]:
         rows = self.db.execute("SELECT step, value FROM metrics WHERE run = ? AND key = ? ORDER BY step", (run_id, key))
         return [(r["step"], r["value"]) for r in rows]

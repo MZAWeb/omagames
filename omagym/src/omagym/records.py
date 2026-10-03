@@ -1,4 +1,8 @@
-"""The commands on runs already recorded: list, show, compare, watch, name, delete."""
+"""The commands on runs already recorded: list, show, compare, watch, name, delete.
+
+A trained model is a training run with a checkpoint: `models` lists those,
+and every other command here takes one by its run id or name.
+"""
 
 from __future__ import annotations
 
@@ -16,11 +20,31 @@ def runs(args) -> None:
     print(report.runs_table(runs) if runs else "no runs yet: try `omagym eval --agent greedy`")
 
 
+def models(args) -> None:
+    store = Store()
+    found = [model(store, run) for run in store.runs(args.game, args.agent, "train", limit=None)
+             if checkpoints(run)]
+    print(report.models_table(found) if found else
+          "no trained models yet: try `omagym train --agent dqn`")
+
+
+def model(store: Store, run: dict) -> dict:
+    """A training run with what a model listing shows beside it."""
+    return {**run, "trained_steps": store.trained_steps(run["id"]),
+            "tests": [store.run(t) for t in store.evaluations_of(run["id"])],
+            "snapshots": len(snapshot_files(run))}
+
+
+def checkpoints(run: dict) -> list[str]:
+    return [name for name in ("best.pt", "last.pt") if (Path(run["dir"]) / name).exists()]
+
+
 def show(args) -> None:
     store = Store()
     run = store.run(args.run)
     curve = store.series(run["id"], "eval/score_mean")
-    print(report.show(run, curve, (Path(run["dir"]) / "code.patch").exists(), len(snapshot_files(run))))
+    model_info = model(store, run) if run["kind"] == "train" else None
+    print(report.show(run, curve, (Path(run["dir"]) / "code.patch").exists(), model_info, checkpoints(run)))
 
 
 def compare(args) -> None:
@@ -54,8 +78,8 @@ def _best_per_agent(store: Store, game: str, metric: str, lower_is_better: bool)
 def _trained_steps(store: Store, run: dict) -> int | None:
     """Steps of training behind a run: its own, or for a test of a checkpoint, the training run's."""
     if run["kind"] == "train":
-        return run["train_steps"]
-    return store.run(run["parent"])["train_steps"] if run["parent"] else None
+        return store.trained_steps(run["id"])
+    return store.trained_steps(run["parent"]) if run["parent"] else None
 
 
 def diff(args) -> None:
@@ -87,10 +111,13 @@ def watch(args) -> int:
 def delete(args) -> int:
     store = Store()
     runs = {run["id"]: run for run in (store.run(ref) for ref in args.runs)}
-    for run_id in runs:
+    for run_id in list(runs):
         orphans = [e for e in store.evaluations_of(run_id) if e not in runs]
-        if orphans:
-            raise ValueError(f"{run_id}'s checkpoint was tested by {', '.join(orphans)}: delete those too, or keep it")
+        if orphans and args.with_tests:
+            runs.update({e: store.run(e) for e in orphans})
+        elif orphans:
+            raise ValueError(f"{run_id}'s checkpoint was tested by {', '.join(orphans)}: "
+                             "delete those too, or pass --with-tests")
     print("\n".join(f"  {run_id}" + (f"  ({run['name']})" if run["name"] else "") for run_id, run in runs.items()))
     if not args.yes and not _confirm(f"delete {len(runs)} run(s) and their files? [y/N] "):
         print("nothing deleted")

@@ -1,4 +1,4 @@
-"""Turning runs into text: what `runs`, `show`, `diff` and `compare` print."""
+"""Turning runs into text: what `runs`, `models`, `show`, `diff` and `compare` print."""
 
 from __future__ import annotations
 
@@ -39,7 +39,14 @@ def runs_table(runs: list[dict]) -> str:
     return table(["run", "kind", "agent", "name", "status", "code", "score"], rows)
 
 
-def show(run: dict, curve: list[tuple[int, float]], patch_exists: bool, snapshots: int = 0) -> str:
+def models_table(models: list[dict]) -> str:
+    rows = [[m["id"], m["name"] or "", m["game"], m["agent"], m["status"], _trained(m),
+             spread(m["summary"], "score"), str(len(m["tests"])), str(m["snapshots"])] for m in models]
+    return table(["model", "name", "game", "agent", "status", "trained", "score", "tests", "snapshots"], rows)
+
+
+def show(run: dict, curve: list[tuple[int, float]], patch_exists: bool, model: dict | None = None,
+         checkpoints: list[str] = ()) -> str:
     out = [
         f"run       {run['id']}" + (f"  ({run['name']})" if run["name"] else ""),
         f"kind      {run['kind']} of {run['agent']} on {run['game']}, {run['status']}",
@@ -63,8 +70,20 @@ def show(run: dict, curve: list[tuple[int, float]], patch_exists: bool, snapshot
         out.append(table(["", "mean", "std", "min", "median", "max"], rows))
     if curve:
         out += ["", "learning curve (eval score by training steps):", _curve(curve)]
-    if snapshots:
-        out += ["", f"{snapshots} snapshots of it playing as it learned: omagym watch {run['id']} --training"]
+    if model:
+        # Agents report progress between games, so a run ends a little past
+        # its budget; only one stopped short of it is worth saying so.
+        short = (model["trained_steps"] or 0) < (run["train_steps"] or 0)
+        out += ["", f"trained   {_trained(model)}" + (f" of {number(run['train_steps'])} asked for" if short else ""),
+                f"model     {', '.join(checkpoints) or 'no checkpoint'} in {run['dir']}"]
+        if model["snapshots"]:
+            out.append(f"snapshots {model['snapshots']}, of it playing as it learned: "
+                       f"omagym watch {run['id']} --training")
+        if model["tests"]:
+            out += ["", "tests of its checkpoint:",
+                    table(["run", "name", "games", "score"],
+                          [[t["id"], t["name"] or "", number(t["summary"].get("episodes")), spread(t["summary"], "score")]
+                           for t in model["tests"]])]
     return "\n".join(out)
 
 
