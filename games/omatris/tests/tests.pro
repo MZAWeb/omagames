@@ -1,10 +1,11 @@
 include(../../../common/common-tests.pri)
+include(../../../common/env/env.pri)
 QT += testlib
 CONFIG += testcase c++17
 TEMPLATE = app
 TARGET = tst_omatris
 
-INCLUDEPATH += ../src
+INCLUDEPATH += ../src ../env
 
 HEADERS += \
     ../src/piece.h \
@@ -26,6 +27,8 @@ HEADERS += \
     ../src/handling.h \
     ../src/preferences.h \
     ../src/omatrisgame.h \
+    ../env/omatrisobservation.h \
+    ../env/omatrisenv.h \
     enginefixture.h \
     challengetests.h \
     difficultytests.h \
@@ -39,7 +42,8 @@ HEADERS += \
     inputtests.h \
     persistencetests.h \
     boardmetricstests.h \
-    placementtests.h
+    placementtests.h \
+    envtests.h
 
 SOURCES += \
     ../src/piece.cpp \
@@ -61,6 +65,8 @@ SOURCES += \
     ../src/handling.cpp \
     ../src/preferences.cpp \
     ../src/omatrisgame.cpp \
+    ../env/omatrisobservation.cpp \
+    ../env/omatrisenv.cpp \
     piecetests.cpp \
     challengetests.cpp \
     difficultytests.cpp \
@@ -73,4 +79,5 @@ SOURCES += \
     persistencetests.cpp \
     boardmetricstests.cpp \
     placementtests.cpp \
+    envtests.cpp \
     tst_omatris.cpp

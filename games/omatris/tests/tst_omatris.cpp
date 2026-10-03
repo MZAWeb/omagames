@@ -6,6 +6,7 @@
 #include "boardtests.h"
 #include "challengetests.h"
 #include "difficultytests.h"
+#include "envtests.h"
 #include "handlingtests.h"
 #include "lockdelaytests.h"
 #include "inputtests.h"
@@ -45,5 +46,7 @@ int main(int argc, char *argv[]) {
     status |= QTest::qExec(&metrics, argc, argv);
     PlacementTests placements;
     status |= QTest::qExec(&placements, argc, argv);
+    EnvTests env;
+    status |= QTest::qExec(&env, argc, argv);
     return status;
 }
