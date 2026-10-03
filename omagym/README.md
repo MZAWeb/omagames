@@ -19,7 +19,7 @@ reading them (each file explains its method where it happens):
 | `greedy` | Omatris | no | Rates the board each landing leaves with four weighted features and takes the best. **Read this first**: every Tetris agent below is this loop with a better rating |
 | `greedy` | Omasnake | no | Steps toward the food, avoiding walls and its body one move ahead |
 | `cem` | Omatris | yes | The cross-entropy method: evolves the weights of 15 board features. No PyTorch |
-| `dqn` | Omatris | yes | A neural network that learns how good a board is (deep Q-learning on afterstates), with n-step returns, Double DQN, score rewards and a CNN to switch on |
+| `dqn` | Omatris | yes | A neural network that learns how good a board is (deep Q-learning on afterstates) |
 | `lookahead` | Omatris | no | Beam search over the next pieces on copies of the game, judging boards with greedy's weights, a `cem` run's or a `dqn` run's network |
 | `mcts` | Omatris | yes | Monte Carlo tree search with a value network that learns from the search (AlphaZero-style) |
 | `ppo` | any | yes | Proximal policy optimisation: learns the policy itself from the raw observation. The general one, and the road to Trackmania |
@@ -319,8 +319,9 @@ game with `env.clone(reseed_hidden=True)`.
 
 Things worth trying:
 
-- `dqn`: each improvement on its own (`--set n_step=3`, `target=best`,
-  `reward=score`, `inputs=cnn`), then together; `gamma`; a bigger network.
+- `dqn`: what the network sees (`--set inputs=rich`, `board`, `cnn`),
+  `gamma`, a bigger network, and the improvements its docstring lists
+  (n-step returns, Double DQN, the game's score as the reward).
 - `cem`: `--set objective=lines` against `score`; more `games` per
   candidate; no noise (`noise=0`) to see the search stall.
 - `lookahead`: `depth=3`, a wider `beam`, and judging with your best `cem`

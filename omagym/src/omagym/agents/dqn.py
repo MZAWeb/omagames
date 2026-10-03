@@ -26,24 +26,11 @@ a little under 1, makes reward soon worth more than reward later.
   the network, refreshed every `target_sync` steps. Otherwise every update
   would also move the target it is chasing.
 
-**The improvements to try**, each one setting (they all default to off, so
-a run with defaults is the plain version and every improvement can be tested
-against it on its own):
-
-- `n_step=3`: learn from the next three rewards before guessing the rest:
-  target = r0 + g*r1 + g^2*r2 + g^3*V(s3). A Tetris pays out several moves
-  after the moves that set it up; with n = 1 that reward creeps back one
-  move per update, with n = 3 it reaches the setup at once.
-- `target=best`: bootstrap from the board the network rates best next,
-  rather than the one actually played. With exploration, the one played is
-  sometimes a random blunder, and "played" (which is SARSA) learns the value
-  of playing with blunders; "best" (Q-learning) learns the value of playing
-  well. The best board is picked by the learning network and rated by the
-  target network: that split is Double DQN, which stops the max over noisy
-  ratings from always picking the lucky overestimate.
-- `reward=score`: learn from the game's own points rather than the shaped
-  reward below. Then V predicts points, which is what `compare` ranks.
-- `inputs=rich`, `inputs=board`, `inputs=cnn`: what the network sees.
+**Ideas to try** (SCIENCE.md, 2.3, has more): learning from the next few
+rewards before guessing the rest (n-step returns); bootstrapping from the
+board the network rates best rather than the one played (Q-learning, and
+Double DQN to keep it honest); the game's own points as the reward; and
+`inputs=rich`, `board` or `cnn` for what the network sees.
 
 **Read next:** mcts.py, which plans with a network like this one.
 """
@@ -51,7 +38,6 @@ against it on its own):
 from __future__ import annotations
 
 import copy
-from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -97,18 +83,12 @@ class AfterstateDQN(Agent):
         target_sync: int = 1_000
         # A training game is cut short here; a good agent never tops out.
         episode_steps: int = 2_000
-        # The improvements described at the top.
-        n_step: int = 1
-        target: str = "played"
-        reward: str = "shaped"
-        # "shaped": a little for every piece placed, a lot for lines (squared,
-        # so a Tetris is worth sixteen singles), a penalty for topping out.
+        # The reward it learns from, built from the env's signals: a little
+        # for every piece placed, a lot for lines (squared, so a Tetris is
+        # worth sixteen singles), and a penalty for topping out.
         reward_piece: float = 1.0
         reward_line: float = 10.0
         reward_top_out: float = -20.0
-        # "score": the game's points times this, plus the top-out penalty.
-        # Scaled because networks learn badly from targets in the thousands.
-        score_scale: float = 0.01
         seed: int = 0
 
     @classmethod
@@ -118,12 +98,6 @@ class AfterstateDQN(Agent):
     def __init__(self, config: Config, spec, device: str = "cpu"):
         super().__init__(config, spec, device)
         afterstate_value.check(config.inputs)
-        for setting, value, choices in (("target", config.target, ("played", "best")),
-                                        ("reward", config.reward, ("shaped", "score"))):
-            if value not in choices:
-                raise ValueError(f"{setting} must be {' or '.join(choices)}, not {value!r}")
-        if config.n_step < 1:
-            raise ValueError("n_step must be at least 1")
         torch.manual_seed(config.seed)
         self.rng = np.random.default_rng(config.seed)
         self.input_size = afterstate_value.input_size(config.inputs, spec)
@@ -160,19 +134,16 @@ class AfterstateDQN(Agent):
 
     def _reward(self, step) -> float:
         c = self.config
-        if c.reward == "score":
-            reward = c.score_scale * step.reward
-        else:
-            reward = c.reward_piece + c.reward_line * step.signals["lines"] ** 2
+        reward = c.reward_piece + c.reward_line * step.signals["lines"] ** 2
         return reward + (c.reward_top_out if step.signals["topped_out"] else 0.0)
 
     def train(self, ctx):
         c = self.config
         memory = _Memory(c.buffer, self.input_size)
         env = ctx.make_env(max_steps=c.episode_steps)
-        # The last n boards chosen and their rewards, waiting for enough of
-        # the future to complete their n-step targets.
-        recent: deque[tuple[np.ndarray, float]] = deque()
+        # The board chosen last move and the reward it earned, waiting for the
+        # next choice to complete its transition (s, r, s').
+        pending: tuple[np.ndarray, float] | None = None
         losses: list[float] = []
         episode_reward = 0.0
         obs = env.reset(ctx.next_seed())
@@ -181,30 +152,22 @@ class AfterstateDQN(Agent):
             inputs = self._inputs(obs, mask)
             action = self.act(obs, mask, explore=True)
             chosen = inputs[action]
-
-            # The board to bootstrap the oldest waiting target from: the one
-            # just played, or the one the network rates best ("target").
-            follow = chosen if c.target == "played" else inputs[int(np.argmax(self.values(inputs)))]
-            if len(recent) == c.n_step:
-                state, reward = self._oldest_return(recent)
-                memory.add(state, reward, c.gamma ** c.n_step, follow)
+            if pending is not None:
+                memory.add(pending[0], pending[1], c.gamma, chosen)
 
             step = env.step(action)
             self.steps += 1
             reward = self._reward(step)
             episode_reward += reward
-            recent.append((chosen, reward))
 
             if step.terminated:
-                # The game is over: nothing comes after, so each waiting board's
-                # target is just the rewards that did come (discount 0).
-                while recent:
-                    state, reward = self._oldest_return(recent)
-                    memory.add(state, reward, 0.0, np.zeros_like(state))
+                # The game is over: nothing comes after, so the target is just
+                # the reward (discount 0).
+                memory.add(chosen, reward, 0.0, np.zeros_like(chosen))
             if step.done:
                 # A game cut short (truncated) still had a future we never saw;
-                # its waiting boards are dropped rather than taught as an ending.
-                recent.clear()
+                # its last transition is dropped rather than taught as an ending.
+                pending = None
                 info = env.info()
                 yield {
                     "steps": self.steps,
@@ -218,18 +181,13 @@ class AfterstateDQN(Agent):
                 episode_reward = 0.0
                 obs = env.reset(ctx.next_seed())
             else:
+                pending = (chosen, reward)
                 obs = step.obs
 
             if len(memory) >= c.warmup:
                 losses.append(self._learn(memory))
             if self.steps % c.target_sync == 0:
                 self.target.load_state_dict(self.net.state_dict())
-
-    def _oldest_return(self, recent: deque) -> tuple[np.ndarray, float]:
-        """Removes the oldest waiting board; it and its discounted rewards so far."""
-        total = sum(self.config.gamma ** k * reward for k, (_, reward) in enumerate(recent))
-        state, _ = recent.popleft()
-        return state, total
 
     def _learn(self, memory: _Memory) -> float:
         """One update: a random batch of old transitions, a step toward their targets."""
@@ -259,8 +217,8 @@ class AfterstateDQN(Agent):
 class _Memory:
     """The replay memory: a ring of (board, reward, discount, next board).
 
-    `discount` is gamma^n for an n-step transition, or 0 when the game ended,
-    so the target is always reward + discount * V(next board).
+    `discount` is gamma, or 0 when the game ended, so the target is always
+    reward + discount * V(next board).
     """
 
     def __init__(self, capacity: int, width: int):
