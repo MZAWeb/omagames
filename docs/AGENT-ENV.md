@@ -315,7 +315,7 @@ Every env follows the same pattern. Each game keeps its spec in its README.
 | Game | Natural action space | Observation (visible only) | Baseline to beat |
 |---|---|---|---|
 | **oma2048** | 4 slides, masked | 4 × 4 log₂ tiles; afterstates are the slide before the random spawn | expectimax; n-tuple TD learning is the known strong method |
-| **omasnake** | 3 relative turns per *move* (ticks between moves skipped) | grid channels: body, head, food, bonus + timer | greedy BFS to food |
+| **omasnake** (built) | 3 relative turns, or 4 absolute directions, per *move* (ticks between moves folded in) | coded 24 × 32 grid (body, head, tail, food, bonus) + a labelled state row | greedy toward the food: average length 41 over 20 games, always dying by boxing itself in |
 | **omasweeper** | reveal / flag × cell, masked to hidden cells | revealed numbers, flags, hidden mask; never mines | the game's own solver (boards are no-guess) |
 | **omanix** | 5 per step (stay, 4 directions) with frame skip | grid of claimed/trail/balls + chaser positions | real-time and hard; the long-term "Trackmania" target |
 | **blackomack** | hit / stand / double / split / insure; bet separately | hand, up-card, true count if wanted | `BasicStrategy` (already in the engine) |
@@ -332,7 +332,18 @@ Every env follows the same pattern. Each game keeps its spec in its README.
    `QSettings` writes).
 4. **Done.** `omatris`: `--replay` in the app and its README section, plus a
    sample replay.
-5. A second game (2048 or Snake) to prove the interface is generic before it
-   hardens. Bump `OG_ABI_VERSION` freely until then.
+5. **Done.** `omasnake`: the second env, chosen because it shares the least
+   with Tetris (real time, no placements or afterstates, a tiny action
+   space) and because a correct learner is known to master it, so a flat
+   learning curve points at a bug rather than at the game. It needed
+   nothing new from the shared layer. No replay viewer yet: that waits until
+   someone wants to watch a Snake agent.
 
-Each step is its own PR with atomic commits, per `CLAUDE.md`.
+Steps 1 to 5 went up as one PR of atomic commits. `OG_ABI_VERSION` can
+still change freely until omagym depends on it.
+
+Next: the omagym skeleton on Omatris (baselines, evaluation, CEM), then
+one learner running on both games with no game-specific code in its loop.
+Omanix is the third env, once both have shaken omagym out: lives, levels,
+a varying number of balls and chasers, and a reward that only comes when a
+cut closes.
