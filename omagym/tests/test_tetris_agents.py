@@ -82,3 +82,41 @@ def test_cem_refuses_an_objective_it_does_not_know():
     cls = resolve("cem", "omatris")
     with pytest.raises(ValueError, match="objective"):
         cls(make_config(cls, {"objective": "style"}), _spec())
+
+
+@pytest.mark.parametrize("settings", [
+    {"n_step": "3"},
+    {"target": "best"},
+    {"reward": "score"},
+    {"inputs": "rich"},
+    {"inputs": "cnn", "hidden": "16"},
+], ids=lambda s: "-".join(f"{k}={v}" for k, v in s.items()))
+def test_every_dqn_improvement_trains(settings):
+    pytest.importorskip("torch")
+    cls = resolve("dqn", "omatris")
+    config = make_config(cls, {"warmup": "32", "batch": "16", "episode_steps": "30", **settings})
+    agent = cls(config, _spec())
+    ctx = TrainContext("omatris", cls.env_config("omatris"), seed=0, device="cpu")
+    for update in agent.train(ctx):
+        if update["steps"] >= 120:
+            break
+    assert np.isfinite(update["loss"])
+
+
+def test_dqn_refuses_settings_it_does_not_know():
+    pytest.importorskip("torch")
+    cls = resolve("dqn", "omatris")
+    for bad in ({"target": "worst"}, {"reward": "vibes"}, {"inputs": "pixels"}, {"n_step": "0"}):
+        with pytest.raises(ValueError):
+            cls(make_config(cls, bad), _spec())
+
+
+def test_n_step_returns_add_up_the_rewards_that_came():
+    pytest.importorskip("torch")
+    from collections import deque
+
+    cls = resolve("dqn", "omatris")
+    agent = cls(make_config(cls, {"gamma": "0.5", "n_step": "3"}), _spec())
+    recent = deque([(np.zeros(1), 1.0), (np.ones(1), 2.0), (np.ones(1), 4.0)])
+    state, total = agent._oldest_return(recent)
+    assert total == 1.0 + 0.5 * 2.0 + 0.25 * 4.0 and state[0] == 0 and len(recent) == 2
