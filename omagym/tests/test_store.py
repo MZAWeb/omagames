@@ -60,13 +60,13 @@ def test_runs_are_found_by_prefix_name_or_last():
         store.run("nothing-like-it")
 
 
-def test_compare_shows_what_differs_and_warns_on_different_tests():
+def test_diff_shows_what_differs_and_warns_on_different_tests():
     store = Store()
     a = _run(store, agent_config={"holes": -0.3})
     b = _run(store, agent_config={"holes": -1.0}, eval_max_steps=200)
     for run in (a, b):
         store.set_summary(run["id"], {"score_mean": 1.0, "score_std": 0.0, "episodes": 5})
-    text = report.compare([store.run(a["id"]), store.run(b["id"])])
+    text = report.diff([store.run(a["id"]), store.run(b["id"])])
     assert "holes" in text and "-1.0" in text
     assert "not tested on the same games" in text
 
