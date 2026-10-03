@@ -18,3 +18,7 @@ Makefile
 /.worktrees/
 /packaging/opr/*/pkg/
 /packaging/opr/*/src/
+/omagym/.venv/
+/omagym/experiments/
+__pycache__/
+.pytest_cache/
