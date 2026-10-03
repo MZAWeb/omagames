@@ -85,6 +85,11 @@ class PPO(Agent):
         entropy_coef: float = 0.01
         max_grad_norm: float = 0.5
         hidden: int = 256
+        # How the policy chooses an Omatris drop: "flat", one choice among
+        # all 80 (column x rotation x hold); or "factored", hold first, then
+        # the rotation, then the column, each its own small choice (see
+        # _Factored). Any other game is always flat.
+        policy: str = "flat"
         # The reward: the game's score times `reward_scale` (networks learn
         # badly from rewards in the thousands), plus `death_penalty` when the
         # game is lost.
@@ -120,7 +125,12 @@ class PPO(Agent):
         # are the choices that make PPO behave, per "The 37 implementation
         # details of PPO"; the small gain on the actor's last layer starts it
         # off nearly uniform, trying everything.
-        self.actor = _mlp(size, config.hidden, spec.action_count, last_gain=0.01).to(device)
+        if config.policy not in ("flat", "factored"):
+            raise ValueError(f"policy must be flat or factored, not {config.policy!r}")
+        if config.policy == "factored" and spec.action_count != _Factored.ACTIONS:
+            raise ValueError("a factored policy is for Omatris's drop actions (80 of them)")
+        outputs = _Factored.OUTPUTS if config.policy == "factored" else spec.action_count
+        self.actor = _mlp(size, config.hidden, outputs, last_gain=0.01).to(device)
         self.critic = _mlp(size, config.hidden, 1, last_gain=1.0).to(device)
         self.optimizer = torch.optim.Adam([*self.actor.parameters(), *self.critic.parameters()],
                                           lr=config.lr, eps=1e-5)
@@ -145,17 +155,17 @@ class PPO(Agent):
                 parts.append(values.astype(np.float32))
         return np.concatenate(parts)
 
-    def _logits(self, x: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-        # A masked action gets a hugely negative logit: probability zero.
-        return self.actor(x).masked_fill(~mask, -1e9)
+    def _policy(self, x: torch.Tensor, mask: torch.Tensor):
+        """The policy's distribution over legal actions for each observation in x."""
+        if self.config.policy == "factored":
+            return _Factored(self.actor(x), mask)
+        return _Flat(self.actor(x), mask)
 
     def act(self, obs, mask, explore=False) -> int:
         x = torch.as_tensor(self.normalizer.apply(self._encode(obs))[None], device=self.device)
         with torch.no_grad():
-            logits = self._logits(x, torch.as_tensor(mask[None], device=self.device))
-        if explore:
-            return int(torch.distributions.Categorical(logits=logits).sample())
-        return int(logits.argmax())
+            policy = self._policy(x, torch.as_tensor(mask[None], device=self.device))
+        return int(policy.sample() if explore else policy.mode())
 
     # -- learning -------------------------------------------------------------
 
@@ -189,7 +199,7 @@ class PPO(Agent):
             masks[t] = np.stack([env.mask() for env in envs])
             x, m = torch.as_tensor(seen[t], device=self.device), torch.as_tensor(masks[t], device=self.device)
             with torch.no_grad():
-                dist = torch.distributions.Categorical(logits=self._logits(x, m))
+                dist = self._policy(x, m)
                 action = dist.sample()
                 logprobs[t] = dist.log_prob(action).cpu().numpy()
                 values[t] = self.critic(x).squeeze(1).cpu().numpy()
@@ -258,7 +268,7 @@ class PPO(Agent):
         for _ in range(c.epochs):
             order = torch.as_tensor(self.rng.permutation(size), device=self.device)
             for rows in order.chunk(c.minibatches):
-                dist = torch.distributions.Categorical(logits=self._logits(b["seen"][rows], b["masks"][rows]))
+                dist = self._policy(b["seen"][rows], b["masks"][rows])
                 logprob = dist.log_prob(b["actions"][rows])
                 # How much likelier the action is now than when it was played.
                 ratio = (logprob - b["logprobs"][rows]).exp()
@@ -272,7 +282,7 @@ class PPO(Agent):
                 clipped = ratio.clamp(1 - c.clip, 1 + c.clip)
                 policy_loss = -torch.min(ratio * adv, clipped * adv).mean()
                 value_loss = (self.critic(b["seen"][rows]).squeeze(1) - b["returns"][rows]).pow(2).mean()
-                entropy = dist.entropy().mean()
+                entropy = dist.entropy(b["actions"][rows]).mean()
                 loss = policy_loss + c.value_coef * value_loss - c.entropy_coef * entropy
 
                 self.optimizer.zero_grad()
@@ -296,6 +306,83 @@ class PPO(Agent):
         self.critic.load_state_dict(state["critic"])
         self.normalizer.load(state["norm"])
         self.steps = state["steps"]
+
+
+class _Flat:
+    """One choice among every action; a masked one gets a hugely negative
+    logit, so probability zero."""
+
+    def __init__(self, logits: torch.Tensor, mask: torch.Tensor):
+        self.dist = torch.distributions.Categorical(logits=logits.masked_fill(~mask, -1e9))
+
+    def sample(self):
+        return self.dist.sample()
+
+    def mode(self):
+        return self.dist.logits.argmax(-1)
+
+    def log_prob(self, actions):
+        return self.dist.log_prob(actions)
+
+    def entropy(self, actions=None):
+        return self.dist.entropy()
+
+
+class _Factored:
+    """A drop chosen in three steps: hold or not, then the rotation, then the column.
+
+    The 80 drop actions are hold x 40 + rotation x 10 + column (the game's
+    README). Instead of one softmax over all 80, the actor outputs 2 + 4 + 10
+    numbers: scores for hold, for each rotation and for each column. Each
+    step is masked to what is still legal given the steps before (a rotation
+    with no reachable column can't be picked), and its probability is the
+    product of the three. The column scores are shared by every rotation, so
+    what is learned about a column ("the well is in column 9") carries over,
+    and each choice is among 2, 4 or 10 rather than 80.
+    """
+
+    ACTIONS, OUTPUTS = 80, 2 + 4 + 10
+
+    def __init__(self, outputs: torch.Tensor, mask: torch.Tensor):
+        self.hold_logits, self.rot_logits, self.col_logits = outputs.split([2, 4, 10], dim=-1)
+        self.mask = mask.view(-1, 2, 4, 10)
+        self.rows = torch.arange(len(mask), device=mask.device)
+
+    def _hold(self):
+        legal = self.mask.any(-1).any(-1)
+        return torch.distributions.Categorical(logits=self.hold_logits.masked_fill(~legal, -1e9))
+
+    def _rot(self, hold):
+        legal = self.mask[self.rows, hold].any(-1)
+        return torch.distributions.Categorical(logits=self.rot_logits.masked_fill(~legal, -1e9))
+
+    def _col(self, hold, rot):
+        legal = self.mask[self.rows, hold, rot]
+        return torch.distributions.Categorical(logits=self.col_logits.masked_fill(~legal, -1e9))
+
+    def _choose(self, pick):
+        hold = pick(self._hold())
+        rot = pick(self._rot(hold))
+        col = pick(self._col(hold, rot))
+        return hold * 40 + rot * 10 + col
+
+    def sample(self):
+        return self._choose(lambda d: d.sample())
+
+    def mode(self):
+        return self._choose(lambda d: d.logits.argmax(-1))
+
+    def _steps(self, actions):
+        hold, rot, col = actions // 40, actions % 40 // 10, actions % 10
+        return (self._hold(), hold), (self._rot(hold), rot), (self._col(hold, rot), col)
+
+    def log_prob(self, actions):
+        return sum(d.log_prob(a) for d, a in self._steps(actions))
+
+    def entropy(self, actions):
+        # The three steps' entropies along the path actually taken: the
+        # exact entropy over all 80 would need every branch.
+        return sum(d.entropy() for d, _ in self._steps(actions))
 
 
 def _mlp(inputs: int, hidden: int, outputs: int, last_gain: float) -> nn.Sequential:
