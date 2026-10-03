@@ -24,6 +24,8 @@ def play(agent: Agent, env: Env, seed: int, explore: bool = False) -> dict:
     """One episode; what it scored, how long it lasted, and its signals summed."""
     obs = env.reset(seed)
     totals = {name: 0.0 for name in env.spec.signals}
+    # Clears by size (a Tetris is a clear of four), where the game clears lines.
+    clears = [0, 0, 0, 0]
     reward, steps = 0.0, 0
     while True:
         step = env.step(agent.decide(env, obs, env.mask(), explore=explore))
@@ -31,6 +33,8 @@ def play(agent: Agent, env: Env, seed: int, explore: bool = False) -> dict:
         reward += step.reward
         for name, value in step.signals.items():
             totals[name] += value
+        if 1 <= step.signals.get("lines", 0) <= 4:
+            clears[int(step.signals["lines"]) - 1] += 1
         obs = step.obs
         if step.done:
             break
@@ -48,7 +52,22 @@ def play(agent: Agent, env: Env, seed: int, explore: bool = False) -> dict:
         "difficulty": float(info.get("dealt_difficulty", 0)),
         "ended": "terminated" if step.terminated else "cut short",
         **{f"sum_{k}": v for k, v in totals.items()},
-    }
+        **({f"clears_{n}": float(c) for n, c in enumerate(clears, 1)} if "lines" in totals else {}),
+    } | style({"steps": steps, "score": info.get("score", reward), **{f"sum_{k}": v for k, v in totals.items()}})
+
+
+def style(episode: dict) -> dict:
+    """How a game was played, beyond its score: points per line, and the
+    holes and stack height after an average move. From an episode's sums, so
+    it can be worked out again for games already recorded."""
+    out = {}
+    steps = max(1, episode["steps"])
+    if episode.get("sum_lines"):
+        out["points_per_line"] = episode["score"] / episode["sum_lines"]
+    for signal, name in (("sum_holes", "avg_holes"), ("sum_max_height", "avg_height")):
+        if signal in episode:
+            out[name] = episode[signal] / steps
+    return out
 
 
 def summarize(episodes: list[dict]) -> dict[str, float]:
