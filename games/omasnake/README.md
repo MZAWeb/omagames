@@ -109,12 +109,64 @@ current speed and the best score for these edges and speed. The window
 scales with the desktop text size; the minimum is 640×520 logical pixels at
 100%, which still leaves at least 16 pixels a cell.
 
+## Agent environment
+
+`bin/build-env omasnake` builds `build-env/omasnake/libomasnake_env.so`,
+the game as a program plays it, for training agents (`docs/AGENT-ENV.md`).
+It plays the same engine as the app but owns nothing else: no high scores,
+nothing written to `omasnake.conf`.
+
+**One step is one move of the snake.** The agent's turn is queued and the
+game ticks until the head has moved, so the opening "Ready" beat and the
+ticks between moves at any speed are folded into the step; nothing done
+between moves could change anything.
+
+### Config
+
+| Key | Default | Choices |
+|---|---|---|
+| `mode` | `classic` | `classic` (walls kill), `wrap` |
+| `difficulty` | `normal` | `slow`, `normal`, `fast`: how many ticks a move takes, which is what a bonus's six seconds are counted against |
+| `actions` | `relative` | `relative`, `absolute` (below) |
+| `max_steps` | 0 | moves before an episode is cut short; 0 never |
+
+### Actions
+
+- **`relative`**: `straight`, `turn_left`, `turn_right`, against the
+  current heading. Never masked; the usual setup for a learner, since the
+  same action means the same thing whichever way the snake points.
+- **`absolute`**: `up`, `down`, `left`, `right`. The way back onto the neck
+  is masked, since the snake would ignore it.
+
+### Observation
+
+| Tensor | Type | Shape | What |
+|---|---|---|---|
+| `grid` | uint8 | 24 × 32 | 0 empty, 1 body, 2 head, 3 tail, 4 food, 5 bonus |
+| `state` | int32 | 12 | head_x, head_y, heading (0 up, 1 down, 2 left, 3 right), length, food_x, food_y, bonus_x, bonus_y (−1 when there is none), bonus_ticks left, score, multiplier, move_ticks |
+
+Where the next dot will appear is never shown: a planner's clone with
+`reseed_hidden` redraws it.
+
+### Reward and signals
+
+The reward is the score gained: 10 × the length multiplier for a food, 50
+for a bonus. Each step also reports `score`, `ate`, `bonus`, `length`,
+`food_distance` (moves from the head to the food, across an edge in Wrap),
+`died` and `filled` (the perfect game). The episode ends when the run does.
+
+The env reports `rules_version` 1 (`Rules::kVersion`), raised whenever the
+same turns would play out differently. Its replays write each turn as
+`U`, `D`, `L` or `R` between runs of ticks; the app has no replay viewer
+for Snake yet.
+
 ## Build, test, run
 
 ```sh
 bin/build omasnake
 bin/test omasnake
 bin/run omasnake
+bin/build-env omasnake   # the agent environment library
 ```
 
 Settings live in `~/.config/Omacom/omasnake.conf`.
