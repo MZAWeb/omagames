@@ -116,3 +116,31 @@ def rich_features(obs: dict[str, np.ndarray], spec: EnvSpec, count: int) -> np.n
     board = np.stack([holes, bumpiness, heights.sum(axis=1), heights.max(axis=1), well_depths.sum(axis=1),
                       well_depths.max(axis=1), row_transitions, column_transitions], axis=1)
     return np.concatenate([earned, board], axis=1).astype(np.float32)
+
+
+# -- What is in hand after a landing --------------------------------------------
+#
+# The board a landing leaves is not the whole story: what you hold and what
+# comes next matter too. An I in the hold beside a deep well is a Tetris in
+# waiting; the same well with an S coming next is a problem. These are the
+# two pieces a player has in hand once the landing is made, worked out from
+# the landing (did it use the hold?) and the preview.
+
+PIECE_KINDS = 8  # 0 for none, then I, J, L, O, S, T, Z
+
+
+def hand_after(obs: dict[str, np.ndarray], spec: EnvSpec, count: int) -> np.ndarray:
+    """[count, 2 * PIECE_KINDS]: the held piece, then the next piece in play,
+    one-hot, as they will be after each landing on offer."""
+    used_hold = obs["candidates"][:count, spec.tensors["candidates"].column("hold")] > 0
+    current, held = int(obs["piece"][0]), int(obs["hold"][0])
+    queue = obs["queue"]
+    # Without the hold: the falling piece lands, the hold is untouched, and the
+    # first in the queue comes next.
+    # With it: the falling piece goes into the hold. If something was held,
+    # that lands and the queue's first comes next; if the hold was empty, the
+    # queue's first lands and its second comes next.
+    held_after = np.where(used_hold, current, held)
+    next_after = np.where(used_hold & (held == 0), queue[1], queue[0])
+    eye = np.eye(PIECE_KINDS, dtype=np.float32)
+    return np.concatenate([eye[held_after], eye[next_after]], axis=1)

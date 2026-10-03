@@ -30,7 +30,8 @@ a little under 1, makes reward soon worth more than reward later.
 rewards before guessing the rest (n-step returns); bootstrapping from the
 board the network rates best rather than the one played (Q-learning, and
 Double DQN to keep it honest); the game's own points as the reward; and
-`inputs=rich`, `board` or `cnn` for what the network sees.
+`inputs=rich`, `board` or `cnn` for what the network sees, and `rich_hand`
+or `cnn_hand` to show it the held and next pieces too.
 
 **Read next:** mcts.py, which plans with a network like this one.
 """

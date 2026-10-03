@@ -353,7 +353,8 @@ game with `env.clone(reseed_hidden=True)`.
 
 Things worth trying:
 
-- `dqn`: what the network sees (`--set inputs=rich`, `board`, `cnn`),
+- `dqn`: what the network sees (`--set inputs=rich`, `board`, `cnn`, and
+  `rich_hand` or `cnn_hand`, which add the held and next pieces),
   `gamma`, a bigger network, and the improvements its docstring lists
   (n-step returns, Double DQN, the game's score as the reward).
 - `cem`: `--set objective=lines` against `score`; more `games` per
