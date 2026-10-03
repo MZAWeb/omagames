@@ -1,6 +1,8 @@
 #include <QCoreApplication>
 #include <QtTest>
 
+#include "envabitests.h"
+#include "envpartstests.h"
 #include "pacertests.h"
 #include "scoretabletests.h"
 #include "themetests.h"
@@ -21,5 +23,9 @@ int main(int argc, char *argv[]) {
     status |= QTest::qExec(&geometry, argc, argv);
     PacerTests pacer;
     status |= QTest::qExec(&pacer, argc, argv);
+    EnvPartsTests envParts;
+    status |= QTest::qExec(&envParts, argc, argv);
+    EnvAbiTests envAbi;
+    status |= QTest::qExec(&envAbi, argc, argv);
     return status;
 }
