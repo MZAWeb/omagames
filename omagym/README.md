@@ -24,7 +24,37 @@ reading them (each file explains its method where it happens):
 | `mcts` | Omatris | yes | Monte Carlo tree search with a value network that learns from the search (AlphaZero-style) |
 | `ppo` | any | yes | Proximal policy optimisation: learns the policy itself from the raw observation. The general one, and the road to Trackmania |
 
-RESULTS_TABLE
+Each with its default training, on the standard games: 20 games of Tetris
+cut at 2,500 pieces (1,000 lines if every one is cleared, about level 100),
+placed at ten key presses a second:
+
+| Agent | Trained | Score | Lines | Games survived (of 20) |
+|---|---|---|---|---|
+| `mcts`, from `dqn`'s network | 20,000 steps, ~6 min | **9,384,719** | 996.6 | 20 |
+| `dqn` | 100,000 steps, ~6 min | 8,462,525 | 977.9 | 19 |
+| `greedy` | none | 6,390,662 | 998.5 | 20 |
+| `lookahead` (greedy's judgement) | none | 6,244,006 | 999.0 | 20 |
+| `lookahead`, judged by `cem`'s weights | none | 4,453,274 | 569.8 | 6 |
+| `cem` | 520,000 steps, ~12 min | 3,672,947 | 542.7 | 6 |
+| `ppo` | 1,000,000 steps, ~10 min | 435 | 0.5 | 0 |
+| `random` | none | 291 | 0.1 | 0 |
+
+What it shows:
+
+- **Search plus a learned value wins.** `mcts` planning with `dqn`'s network
+  beats `dqn` alone on every one of the 20 games.
+- **Score and survival are different goals.** `greedy` and `lookahead`
+  clear nearly every line but score a third less: they clear lines one at a
+  time and keep the stack flat. The learners build up for multi-line clears.
+- **Train on the game you're tested on.** `cem` trains on 300-piece games
+  (`episode_steps`), which never get past about level 12, so it never meets
+  the gravity of the later levels: its weights stack high, and at 20G a tall
+  stack is a death trap. Try `--set episode_steps=2500`, which is slower.
+- **PPO has barely started.** A million steps is little for a policy that
+  must learn what each of 80 drops does from the raw well. That is the
+  lesson of its docstring, and the place to try longer runs, `--env
+  actions=raw`, or reward shaping.
+
 
 New to the field? `SCIENCE.md` maps it: the families of algorithms, the
 techniques they share, how to compare them fairly, and which suit which game.
@@ -169,13 +199,14 @@ played.
 ### Reading `compare`
 
 ```
-ranked by lines, higher is better: the 20 games of omatris every run played, each cut at 500 steps
+ranked by score, higher is better: the 20 games of omatris every run played, each cut at 2500 steps
 
-    run              agent   trained        lines        vs best: won-tied-lost  difference (95% range)   verdict
---  ---------------  ------  -------------  -----------  ----------------------  -----------------------  -------
-1.  greedy-baseline  greedy  -              198.8 ± 0.6
-2.  dqn-first        dqn     100,000 steps  194.7 ± 1.8  0-1-19                  -4.0 (-4.9 to -3.1)      worse
-3.  random-baseline  random  -              0.1 ± 0.3    0-0-20                  -198.7 (-199 to -198.2)  worse
+    run     agent   trained        score                  vs best: won-tied-lost  difference (95% range)                 verdict
+--  ------  ------  -------------  ---------------------  ----------------------  -------------------------------------  -------
+1.  mcts    mcts    20,215 steps   9,384,719 ± 154,998
+2.  dqn     dqn     101,239 steps  8,462,525 ± 1,033,209  0-0-20                  -922,194 (-1,425,336 to -613,467)      worse
+3.  greedy  greedy  -              6,390,662 ± 59,334     0-0-20                  -2,994,057 (-3,072,794 to -2,915,761)  worse
+4.  cem     cem     520,984 steps  3,672,947 ± 3,695,487  1-0-19                  -5,711,772 (-7,230,898 to -4,069,959)  worse
 ```
 
 Every run is set against the best, **game by game**: on the same game,
@@ -192,11 +223,10 @@ pieces were, so it is much sharper than comparing two averages.
 - **trained**: steps of training behind it, so a learner that needed a
   million steps is not mistaken for one that needed ten thousand.
 
-The ranking depends on what you rank by. With the default reward, `dqn`
-beats `greedy` on `score` but loses on `lines`. Its stack stands about
-three times as tall (`--by max_height --lower`), which looks like
-building for multi-line clears: they score far more than the same lines
-cleared one at a time.
+The ranking depends on what you rank by. `dqn` beats `greedy` on `score`
+but loses on `lines` (`--by lines`): its stack stands taller (`--by
+max_height --lower`), building for multi-line clears, which score far more
+than the same lines cleared one at a time.
 
 ### A way of working
 
