@@ -41,7 +41,7 @@ def all_agents() -> list[type[Agent]]:
 
 
 # Importing an agent's module registers it. Add new agents' modules here.
-for _module in ("random_agent", "greedy", "cem", "dqn", "lookahead", "mcts"):
+for _module in ("random_agent", "greedy", "cem", "dqn", "lookahead", "mcts", "ppo"):
     try:
         importlib.import_module(f"{__name__}.{_module}")
     except ImportError as error:

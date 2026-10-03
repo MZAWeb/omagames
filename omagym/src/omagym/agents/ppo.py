@@ -1,0 +1,316 @@
+"""Proximal policy optimisation (PPO): learning the policy itself.
+
+**The idea.** Every other learner here learns a *value* and acts by "take
+the best". PPO learns the *policy* directly: a network that, given what the
+agent sees, outputs a probability for every action (SCIENCE.md, 2.4). It
+plays by sampling from those probabilities, and learns by making the
+actions that turned out better than expected more likely, and the others
+less.
+
+It needs no afterstates, no features, no copy of the game: only the
+observation and the action mask. So this is the one agent here that plays
+any game. Tetris in the `drop` action space (a column and a rotation),
+Tetris pressing keys (`--env actions=raw --env frame_skip=4`), or Snake.
+
+**The loop**, repeated forever:
+
+1. **Collect.** Play `envs` games side by side for `rollout` steps each,
+   recording what was seen, done, and earned.
+2. **Judge each action** with an *advantage*: how much better it turned out
+   than the critic expected. The critic is a second network that learns
+   V(observation), the reward to expect from here. An action with a
+   positive advantage was a pleasant surprise. GAE (generalised advantage
+   estimation) blends one-step and many-step views of "how it turned out"
+   with `gae_lambda`.
+3. **Update** both networks for a few `epochs` over that batch, then throw
+   the batch away (PPO is on-policy: it learns only from its current self).
+
+**The "proximal" part.** A policy-gradient step that is too big can wreck a
+policy that took hours to learn. PPO clips each update: once an action's
+probability has moved more than `clip` (20%) from what it was when the
+batch was collected, that action stops pushing. Simple, and it is why PPO is
+the default choice in so much of reinforcement learning.
+
+**What to expect on Tetris:** weaker than the afterstate agents, and that is
+the lesson. They are told every landing and its board; PPO has to work out
+from the raw well what each of 80 actions does. With raw key presses it is
+harder still: a line's reward comes dozens of presses after the ones that
+earned it. That is the Trackmania problem in miniature.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+
+import numpy as np
+import torch
+from torch import nn
+
+from . import register
+from .base import Agent
+
+# uint8 tensors hold categories (a cell's contents, a piece's kind) and are
+# one-hot encoded with this many classes; anything higher shares the last.
+_CATEGORIES = 8
+# Tensors only the placement action space has: a policy over 80 drops has no use for them.
+_SKIP = ("candidates", "afterstates")
+
+
+@register
+class PPO(Agent):
+    name = "ppo"
+    description = "Learns a policy network directly with proximal policy optimisation. Plays any game."
+    trainable = True
+
+    @dataclass
+    class Config:
+        # Games played side by side, and steps of each per batch: a batch is
+        # envs * rollout steps. Many games at once give varied, less
+        # correlated experience.
+        envs: int = 8
+        rollout: int = 128
+        # The update: passes over each batch, split into minibatches.
+        epochs: int = 4
+        minibatches: int = 4
+        lr: float = 2.5e-4
+        gamma: float = 0.99
+        gae_lambda: float = 0.95
+        clip: float = 0.2
+        # How much the critic's error and the policy's randomness count in
+        # the loss. The entropy bonus keeps the policy from committing to
+        # one action before it knows enough.
+        value_coef: float = 0.5
+        entropy_coef: float = 0.01
+        max_grad_norm: float = 0.5
+        hidden: int = 256
+        # The reward: the game's score times `reward_scale` (networks learn
+        # badly from rewards in the thousands), plus `death_penalty` when the
+        # game is lost.
+        reward_scale: float = 0.01
+        death_penalty: float = -1.0
+        # Hunger: a training game that goes this many steps without any reward
+        # ends, and counts as lost. Without it, an agent that finds dying
+        # costs more than scoring earns can learn to stall forever (a Snake
+        # circling, never eating): reward hacking, SCIENCE.md section 3.
+        patience: int = 300
+        episode_steps: int = 2_000
+        seed: int = 0
+
+    @classmethod
+    def env_config(cls, game: str) -> dict:
+        # A fixed set of actions, which is what a policy network outputs.
+        return {"omatris": {"actions": "drop"}, "omasnake": {"actions": "absolute"}}.get(game, {})
+
+    def __init__(self, config: Config, spec, device: str = "cpu"):
+        super().__init__(config, spec, device)
+        torch.manual_seed(config.seed)
+        self.rng = np.random.default_rng(config.seed)
+        self.tensors = [t for t in spec.tensors.values() if t.name not in _SKIP]
+        size = sum(int(np.prod(t.shape)) * (_CATEGORIES if t.dtype == np.uint8 else 1) for t in self.tensors)
+        self.normalizer = _RunningNorm(size)
+        # Two networks: the actor (the policy, one output per action) and the
+        # critic (the value, one output). Tanh and orthogonal initialisation
+        # are the choices that make PPO behave, per "The 37 implementation
+        # details of PPO"; the small gain on the actor's last layer starts it
+        # off nearly uniform, trying everything.
+        self.actor = _mlp(size, config.hidden, spec.action_count, last_gain=0.01).to(device)
+        self.critic = _mlp(size, config.hidden, 1, last_gain=1.0).to(device)
+        self.optimizer = torch.optim.Adam([*self.actor.parameters(), *self.critic.parameters()],
+                                          lr=config.lr, eps=1e-5)
+        self.steps = 0
+
+    # -- seeing ---------------------------------------------------------------
+
+    def _encode(self, obs) -> np.ndarray:
+        """Every tensor the game shows, flattened into one vector of numbers.
+
+        uint8 tensors are categories, so each value becomes a one-hot block
+        (a cell holding food is not "four times" a cell holding body).
+        int32 and float tensors are quantities, used as they are; the running
+        normalisation in _RunningNorm puts them all on a similar scale.
+        """
+        parts = []
+        for t in self.tensors:
+            values = obs[t.name].reshape(-1)
+            if t.dtype == np.uint8:
+                parts.append(np.eye(_CATEGORIES, dtype=np.float32)[np.minimum(values, _CATEGORIES - 1)].reshape(-1))
+            else:
+                parts.append(values.astype(np.float32))
+        return np.concatenate(parts)
+
+    def _logits(self, x: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+        # A masked action gets a hugely negative logit: probability zero.
+        return self.actor(x).masked_fill(~mask, -1e9)
+
+    def act(self, obs, mask, explore=False) -> int:
+        x = torch.as_tensor(self.normalizer.apply(self._encode(obs))[None], device=self.device)
+        with torch.no_grad():
+            logits = self._logits(x, torch.as_tensor(mask[None], device=self.device))
+        if explore:
+            return int(torch.distributions.Categorical(logits=logits).sample())
+        return int(logits.argmax())
+
+    # -- learning -------------------------------------------------------------
+
+    def train(self, ctx):
+        c = self.config
+        envs = [ctx.make_env(max_steps=c.episode_steps) for _ in range(c.envs)]
+        obs = [env.reset(ctx.next_seed()) for env in envs]
+        self._hungry = np.zeros(len(envs), np.int64)   # steps since each game's last reward
+        finished_scores: list[float] = []
+        while True:
+            batch = self._collect(envs, obs, ctx, finished_scores)
+            stats = self._update(batch)
+            yield {"steps": self.steps,
+                   "episode_score": float(np.mean(finished_scores)) if finished_scores else float("nan"),
+                   "episodes": float(len(finished_scores)), **stats}
+            finished_scores.clear()
+
+    def _collect(self, envs, obs, ctx, finished_scores) -> dict:
+        """1. Plays every game on for `rollout` steps; what happened, as arrays."""
+        c = self.config
+        T, N = c.rollout, len(envs)
+        seen = np.zeros((T, N, self.normalizer.size), np.float32)
+        masks = np.zeros((T, N, self.spec.action_count), bool)
+        actions, logprobs = np.zeros((T, N), np.int64), np.zeros((T, N), np.float32)
+        values, rewards, dones = np.zeros((T, N), np.float32), np.zeros((T, N), np.float32), np.zeros((T, N), np.float32)
+
+        for t in range(T):
+            encoded = np.stack([self._encode(o) for o in obs])
+            self.normalizer.update(encoded)
+            seen[t] = self.normalizer.apply(encoded)
+            masks[t] = np.stack([env.mask() for env in envs])
+            x, m = torch.as_tensor(seen[t], device=self.device), torch.as_tensor(masks[t], device=self.device)
+            with torch.no_grad():
+                dist = torch.distributions.Categorical(logits=self._logits(x, m))
+                action = dist.sample()
+                logprobs[t] = dist.log_prob(action).cpu().numpy()
+                values[t] = self.critic(x).squeeze(1).cpu().numpy()
+            actions[t] = action.cpu().numpy()
+
+            for i, env in enumerate(envs):
+                step = env.step(int(actions[t, i]))
+                self.steps += 1
+                self._hungry[i] = 0 if step.reward > 0 else self._hungry[i] + 1
+                starved = self._hungry[i] >= c.patience
+                lost = step.terminated or starved
+                rewards[t, i] = c.reward_scale * step.reward + (c.death_penalty if lost else 0.0)
+                if step.truncated and not starved:
+                    # Cut short, not lost: the game had a future, worth about
+                    # what the critic says, so that is added rather than
+                    # pretending the reward stops here.
+                    last = torch.as_tensor(self.normalizer.apply(self._encode(step.obs))[None], device=self.device)
+                    with torch.no_grad():
+                        rewards[t, i] += c.gamma * float(self.critic(last))
+                dones[t, i] = float(step.done or starved)
+                if step.done or starved:
+                    finished_scores.append(env.info()["score"])
+                    self._hungry[i] = 0
+                    obs[i] = env.reset(ctx.next_seed())
+                else:
+                    obs[i] = step.obs
+
+        # 2. Advantages, by GAE, walking backwards through time. delta is the
+        # one-step surprise: reward + discounted value of the next state, minus
+        # the value expected here. The advantage adds up the surprises ahead,
+        # each discounted by gamma * lambda, stopping at the end of a game.
+        with torch.no_grad():
+            last = torch.as_tensor(self.normalizer.apply(np.stack([self._encode(o) for o in obs])), device=self.device)
+            next_value = self.critic(last).squeeze(1).cpu().numpy()
+        advantages = np.zeros((T, N), np.float32)
+        running = np.zeros(N, np.float32)
+        for t in reversed(range(T)):
+            following = next_value if t == T - 1 else values[t + 1]
+            alive = 1.0 - dones[t]
+            delta = rewards[t] + c.gamma * following * alive - values[t]
+            running = delta + c.gamma * c.gae_lambda * alive * running
+            advantages[t] = running
+        returns = advantages + values   # what the critic should have said
+
+        flat = lambda a: a.reshape(T * N, *a.shape[2:])  # noqa: E731
+        return {"seen": flat(seen), "masks": flat(masks), "actions": flat(actions), "logprobs": flat(logprobs),
+                "advantages": flat(advantages), "returns": flat(returns)}
+
+    def _update(self, batch: dict) -> dict:
+        """3. A few passes over the batch, in shuffled minibatches."""
+        c = self.config
+        b = {k: torch.as_tensor(v, device=self.device) for k, v in batch.items()}
+        size = len(b["actions"])
+        stats: dict[str, list[float]] = {"policy_loss": [], "value_loss": [], "entropy": [], "clip_fraction": []}
+        for _ in range(c.epochs):
+            order = torch.as_tensor(self.rng.permutation(size), device=self.device)
+            for rows in order.chunk(c.minibatches):
+                dist = torch.distributions.Categorical(logits=self._logits(b["seen"][rows], b["masks"][rows]))
+                logprob = dist.log_prob(b["actions"][rows])
+                # How much likelier the action is now than when it was played.
+                ratio = (logprob - b["logprobs"][rows]).exp()
+                # Advantages normalised per minibatch: only their sign and
+                # relative size matter, and this keeps the step size steady.
+                adv = b["advantages"][rows]
+                adv = (adv - adv.mean()) / (adv.std() + 1e-8)
+                # The clipped objective: the smaller (more pessimistic) of the
+                # plain and the clipped improvement, so no update gains by
+                # moving an action's probability past the clip.
+                clipped = ratio.clamp(1 - c.clip, 1 + c.clip)
+                policy_loss = -torch.min(ratio * adv, clipped * adv).mean()
+                value_loss = (self.critic(b["seen"][rows]).squeeze(1) - b["returns"][rows]).pow(2).mean()
+                entropy = dist.entropy().mean()
+                loss = policy_loss + c.value_coef * value_loss - c.entropy_coef * entropy
+
+                self.optimizer.zero_grad()
+                loss.backward()
+                # Gradient clipping: no single minibatch gets to shove the
+                # networks far, however surprising it was.
+                nn.utils.clip_grad_norm_([*self.actor.parameters(), *self.critic.parameters()], c.max_grad_norm)
+                self.optimizer.step()
+                for key, value in (("policy_loss", policy_loss), ("value_loss", value_loss), ("entropy", entropy),
+                                   ("clip_fraction", ((ratio - 1).abs() > c.clip).float().mean())):
+                    stats[key].append(float(value))
+        return {key: float(np.mean(values)) for key, values in stats.items()}
+
+    def save(self, path: Path) -> None:
+        torch.save({"actor": self.actor.state_dict(), "critic": self.critic.state_dict(),
+                    "norm": self.normalizer.state(), "steps": self.steps}, path)
+
+    def load(self, path: Path) -> None:
+        state = torch.load(path, map_location=self.device, weights_only=False)
+        self.actor.load_state_dict(state["actor"])
+        self.critic.load_state_dict(state["critic"])
+        self.normalizer.load(state["norm"])
+        self.steps = state["steps"]
+
+
+def _mlp(inputs: int, hidden: int, outputs: int, last_gain: float) -> nn.Sequential:
+    layers = [nn.Linear(inputs, hidden), nn.Tanh(), nn.Linear(hidden, hidden), nn.Tanh(), nn.Linear(hidden, outputs)]
+    for i, layer in enumerate(l for l in layers if isinstance(l, nn.Linear)):
+        nn.init.orthogonal_(layer.weight, last_gain if i == 2 else np.sqrt(2))
+        nn.init.zeros_(layer.bias)
+    return nn.Sequential(*layers)
+
+
+class _RunningNorm:
+    """Keeps a running mean and variance of every input, and rescales inputs
+    by them: a score in the thousands and a one-hot cell end up on the same
+    scale, without anyone saying how big a score gets."""
+
+    def __init__(self, size: int):
+        self.size = size
+        self.mean, self.var, self.count = np.zeros(size), np.ones(size), 1e-4
+
+    def update(self, batch: np.ndarray) -> None:
+        # Chan et al.'s parallel update: merge the batch's mean and variance in.
+        mean, var, n = batch.mean(axis=0), batch.var(axis=0), len(batch)
+        delta, total = mean - self.mean, self.count + n
+        self.mean = self.mean + delta * n / total
+        self.var = (self.var * self.count + var * n + delta**2 * self.count * n / total) / total
+        self.count = total
+
+    def apply(self, x: np.ndarray) -> np.ndarray:
+        return np.clip((x - self.mean) / np.sqrt(self.var + 1e-8), -10, 10).astype(np.float32)
+
+    def state(self) -> dict:
+        return {"mean": self.mean, "var": self.var, "count": self.count}
+
+    def load(self, state: dict) -> None:
+        self.mean, self.var, self.count = state["mean"], state["var"], state["count"]
