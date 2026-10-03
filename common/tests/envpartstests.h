@@ -3,7 +3,7 @@
 #include <QObject>
 
 // The pieces under the env ABI: the observation layout, config resolution
-// and replay/v1 (common/env/).
+// replay/v1 and the pace and playlist an app shows it with (common/env/).
 class EnvPartsTests : public QObject {
     Q_OBJECT
 private slots:
@@ -25,4 +25,7 @@ private slots:
 
     void paceShowsBeatsAtEachSpeed();
     void paceRefusesWhatIsNotASpeed();
+
+    void playlistTakesEveryReplayArgumentInOrder();
+    void playlistStepsBetweenItsEnds();
 };

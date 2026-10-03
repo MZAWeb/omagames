@@ -9,6 +9,7 @@
 #include "observationlayout.h"
 #include "replay.h"
 #include "replaypace.h"
+#include "replayplaylist.h"
 
 using OmaGames::ObservationLayout;
 using OmaGames::Replay;
@@ -227,4 +228,40 @@ void EnvPartsTests::paceRefusesWhatIsNotASpeed() {
     pace.nextFrame();
     pace.restart();
     QCOMPARE(pace.nextFrame() + pace.nextFrame() + pace.nextFrame(), 0);  // the owed quarter is gone
+}
+
+void EnvPartsTests::playlistTakesEveryReplayArgumentInOrder() {
+    using OmaGames::ReplayPlaylist;
+    QString error;
+    const QString app = QStringLiteral("omatris");
+    QCOMPARE(*ReplayPlaylist::fromArguments({app}, &error), QStringList());
+    const QStringList args = {app, QStringLiteral("--replay"), QStringLiteral("a.json"), QStringLiteral("-x"),
+                              QStringLiteral("--replay"), QStringLiteral("b.json")};
+    QCOMPARE(*ReplayPlaylist::fromArguments(args, &error), (QStringList{QStringLiteral("a.json"), QStringLiteral("b.json")}));
+
+    QVERIFY(!ReplayPlaylist::fromArguments({app, QStringLiteral("--replay")}, &error));
+    QCOMPARE(error, QStringLiteral("--replay needs a file"));
+    QVERIFY(!ReplayPlaylist::fromArguments({app, QStringLiteral("--replay"), QStringLiteral("--replay"),
+                                            QStringLiteral("a.json")}, &error));
+}
+
+void EnvPartsTests::playlistStepsBetweenItsEnds() {
+    OmaGames::ReplayPlaylist one({QStringLiteral("a.json")});
+    QCOMPARE(one.current(), QStringLiteral("a.json"));
+    QCOMPARE(one.position(), QString());  // one replay is not a list to step through
+    QVERIFY(!one.next() && !one.previous());
+
+    OmaGames::ReplayPlaylist three({QStringLiteral("a"), QStringLiteral("b"), QStringLiteral("c")});
+    QCOMPARE(three.position(), QStringLiteral("1 of 3"));
+    QVERIFY(!three.hasPrevious() && !three.previous());
+    QVERIFY(three.next() && three.next());
+    QCOMPARE(three.current(), QStringLiteral("c"));
+    QCOMPARE(three.position(), QStringLiteral("3 of 3"));
+    QVERIFY(!three.hasNext() && !three.next());
+    QCOMPARE(three.index(), 2);
+    QVERIFY(three.previous());
+    QCOMPARE(three.current(), QStringLiteral("b"));
+
+    QVERIFY(OmaGames::ReplayPlaylist().isEmpty());
+    QCOMPARE(OmaGames::ReplayPlaylist().current(), QString());
 }

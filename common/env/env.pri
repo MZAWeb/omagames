@@ -12,11 +12,13 @@ HEADERS += \
     $$PWD/observationlayout.h \
     $$PWD/envconfig.h \
     $$PWD/replay.h \
-    $$PWD/replaypace.h
+    $$PWD/replaypace.h \
+    $$PWD/replayplaylist.h
 
 SOURCES += \
     $$PWD/envabi.cpp \
     $$PWD/observationlayout.cpp \
     $$PWD/envconfig.cpp \
     $$PWD/replay.cpp \
-    $$PWD/replaypace.cpp
+    $$PWD/replaypace.cpp \
+    $$PWD/replayplaylist.cpp
