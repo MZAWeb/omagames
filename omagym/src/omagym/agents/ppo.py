@@ -2,7 +2,7 @@
 
 **The idea.** Every other learner here learns a *value* and acts by "take
 the best". PPO learns the *policy* directly: a network that, given what the
-agent sees, outputs a probability for every action (SCIENCE.md, 2.4). It
+agent sees, outputs a probability for every action (README, Science 2.4). It
 plays by sampling from those probabilities, and learns by making the
 actions that turned out better than expected more likely, and the others
 less.
@@ -98,7 +98,7 @@ class PPO(Agent):
         # Hunger: a training game that goes this many steps without any reward
         # ends, and counts as lost. Without it, an agent that finds dying
         # costs more than scoring earns can learn to stall forever (a Snake
-        # circling, never eating): reward hacking, SCIENCE.md section 3.
+        # circling, never eating): reward hacking, README, Science section 3.
         patience: int = 300
         episode_steps: int = 2_000
         seed: int = 0

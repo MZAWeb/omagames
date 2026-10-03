@@ -17,7 +17,7 @@ a time:
 Over generations the mean drifts toward weights that play well, and the
 spread shrinks as the elite agree. Nothing here knows Tetris or computes a
 gradient: CEM only ever sees "these numbers scored that much". That is
-black-box optimisation (SCIENCE.md, section 2.2).
+black-box optimisation (README, Science 2.2).
 
 **The one trick that matters: noise.** Left alone, the spread collapses
 within a few generations, long before the mean is any good, and the search

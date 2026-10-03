@@ -5,7 +5,7 @@ afterstate_value.py). To move, it rates the board every landing would leave
 and takes the best. To learn, it plays, and nudges V toward what each board
 turned out to be worth.
 
-"Turned out to be worth" is temporal-difference learning (SCIENCE.md, 2.3).
+"Turned out to be worth" is temporal-difference learning (README, Science 2.3).
 After landing on board s, collecting reward r, and reaching board s' next,
 a better guess for V(s) than the current one is
 
@@ -26,7 +26,7 @@ a little under 1, makes reward soon worth more than reward later.
   the network, refreshed every `target_sync` steps. Otherwise every update
   would also move the target it is chasing.
 
-**Ideas to try** (SCIENCE.md, 2.3, has more): learning from the next few
+**Ideas to try** (README, Science 2.3, has more): learning from the next few
 rewards before guessing the rest (n-step returns); bootstrapping from the
 board the network rates best rather than the one played (Q-learning, and
 Double DQN to keep it honest); the game's own points as the reward; and
@@ -95,7 +95,7 @@ class AfterstateDQN(Agent):
         reward_dealt_row: float = 0.0   # per dealt row of a Challenge cleared: digging (try 10)
         reward_tspin: float = 0.0       # per T-spin
         # Shaping, potential-based so it can't change what the best play is
-        # (SCIENCE.md, section 3): paid for the *change* in holes and in the
+        # (README, Science section 3): paid for the *change* in holes and in the
         # stack's height after each piece, so a hole is felt when it is made.
         shaping_holes: float = 0.0      # try 1: -1 for every hole made, +1 for every one opened
         shaping_height: float = 0.0     # try 0.5, per row the tallest column grows

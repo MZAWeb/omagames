@@ -2,7 +2,7 @@
 
 An *afterstate* is the board a landing leaves behind, after its lines clear
 and before the next piece arrives. Rating afterstates rather than actions is
-the trick that makes value learning work for Tetris (SCIENCE.md, 2.3): the
+the trick that makes value learning work for Tetris (README, Science 2.3): the
 number of landings changes every piece, but every landing leaves a board,
 and one network can rate any board. To choose, rate every landing's board
 and take the best.
