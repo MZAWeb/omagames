@@ -30,9 +30,15 @@ def headline_keys(game: str) -> list[str]:
 
 
 def runs_table(runs: list[dict]) -> str:
-    rows = [[r["id"], r["agent"], r["name"] or "", r["status"], _trained(r), r["code"], spread(r["summary"], "score")]
+    rows = [[r["id"], r["name"] or "", r["status"], _trained(r), spread(r["summary"], "score"), _short(r["notes"])]
             for r in runs]
-    return table(["run", "agent", "name", "status", "trained", "code", "score"], rows)
+    return table(["run", "name", "status", "trained", "score", "notes"], rows)
+
+
+def _short(text: str | None, width: int = 70) -> str:
+    """A note on one line, cut to fit a table; `show` has it in full."""
+    text = " ".join((text or "").split())
+    return text if len(text) <= width else text[: width - 1] + "…"
 
 
 def show(run: dict, curve: list[tuple[int, float]], patch_exists: bool, trained: dict | None = None,
