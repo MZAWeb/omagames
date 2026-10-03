@@ -90,6 +90,11 @@ class PPO(Agent):
         # game is lost.
         reward_scale: float = 0.01
         death_penalty: float = -1.0
+        # For a game won rather than lost (a Challenge cleared, a Sprint's
+        # forty lines): without it, a game that ends by being won only pays
+        # less than one played on. And per dealt row of a Challenge cleared.
+        reward_win: float = 0.0         # try 1, the size of the death penalty
+        reward_dealt_row: float = 0.0   # try 0.1
         # Hunger: a training game that goes this many steps without any reward
         # ends, and counts as lost. Without it, an agent that finds dying
         # costs more than scoring earns can learn to stall forever (a Snake
@@ -191,12 +196,15 @@ class PPO(Agent):
             actions[t] = action.cpu().numpy()
 
             for i, env in enumerate(envs):
+                before = obs[i]
                 step = env.step(int(actions[t, i]))
                 self.steps += 1
                 self._hungry[i] = 0 if step.reward > 0 else self._hungry[i] + 1
                 starved = self._hungry[i] >= c.patience
-                lost = step.terminated or starved
+                won = step.terminated and env.info().get("phase") == "finished"
+                lost = (step.terminated and not won) or starved
                 rewards[t, i] = c.reward_scale * step.reward + (c.death_penalty if lost else 0.0)
+                rewards[t, i] += c.reward_win * won + c.reward_dealt_row * self._dealt_cleared(before, step.obs)
                 if step.truncated and not starved:
                     # Cut short, not lost: the game had a future, worth about
                     # what the critic says, so that is added rather than
@@ -232,6 +240,14 @@ class PPO(Agent):
         flat = lambda a: a.reshape(T * N, *a.shape[2:])  # noqa: E731
         return {"seen": flat(seen), "masks": flat(masks), "actions": flat(actions), "logprobs": flat(logprobs),
                 "advantages": flat(advantages), "returns": flat(returns)}
+
+    def _dealt_cleared(self, before, after) -> float:
+        """A Challenge's dealt rows this step cleared; 0 for a game without them."""
+        stats = self.spec.tensors.get("stats")
+        if stats is None or "dealt_rows_left" not in stats.labels:
+            return 0.0
+        column = stats.column("dealt_rows_left")
+        return float(before["stats"][column] - after["stats"][column])
 
     def _update(self, batch: dict) -> dict:
         """3. A few passes over the batch, in shuffled minibatches."""

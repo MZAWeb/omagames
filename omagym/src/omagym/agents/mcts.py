@@ -87,9 +87,14 @@ class MonteCarloTreeSearch(Agent):
         batch: int = 256
         warmup: int = 500
         episode_steps: int = 300
+        # The rewards the search adds up, as in dqn (whose settings these mirror,
+        # so a network from a dqn run keeps meaning the same thing).
         reward_piece: float = 1.0
         reward_line: float = 10.0
         reward_top_out: float = -20.0
+        reward_win: float = 0.0         # clearing a Challenge (try 100)
+        reward_dealt_row: float = 0.0   # per dealt row cleared (try 10)
+        reward_tspin: float = 0.0
         seed: int = 0
 
     @classmethod
@@ -197,13 +202,15 @@ class MonteCarloTreeSearch(Agent):
         env_copy = source.clone(reseed_hidden=True, seed=int(self.rng.integers(2**31)))
         self._copies.append(env_copy)
         step = env_copy.step(landing)
-        node.rewards[landing] = self._reward(step)
+        node.rewards[landing] = self._reward(step, node.dealt_left)
         return self._node(env_copy, step.obs, env_copy.mask(), ended=step.done)
 
     def _node(self, env: Env | None, obs, mask, ended: bool) -> _Node:
         """A decision point: the landings on offer, rated by the network."""
+        dealt_left = int(obs["stats"][self.spec.tensors["stats"].column("dealt_rows_left")])
         if ended:
-            return _Node(env, np.zeros((0, 1), np.float32), np.zeros(0, np.float32), np.zeros(0), ended=True)
+            return _Node(env, np.zeros((0, 1), np.float32), np.zeros(0, np.float32), np.zeros(0), ended=True,
+                         dealt_left=dealt_left)
         inputs = afterstate_value.inputs_for(self.inputs, obs, self.spec, omatris.landing_count(mask))
         ratings = self._values(inputs)
         # Priors: the ratings, standardised and softened into probabilities
@@ -211,16 +218,21 @@ class MonteCarloTreeSearch(Agent):
         spread = ratings.std() + 1e-6
         logits = (ratings - ratings.max()) / spread / self.config.prior_temperature
         priors = np.exp(logits) / np.exp(logits).sum()
-        return _Node(env, inputs, ratings, priors)
+        return _Node(env, inputs, ratings, priors, dealt_left=dealt_left)
 
     def _values(self, inputs: np.ndarray) -> np.ndarray:
         with torch.no_grad():
             return self.net(torch.as_tensor(inputs, device=self.device)).squeeze(1).cpu().numpy()
 
-    def _reward(self, step) -> float:
-        c = self.config
-        reward = c.reward_piece + c.reward_line * step.signals["lines"] ** 2
-        return reward + (c.reward_top_out if step.signals["topped_out"] else 0.0)
+    def _reward(self, step, dealt_before: int) -> float:
+        c, s = self.config, step.signals
+        reward = c.reward_piece + c.reward_line * s["lines"] ** 2 + c.reward_tspin * (s["tspin"] > 0)
+        if s["topped_out"]:
+            reward += c.reward_top_out
+        elif step.terminated:
+            reward += c.reward_win   # ended without topping out: the goal was reached
+        dealt_after = int(step.obs["stats"][self.spec.tensors["stats"].column("dealt_rows_left")])
+        return reward + c.reward_dealt_row * (dealt_before - dealt_after)
 
     # -- learning from the search -----------------------------------------------
 
@@ -285,6 +297,7 @@ class _Node:
     ratings: np.ndarray             # the network's value of each landing
     priors: np.ndarray              # where to look first, from the ratings
     ended: bool = False
+    dealt_left: int = 0             # a Challenge's dealt rows still to clear here
     visits: np.ndarray = field(init=False)
     totals: np.ndarray = field(init=False)
     rewards: dict[int, float] = field(default_factory=dict)

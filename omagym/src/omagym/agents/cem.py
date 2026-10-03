@@ -74,8 +74,14 @@ class CrossEntropy(Agent):
         # Every candidate plays the *same* games (see train()).
         games: int = 2
         episode_steps: int = 300
-        # What "playing well" means: the game's own "score", or "lines".
+        # What "playing well" means: the game's own "score", or "lines"...
         objective: str = "score"
+        # ...plus bonuses, in the objective's units. A Challenge ends when it
+        # is won, so on score alone winning *costs* the points it would have
+        # gone on to make: with Challenge games in the training mix, give a
+        # win and the digging something (try 50000 and 2000 with score).
+        fitness_win: float = 0.0
+        fitness_dealt_row: float = 0.0  # per dealt row cleared
         seed: int = 0
 
     @classmethod
@@ -107,7 +113,10 @@ class CrossEntropy(Agent):
 
     def _fitness(self, weights: np.ndarray, env, seed: int) -> tuple[float, int]:
         """Plays one game with `weights`; how well it did, and the steps it took."""
+        c = self.config
         obs = env.reset(seed)
+        dealt = self.spec.tensors["stats"].column("dealt_rows_left")
+        dealt_at_start = float(obs["stats"][dealt])
         steps, lines = 0, 0.0
         while True:
             step = env.step(self._choose(weights, obs, env.mask()))
@@ -116,7 +125,10 @@ class CrossEntropy(Agent):
             if step.done:
                 break
             obs = step.obs
-        return (env.info()["score"] if self.config.objective == "score" else lines), steps
+        won = step.terminated and not step.signals["topped_out"]
+        fitness = env.info()["score"] if c.objective == "score" else lines
+        fitness += c.fitness_win * won + c.fitness_dealt_row * (dealt_at_start - float(step.obs["stats"][dealt]))
+        return fitness, steps
 
     # -- learning -------------------------------------------------------------
 
