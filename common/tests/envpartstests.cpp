@@ -1,6 +1,8 @@
 #include "envpartstests.h"
 
 #include <QJsonArray>
+#include <QJsonDocument>
+#include <QTemporaryDir>
 #include <QtTest>
 
 #include "envconfig.h"
@@ -158,4 +160,36 @@ void EnvPartsTests::replayRefusesWhatItCannotPlay() {
     QVERIFY(!Replay::fromJson(with(QStringLiteral("calls"), QStringLiteral("tick")), &error));
     QVERIFY(error.contains(QStringLiteral("tick")));
     QVERIFY(!Replay::validInput(QStringLiteral("two words")));
+}
+
+void EnvPartsTests::replayKnowsWhoCanPlayIt() {
+    const Replay replay(QStringLiteral("omatris"), 2, {}, 1);
+    QString error;
+    QVERIFY(replay.playableBy(QStringLiteral("omatris"), 2, &error));
+    QVERIFY(!replay.playableBy(QStringLiteral("omasnake"), 2, &error));
+    QCOMPARE(error, QStringLiteral("this is a replay of omatris, not omasnake"));
+    QVERIFY(!replay.playableBy(QStringLiteral("omatris"), 3, &error));
+    QVERIFY(error.contains(QStringLiteral("version 2")));
+}
+
+void EnvPartsTests::replayFilesAreRead() {
+    QTemporaryDir dir;
+    QString error;
+    QVERIFY(!Replay::readFile(dir.filePath(QStringLiteral("missing.json")), &error));
+    QVERIFY(error.startsWith(QStringLiteral("cannot read")));
+
+    QFile broken(dir.filePath(QStringLiteral("broken.json")));
+    QVERIFY(broken.open(QIODevice::WriteOnly));
+    broken.write("{\"format\": ");
+    broken.close();
+    QVERIFY(!Replay::readFile(broken.fileName(), &error));
+    QVERIFY(error.contains(QStringLiteral("not a JSON object")));
+
+    QFile good(dir.filePath(QStringLiteral("good.json")));
+    QVERIFY(good.open(QIODevice::WriteOnly));
+    good.write(QJsonDocument(Replay(QStringLiteral("walk"), 1, {}, 9).toJson()).toJson());
+    good.close();
+    const auto json = Replay::readFile(good.fileName(), &error);
+    QVERIFY(json);
+    QCOMPARE(json->value(QStringLiteral("seed")).toInt(), 9);
 }

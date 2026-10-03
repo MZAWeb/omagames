@@ -20,4 +20,6 @@ private slots:
     void replayMergesIdleTicks();
     void replayRoundTrips();
     void replayRefusesWhatItCannotPlay();
+    void replayKnowsWhoCanPlayIt();
+    void replayFilesAreRead();
 };

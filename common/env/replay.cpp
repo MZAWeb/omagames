@@ -1,5 +1,7 @@
 #include "replay.h"
 
+#include <QFile>
+#include <QJsonDocument>
 #include <QStringList>
 
 #include <algorithm>
@@ -94,6 +96,36 @@ bool Replay::validInput(const QString &token) {
     if (token.isEmpty() || token.startsWith(QLatin1Char('t')))
         return false;
     return std::none_of(token.begin(), token.end(), [](QChar c) { return c.isSpace(); });
+}
+
+std::optional<QJsonObject> Replay::readFile(const QString &path, QString *error) {
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        *error = QStringLiteral("cannot read %1: %2").arg(path, file.errorString());
+        return std::nullopt;
+    }
+    QJsonParseError parse;
+    const QJsonDocument doc = QJsonDocument::fromJson(file.readAll(), &parse);
+    if (!doc.isObject()) {
+        *error = QStringLiteral("%1 is not a JSON object: %2").arg(path, parse.errorString());
+        return std::nullopt;
+    }
+    return doc.object();
+}
+
+bool Replay::playableBy(const QString &game, int rulesVersion, QString *error) const {
+    if (m_game != game) {
+        *error = QStringLiteral("this is a replay of %1, not %2").arg(m_game, game);
+        return false;
+    }
+    if (m_rulesVersion != rulesVersion) {
+        *error = QStringLiteral("recorded under %1 rules version %2; this build plays version %3")
+                     .arg(game)
+                     .arg(m_rulesVersion)
+                     .arg(rulesVersion);
+        return false;
+    }
+    return true;
 }
 
 }  // namespace OmaGames

@@ -1,8 +1,5 @@
 #include "replayplayer.h"
 
-#include <QFile>
-#include <QJsonDocument>
-
 #include <algorithm>
 
 #include "modes.h"
@@ -24,16 +21,8 @@ std::optional<ReplayPlayer> ReplayPlayer::load(const QJsonObject &json, QString 
     const auto replay = OmaGames::Replay::fromJson(json, error);
     if (!replay)
         return std::nullopt;
-    if (replay->game() != kGame) {
-        *error = QStringLiteral("this is a replay of %1, not Omatris").arg(replay->game());
+    if (!replay->playableBy(kGame, Rules::kVersion, error))
         return std::nullopt;
-    }
-    if (replay->rulesVersion() != Rules::kVersion) {
-        *error = QStringLiteral("recorded under rules version %1; this Omatris plays version %2")
-                     .arg(replay->rulesVersion())
-                     .arg(Rules::kVersion);
-        return std::nullopt;
-    }
     ReplayPlayer player;
     const QString mode = replay->config().value(QStringLiteral("mode")).toString(Modes::id(Mode::Marathon));
     if (!Modes::fromId(mode, &player.m_mode)) {
@@ -58,18 +47,8 @@ std::optional<ReplayPlayer> ReplayPlayer::load(const QJsonObject &json, QString 
 }
 
 std::optional<ReplayPlayer> ReplayPlayer::loadFile(const QString &path, QString *error) {
-    QFile file(path);
-    if (!file.open(QIODevice::ReadOnly)) {
-        *error = QStringLiteral("cannot read %1: %2").arg(path, file.errorString());
-        return std::nullopt;
-    }
-    QJsonParseError parse;
-    const QJsonDocument doc = QJsonDocument::fromJson(file.readAll(), &parse);
-    if (!doc.isObject()) {
-        *error = QStringLiteral("%1 is not JSON: %2").arg(path, parse.errorString());
-        return std::nullopt;
-    }
-    return load(doc.object(), error);
+    const auto json = OmaGames::Replay::readFile(path, error);
+    return json ? load(*json, error) : std::nullopt;
 }
 
 Game ReplayPlayer::deal() const {

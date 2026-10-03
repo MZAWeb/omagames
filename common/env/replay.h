@@ -51,6 +51,13 @@ public:
 
     static bool validInput(const QString &token);
 
+    // The JSON object in a replay file, or nothing and why not.
+    static std::optional<QJsonObject> readFile(const QString &path, QString *error);
+    // Whether `game` playing `rulesVersion` can play this back; the reason
+    // when not, so the app can say why it refused rather than show a game
+    // that never happened.
+    bool playableBy(const QString &game, int rulesVersion, QString *error) const;
+
 private:
     QString m_game;
     int m_rulesVersion = 0;
