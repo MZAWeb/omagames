@@ -44,7 +44,8 @@ def all_agents() -> list[type[Agent]]:
 # those for any game at the top, the rest in their game's folder.
 for _module in ("random_agent", "ppo",
                 "omatris.greedy", "omatris.cem", "omatris.dqn", "omatris.lookahead", "omatris.mcts", "omatris.xgb",
-                "omasnake.greedy"):
+                "omasnake.greedy",
+                "oma2048.greedy", "oma2048.expectimax", "oma2048.ntuple"):
     try:
         importlib.import_module(f"{__name__}.{_module}")
     except ImportError as error:
