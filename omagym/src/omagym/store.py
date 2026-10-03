@@ -143,14 +143,17 @@ class Store:
         run["summary"] = self.summary(run["id"])
         return run
 
-    def runs(self, game: str | None = None, agent: str | None = None, kind: str | None = None, limit: int = 30):
+    def runs(self, game: str | None = None, agent: str | None = None, kind: str | None = None,
+             limit: int | None = 30):
         query, params = "SELECT id FROM runs WHERE 1 = 1", []
         for column, value in (("game", game), ("agent", agent), ("kind", kind)):
             if value:
                 query += f" AND {column} = ?"
                 params.append(value)
-        query += " ORDER BY started DESC, id DESC LIMIT ?"
-        params.append(limit)
+        query += " ORDER BY started DESC, id DESC"
+        if limit is not None:
+            query += " LIMIT ?"
+            params.append(limit)
         return [self.run(r["id"]) for r in self.db.execute(query, params)]
 
     def summary(self, run_id: str) -> dict[str, float]:

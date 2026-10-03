@@ -61,8 +61,9 @@ uv run omagym eval --game omatris --agent greedy --name greedy-baseline
 # Train the neural one for 100k steps, evaluating every 10k.
 uv run omagym train --game omatris --agent dqn --steps 100000 --name dqn-first
 
-# How did they do, side by side?
+# Which played better, and is the difference real?
 uv run omagym compare greedy-baseline dqn-first
+uv run omagym compare --game omatris        # every agent's best run, ranked
 
 # Watch the trained agent's best game in the real app.
 uv run omagym watch dqn-first
@@ -81,7 +82,8 @@ of its id, its `--name`, or `last`.
 | `omagym train --game G --agent A --steps N` | Trains a learning agent, evaluating as it goes, and records it |
 | `omagym runs [--game G] [--agent A] [--kind train\|eval]` | Lists runs, newest first, with their score |
 | `omagym show R` | Everything about a run: settings, code, results, learning curve |
-| `omagym compare R1 R2 ...` | Runs side by side, plus every setting that differs between them |
+| `omagym compare [R1 R2 ...] [--by M] [--lower]` | Ranks runs by score (or `--by lines`, `ate`, `steps`...; `--lower` when less is better, as for `holes`) and says which beat which beyond doubt. With no runs, ranks each agent's best run of `--game` |
+| `omagym diff R1 R2 ...` | Runs side by side, plus every setting that differs between them: for runs of one agent |
 | `omagym watch R [--worst]` | Plays the run's best (or worst) evaluation game in the app |
 | `omagym note R --name N --notes "..."` | Names a run, or writes down what it was about, afterwards |
 
@@ -140,8 +142,41 @@ where key = 'score_mean' order by value desc"`.
 Evaluation game *i* is always dealt from the same seed (`1_000_000_000 + i`),
 and training never draws a seed that high. So every agent evaluated with
 the same game, episode count and step cap played exactly the same games,
-and none of them ever trained on those games. `compare` warns when the runs
-you put side by side were not tested alike.
+and none of them ever trained on those games. `compare` refuses runs whose
+games were cut at different lengths, and only counts the games all of them
+played.
+
+### Reading `compare`
+
+```
+ranked by lines, higher is better: the 20 games of omatris every run played, each cut at 500 steps
+
+    run              agent   trained        lines        vs best: won-tied-lost  difference (95% range)   verdict
+--  ---------------  ------  -------------  -----------  ----------------------  -----------------------  -------
+1.  greedy-baseline  greedy  -              198.8 ± 0.6
+2.  dqn-first        dqn     100,000 steps  194.7 ± 1.8  0-1-19                  -4.0 (-4.9 to -3.1)      worse
+3.  random-baseline  random  -              0.1 ± 0.3    0-0-20                  -198.7 (-199 to -198.2)  worse
+```
+
+Every run is set against the best, **game by game**: on the same game,
+how much more or less did it score? That cancels out how kind each game's
+pieces were, so it is much sharper than comparing two averages.
+
+- **won-tied-lost**: on how many of the games it did better than the best
+  run, the same, or worse.
+- **difference**: by how much, on average, with a 95% range for the true
+  difference (a bootstrap over the games).
+- **verdict**: `worse` when the whole range is below zero; `can't tell` when
+  it straddles zero, so these games can't separate the two (try more
+  `--episodes`); `same` when it played every game identically.
+- **trained**: steps of training behind it, so a learner that needed a
+  million steps is not mistaken for one that needed ten thousand.
+
+The ranking depends on what you rank by. With the default reward, `dqn`
+beats `greedy` on `score` but loses on `lines`. Its stack stands about
+three times as tall (`--by max_height --lower`), which looks like
+building for multi-line clears: they score far more than the same lines
+cleared one at a time.
 
 ### A way of working
 
@@ -153,9 +188,9 @@ you put side by side were not tested alike.
    `code` easy to read.
 4. **Run it** with `--name` and `--notes` saying what you changed and
    expect.
-5. **`compare`** the new run with the baseline. Look at the spread
-   (`± std`) as well as the mean. A difference smaller than the spread is
-   probably noise.
+5. **`compare`** the new run with the baseline. Believe a `worse` or a
+   lead over a `worse`; treat `can't tell` as no difference yet. `diff`
+   shows what changed between them.
 6. **For learners, use more than one seed** before believing a difference:
    `--seed 1`, `--seed 2`, `--seed 3` and compare all of them. Training is
    noisy. Then test the winner's checkpoint on more games with
@@ -181,7 +216,8 @@ src/omagym/
   training.py            the loop around an agent's training: budget, evaluations, checkpoints
   store.py               the experiment database
   provenance.py          which code a run ran
-  report.py              the tables `runs`, `show` and `compare` print
+  comparison.py          which run played better, game by game, and how sure that is
+  report.py              the tables `runs`, `show`, `diff` and `compare` print
   cli.py                 the `omagym` command
 tests/                   `uv run pytest`
 experiments/             your runs (not in git)

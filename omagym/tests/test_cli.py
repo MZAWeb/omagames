@@ -3,15 +3,17 @@ import pytest
 from omagym.cli import main
 
 
-def test_eval_records_a_run_that_runs_show_and_compare_read(capsys):
+def test_eval_records_a_run_that_runs_show_diff_and_compare_read(capsys):
     assert main(["eval", "--agent", "greedy", "--episodes", "2", "--max-steps", "40", "--name", "g"]) == 0
     assert main(["eval", "--agent", "random", "--episodes", "2", "--max-steps", "40", "--name", "r"]) == 0
     capsys.readouterr()
     assert main(["runs"]) == 0
     listing = capsys.readouterr().out
     assert "greedy" in listing and "random" in listing
-    assert main(["compare", "g", "r"]) == 0
+    assert main(["diff", "g", "r"]) == 0
     assert "score" in capsys.readouterr().out
+    assert main(["compare", "r", "g", "--by", "lines"]) == 0
+    assert "g played best." in capsys.readouterr().out
     assert main(["show", "last"]) == 0
     assert "evaluated on 2 fixed games" in capsys.readouterr().out
 
@@ -24,6 +26,21 @@ def test_the_same_agent_on_the_same_games_scores_the_same(capsys):
 
     store = Store()
     assert store.run("one")["summary"] == store.run("two")["summary"]
+
+
+def test_compare_without_runs_ranks_each_agents_best_run_on_the_default_games(capsys):
+    assert main(["compare", "--game", "omasnake"]) == 2
+    assert "no finished omasnake runs" in capsys.readouterr().err
+    main(["eval", "--game", "omasnake", "--agent", "greedy", "--name", "greedy"])
+    main(["eval", "--game", "omasnake", "--agent", "random", "--name", "random-1"])
+    main(["eval", "--game", "omasnake", "--agent", "random", "--name", "random-2", "--set", "seed=1"])
+    main(["eval", "--game", "omasnake", "--agent", "random", "--episodes", "3", "--name", "too-few"])
+    capsys.readouterr()
+    assert main(["compare", "--game", "omasnake", "--by", "ate"]) == 0
+    text = capsys.readouterr().out
+    assert "greedy played best." in text
+    # One row per agent: the better of the two random runs, and never the short test.
+    assert ("random-1" in text) != ("random-2" in text) and "too-few" not in text
 
 
 def test_mistakes_are_explained_not_raised(capsys):

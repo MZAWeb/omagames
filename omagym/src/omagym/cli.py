@@ -3,7 +3,8 @@
     uv run omagym agents
     uv run omagym eval --game omatris --agent greedy
     uv run omagym train --game omatris --agent dqn --steps 100000
-    uv run omagym compare last 20261003-1412
+    uv run omagym compare --game omatris      # each agent's best run, ranked
+    uv run omagym compare greedy-baseline last
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import native, provenance, report
+from . import comparison, native, provenance, report
 from .agents import UNAVAILABLE, all_agents, make_config, resolve
 from .env import Env
 from .evaluation import evaluate
@@ -72,7 +73,13 @@ def _parser() -> argparse.ArgumentParser:
     sub = command("show", _show, "everything about one run")
     sub.add_argument("run", help="run id, a unique prefix of one, its name, or 'last'")
 
-    sub = command("compare", _compare, "runs side by side, and the settings that differ")
+    sub = command("compare", _compare, "which runs played best, and whether the difference is real")
+    sub.add_argument("runs", nargs="*", help="runs to rank (default: each agent's best run of --game)")
+    sub.add_argument("--game", default="omatris", choices=native.games(), help="the game, when no runs are given")
+    sub.add_argument("--by", default="score", metavar="METRIC", help="what to rank by: score, steps, lines, ate...")
+    sub.add_argument("--lower", action="store_true", help="lower is better (holes, max_height...)")
+
+    sub = command("diff", _diff, "runs side by side, with the settings that differ between them")
     sub.add_argument("runs", nargs="+")
 
     sub = command("watch", _watch, "play a run's best (or worst) evaluation game in the real app")
@@ -236,10 +243,45 @@ def _show(args) -> None:
 
 def _compare(args) -> None:
     store = Store()
+    runs = [store.run(ref) for ref in args.runs] if args.runs else _best_per_agent(store, args.game, args.by, args.lower)
+    for run in runs:
+        run["trained_steps"] = _trained_steps(store, run)
+    episodes = {run["id"]: store.episodes(run["id"]) for run in runs}
+    print(report.ranking(comparison.rank(runs, episodes, args.by, args.lower)))
+
+
+def _best_per_agent(store: Store, game: str, metric: str, lower_is_better: bool) -> list[dict]:
+    """Each agent's best finished run on the game's default evaluation games."""
+    key = f"{comparison.metric_key(metric)}_mean"
+    sign = -1.0 if lower_is_better else 1.0
+    standard = defaults(game)
+    best: dict[str, dict] = {}
+    for run in store.runs(game=game, limit=None):
+        if (run["status"] in ("done", "interrupted") and key in run["summary"]
+                and run["eval_max_steps"] == standard.eval_max_steps
+                and run["summary"]["episodes"] >= standard.eval_episodes):
+            held = best.get(run["agent"])
+            if held is None or sign * run["summary"][key] > sign * held["summary"][key]:
+                best[run["agent"]] = run
+    if not best:
+        raise ValueError(f"no finished {game} runs on the default evaluation games yet; "
+                         "try `omagym eval --agent greedy`")
+    return list(best.values())
+
+
+def _trained_steps(store: Store, run: dict) -> int | None:
+    """Steps of training behind a run: its own, or for a test of a checkpoint, the training run's."""
+    if run["kind"] == "train":
+        return run["train_steps"]
+    return store.run(run["parent"])["train_steps"] if run["parent"] else None
+
+
+def _diff(args) -> None:
+    store = Store()
     runs = [store.run(ref) for ref in args.runs]
     if len({r["game"] for r in runs}) > 1:
         raise ValueError("those runs are of different games")
-    print(report.compare(runs))
+    print(report.diff(runs))
 
 
 def _watch(args) -> int:
