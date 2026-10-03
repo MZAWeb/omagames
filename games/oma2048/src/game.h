@@ -23,6 +23,9 @@ public:
     bool undo();
     // "Keep going" on the win overlay: the run continues with the same score.
     void keepGoing() { m_keepPlaying = m_won; }
+    // Redraws where and what spawns next from `seed`: what a player can't
+    // see, for a planner trying moves out on a copy (docs/AGENT-ENV.md).
+    void reseedHidden(quint32 seed) { m_rng.seed(seed); }
 
     const Board &board() const { return m_board; }
     int score() const { return m_score; }

@@ -5,6 +5,7 @@ TARGET = oma2048
 TEMPLATE = app
 
 HEADERS += \
+    src/rules.h \
     src/board.h \
     src/game.h \
     src/oma2048game.h

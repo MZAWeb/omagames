@@ -62,6 +62,41 @@ fade in. Tile colors are a ramp built with `theme.mix` from the Omarchy theme
 — low tiles near the background, high tiles toward the accent — so the board
 follows the desktop like every other omagame; no color is hardcoded.
 
+## Agent environment
+
+`bin/build-env oma2048` builds `build-env/oma2048/liboma2048_env.so`, the
+game as a program plays it, for training agents (`docs/AGENT-ENV.md`): the
+same engine as the app, without undo, high scores or settings.
+
+**Config:** `goal` (default 0): the tile that ends the run when it first
+appears; 0 plays on until no slide is left. Plus `max_steps`, as every env.
+
+**Actions:** `left`, `right`, `up`, `down`; a slide that would change
+nothing is masked. One step is one slide, then the new tile spawns.
+
+**Observation:**
+
+| Tensor | Type | Shape | What |
+|---|---|---|---|
+| `board` | uint8 | 4 × 4 | each tile's power of two (1 is a 2, 11 is 2048), 0 for empty |
+| `afterstates` | uint8 | 4 × 4 × 4 | per action, the board the slide leaves before the spawn; zeros where it is masked |
+| `gains` | int32 | 4 | per action, the points that slide would score |
+| `stats` | int32 | 4 | score, highest tile, empty cells, moves |
+
+Where the next tile spawns is never shown: a clone with `reseed_hidden`
+redraws it.
+
+**Reward and signals:** the reward is the score gained. Each step also
+reports `score`, `merges`, `highest`, `empty` and `won` (1 on the move that
+first makes a 2048). An episode ends when no slide is left, or at the goal.
+
+**Rules version:** `Rules::kVersion`, 1. It goes up with any change that
+makes the same moves from the same seed play out differently.
+
+**Replays and frames:** a replay is the seed and the slides, `L R U D`.
+`og_replay_frames` plays one back for omagym's web viewer: a frame per move
+with the 16 tile values, the score, the highest tile and the move made.
+
 ## Build, test, run
 
 ```sh
