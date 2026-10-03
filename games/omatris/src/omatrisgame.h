@@ -16,6 +16,7 @@
 #include "preferences.h"
 #include "replaypace.h"
 #include "replayplayer.h"
+#include "replayplaylist.h"
 #include "scoretable.h"
 
 // The only bridge between the engine and QML: state as properties, actions as
@@ -69,6 +70,11 @@ class OmatrisGame : public QObject {
     Q_PROPERTY(QString replaySpeedLabel READ replaySpeedLabel NOTIFY replayChanged)
     // Every call made: what is on screen is where the recording stops.
     Q_PROPERTY(bool replayEnded READ replayEnded NOTIFY replayChanged)
+    // Given several replays, which one this is ("3 of 10", else empty), and
+    // whether there is another either side of it.
+    Q_PROPERTY(QString replayPosition READ replayPosition NOTIFY replayChanged)
+    Q_PROPERTY(bool hasNextReplay READ hasNextReplay NOTIFY replayChanged)
+    Q_PROPERTY(bool hasPreviousReplay READ hasPreviousReplay NOTIFY replayChanged)
 
 public:
     // One simulation tick per timer shot: 60 ticks a second.
@@ -129,9 +135,13 @@ public:
     int replaySpeed() const { return m_pace.speed(); }
     QString replaySpeedLabel() const { return m_pace.label(); }
     bool replayEnded() const { return m_replay && m_replay->done(); }
-    // Starts watching the replay in `path`; false and the reason when it is
-    // not one this game can play.
-    bool loadReplay(const QString &path, QString *error);
+    QString replayPosition() const { return m_replay ? m_playlist.position() : QString(); }
+    bool hasNextReplay() const { return m_replay && m_playlist.hasNext(); }
+    bool hasPreviousReplay() const { return m_replay && m_playlist.hasPrevious(); }
+    // Starts watching the first of `paths`, to be stepped through in order;
+    // false and the reason when any of them is not one this game can play.
+    bool loadReplays(const QStringList &paths, QString *error);
+    bool loadReplay(const QString &path, QString *error) { return loadReplays({path}, error); }
 
     // Read-only view for the renderer; null on the start screen.
     const Game *engine() const { return m_game.get(); }
@@ -164,6 +174,9 @@ public:
     // Plays the replay on to the next piece that locks, paused or not.
     Q_INVOKABLE void replayNextPiece();
     Q_INVOKABLE void restartReplay();
+    // The next or previous of the replays given, at the speed picked.
+    Q_INVOKABLE void nextReplay();
+    Q_INVOKABLE void previousReplay();
     // {cells: [{x, y}], width, height} of a piece in its spawn orientation,
     // for the hold box and the next queue.
     Q_INVOKABLE QVariantMap pieceShape(int piece) const { return Piece::spawnBoxMap(piece); }
@@ -237,6 +250,8 @@ private:
     // Makes `calls` on the replay's game and shows what they did.
     void playReplay(const std::function<std::vector<Event>()> &calls);
     void endReplay();
+    // Puts the replay in `path` on screen from its start.
+    bool watch(const QString &path, QString *error);
     void setHandling(const Handling &handling);
     void applyHandling();
 
@@ -247,5 +262,6 @@ private:
     Preferences m_preferences;
     int m_newHighScoreRank = -1;
     std::optional<ReplayPlayer> m_replay;
+    OmaGames::ReplayPlaylist m_playlist;
     OmaGames::ReplayPace m_pace;
 };

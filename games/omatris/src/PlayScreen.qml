@@ -30,6 +30,8 @@ FocusScope {
             break;
         case Qt.Key_Right: game.replayNextPiece(); break;
         case Qt.Key_R: game.restartReplay(); break;
+        case Qt.Key_N: game.nextReplay(); break;
+        case Qt.Key_B: game.previousReplay(); break;
         case Qt.Key_G: game.toggleGhost(); break;
         case Qt.Key_Escape: root.leaveRequested(); break;
         default: return false;

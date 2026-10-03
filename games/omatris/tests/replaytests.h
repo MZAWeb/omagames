@@ -24,4 +24,6 @@ private slots:
     void aReplayIsNeverAHighScore();
     void aReplayLeavesTheChosenModeAlone();
     void aFileThatIsNotAReplayDoesNotLoad();
+    void severalReplaysAreSteppedThrough();
+    void oneBadReplayAmongSeveralOpensNone();
 };

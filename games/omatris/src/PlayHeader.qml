@@ -69,6 +69,12 @@ RowLayout {
             text: qsTr("Paused")
             tint: theme.orange
         }
+        // Which of the replays given this is, when there are several.
+        OmaBadge {
+            visible: game.replayPosition !== ""
+            text: game.replayPosition
+            tint: theme.green
+        }
         OmaBadge {
             visible: game.replaying
             text: game.replaySpeedLabel

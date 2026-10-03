@@ -1,5 +1,5 @@
 // OmatrisGame watching a recorded game instead of being played: what
-// `--replay <file>` opens. The player's keys are ignored, nothing is ranked,
+// `--replay <file>` opens, or several of them to step between. The player's keys are ignored, nothing is ranked,
 // and the replay drops pieces as fast as it was recorded dropping them.
 #include "omatrisgame.h"
 
@@ -11,15 +11,44 @@ constexpr int kDefaultSpeed = 2;
 
 }  // namespace
 
-bool OmatrisGame::loadReplay(const QString &path, QString *error) {
+bool OmatrisGame::loadReplays(const QStringList &paths, QString *error) {
+    if (paths.isEmpty()) {
+        *error = QStringLiteral("no replay to watch");
+        return false;
+    }
+    // All of them up front, so a bad one is said before anything opens
+    // rather than when it is stepped onto.
+    for (const QString &path : paths) {
+        if (!ReplayPlayer::loadFile(path, error))
+            return false;
+    }
+    m_playlist = OmaGames::ReplayPlaylist(paths);
+    m_pace = OmaGames::ReplayPace(kDefaultSpeed);
+    return watch(m_playlist.current(), error);
+}
+
+bool OmatrisGame::watch(const QString &path, QString *error) {
     auto player = ReplayPlayer::loadFile(path, error);
     if (!player)
         return false;
     m_replay = std::move(player);
-    m_pace = OmaGames::ReplayPace(kDefaultSpeed);
+    m_pace.restart();
     show(std::make_unique<Game>(m_replay->deal()));
     emit replayChanged();
     return true;
+}
+
+void OmatrisGame::nextReplay() {
+    QString error;
+    // A file gone since it was checked leaves the one on screen there.
+    if (m_replay && m_playlist.next() && !watch(m_playlist.current(), &error))
+        m_playlist.previous();
+}
+
+void OmatrisGame::previousReplay() {
+    QString error;
+    if (m_replay && m_playlist.previous() && !watch(m_playlist.current(), &error))
+        m_playlist.next();
 }
 
 void OmatrisGame::restartReplay() {
@@ -35,6 +64,7 @@ void OmatrisGame::endReplay() {
     if (!m_replay)
         return;
     m_replay.reset();
+    m_playlist = {};
     m_pace = OmaGames::ReplayPace(kDefaultSpeed);
     emit replayChanged();
 }

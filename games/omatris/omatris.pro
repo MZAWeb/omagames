@@ -24,6 +24,7 @@ HEADERS += \
     src/replayplayer.h \
     ../../common/env/replay.h \
     ../../common/env/replaypace.h \
+    ../../common/env/replayplaylist.h \
     src/autoshift.h \
     src/handling.h \
     src/preferences.h \
@@ -47,6 +48,7 @@ SOURCES += \
     src/replayplayer.cpp \
     ../../common/env/replay.cpp \
     ../../common/env/replaypace.cpp \
+    ../../common/env/replayplaylist.cpp \
     src/autoshift.cpp \
     src/handling.cpp \
     src/preferences.cpp \

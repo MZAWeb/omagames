@@ -304,3 +304,51 @@ void ReplayTests::aFileThatIsNotAReplayDoesNotLoad() {
     QVERIFY(!game.replaying());
     QCOMPARE(game.phase(), QStringLiteral("start"));
 }
+
+void ReplayTests::severalReplaysAreSteppedThrough() {
+    OmatrisGame game;
+    game.setStepInterval(0);
+    QJsonObject early = toppedOut().replay().toJson();
+    early.insert(QStringLiteral("agent"), QStringLiteral("dqn after 0 steps"));
+    QString error;
+    QVERIFY2(game.loadReplays({write(early), kSample}, &error), qPrintable(error));
+    QCOMPARE(game.replayAgent(), QStringLiteral("dqn after 0 steps"));
+    QCOMPARE(game.replayPosition(), QStringLiteral("1 of 2"));
+    QVERIFY(game.hasNextReplay() && !game.hasPreviousReplay());
+
+    game.setReplaySpeed(4);
+    for (int i = 0; i < 5; ++i)
+        game.replayNextPiece();
+    game.nextReplay();
+    QCOMPARE(game.replayAgent(), QStringLiteral("greedy heuristic"));
+    QCOMPARE(game.replayPosition(), QStringLiteral("2 of 2"));
+    QCOMPARE(game.score(), 0);           // from its start
+    QCOMPARE(game.replaySpeed(), 4);     // at the speed picked
+    QVERIFY(!game.hasNextReplay() && game.hasPreviousReplay());
+    game.nextReplay();                   // nothing after the last
+    QCOMPARE(game.replayPosition(), QStringLiteral("2 of 2"));
+
+    game.previousReplay();
+    QCOMPARE(game.replayAgent(), QStringLiteral("dqn after 0 steps"));
+    watchToTheEnd(game);
+    QCOMPARE(game.phase(), QStringLiteral("gameover"));
+    game.nextReplay();                   // from the end of one, on to the next
+    QCOMPARE(game.phase(), kPlaying);
+
+    game.backToStart();
+    QVERIFY(!game.replaying());
+    QCOMPARE(game.replayPosition(), QString());
+    QVERIFY(game.loadReplay(kSample, &error));
+    QCOMPARE(game.replayPosition(), QString());  // one replay is not a list
+    QVERIFY(!game.hasNextReplay());
+}
+
+void ReplayTests::oneBadReplayAmongSeveralOpensNone() {
+    OmatrisGame game;
+    QString error;
+    const QString junk = write({{QStringLiteral("format"), QStringLiteral("replay/v1")}});
+    QVERIFY(!game.loadReplays({kSample, junk}, &error));
+    QVERIFY(!error.isEmpty());
+    QVERIFY(!game.replaying());
+    QVERIFY(!game.loadReplays({}, &error));
+}
