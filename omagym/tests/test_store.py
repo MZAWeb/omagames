@@ -29,6 +29,25 @@ def test_a_run_keeps_everything_recorded_about_it(experiments):
     assert (experiments / "experiments.sqlite").exists()
 
 
+def test_a_deleted_run_leaves_nothing_behind(experiments):
+    store = Store()
+    kept, gone = _run(store, name="kept"), _run(store, name="gone")
+    for run in (kept, gone):
+        store.log(run["id"], 1, {"loss": 1.0})
+        store.add_episodes(run["id"], [{"episode": 0, "seed": 1, "score": 1}])
+        store.set_summary(run["id"], {"score_mean": 1.0})
+    store.delete(gone["id"])
+
+    with pytest.raises(KeyError):
+        store.run("gone")
+    for table in ("runs", "metrics", "episodes", "summary"):
+        column = "id" if table == "runs" else "run"
+        rows = store.db.execute(f"SELECT {column} FROM {table}").fetchall()
+        assert [r[0] for r in rows] == [kept["id"]]
+    assert not (experiments / "runs" / gone["id"]).exists()
+    assert (experiments / "runs" / kept["id"]).exists()
+
+
 def test_runs_are_found_by_prefix_name_or_last():
     store = Store()
     first, second = _run(store), _run(store, name="second")

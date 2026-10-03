@@ -84,6 +84,7 @@ of its id, its `--name`, or `last`.
 | `omagym compare R1 R2 ...` | Runs side by side, plus every setting that differs between them |
 | `omagym watch R [--worst]` | Plays the run's best (or worst) evaluation game in the app |
 | `omagym note R --name N --notes "..."` | Names a run, or writes down what it was about, afterwards |
+| `omagym delete R1 R2 ... [--yes]` | Forgets runs: their results, checkpoints and replays. Asks first. A training run goes only together with the tests of its checkpoint |
 
 Options shared by `train` and `eval`:
 

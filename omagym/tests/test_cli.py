@@ -26,6 +26,31 @@ def test_the_same_agent_on_the_same_games_scores_the_same(capsys):
     assert store.run("one")["summary"] == store.run("two")["summary"]
 
 
+def test_delete_asks_first_and_forgets_the_run(capsys, monkeypatch):
+    from omagym.store import Store
+
+    main(["eval", "--agent", "random", "--episodes", "1", "--max-steps", "10", "--name", "doomed"])
+    monkeypatch.setattr("builtins.input", lambda _: "n")
+    assert main(["delete", "doomed"]) == 1
+    assert Store().run("doomed")
+    monkeypatch.setattr("builtins.input", lambda _: "y")
+    assert main(["delete", "doomed"]) == 0
+    assert "deleted 1 run" in capsys.readouterr().out
+    assert main(["show", "doomed"]) == 2
+
+
+def test_a_trained_run_goes_only_with_the_tests_of_its_checkpoint(capsys):
+    from omagym.store import Store
+
+    store = Store()
+    trained = store.new_run("train", "omatris", "dqn", agent_config={}, env_config={}, code="c", dirty=0)
+    tested = store.new_run("eval", "omatris", "dqn", agent_config={}, env_config={}, code="c", dirty=0,
+                           parent=trained["id"])
+    assert main(["delete", trained["id"], "--yes"]) == 2
+    assert "tested by" in capsys.readouterr().err
+    assert main(["delete", trained["id"], tested["id"], "--yes"]) == 0
+
+
 def test_mistakes_are_explained_not_raised(capsys):
     assert main(["eval", "--agent", "greedy", "--set", "hole=1"]) == 2
     assert "no setting 'hole'" in capsys.readouterr().err
