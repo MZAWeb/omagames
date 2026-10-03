@@ -58,7 +58,7 @@ it are then listed as unavailable.
 ## A first session
 
 ```sh
-# Test the dumb strategy: 20 fixed games of Tetris, each cut at 500 pieces.
+# Test the dumb strategy: 20 fixed games of Tetris, each cut at 2,500 pieces (about level 100).
 uv run omagym eval --game omatris --agent greedy --name greedy-baseline
 
 # Train the neural one for 100k steps, evaluating every 10k.
@@ -105,7 +105,7 @@ Options shared by `train` and `eval`:
 - `--env KEY=VALUE` changes a game setting: `--env mode=sprint`. The game's
   README ("Agent environment") lists them.
 - `--episodes N` and `--max-steps N` set the evaluation games: how many, and
-  where each is cut (defaults: 20 × 500 for Omatris, 50 × 3000 for Omasnake).
+  where each is cut (defaults: 20 × 2,500 for Omatris, 50 × 3000 for Omasnake).
 - `--name`, `--notes`: say what you were trying. Future you will thank you.
 - `--seed N`: the agent's own randomness (training games, exploration).
 

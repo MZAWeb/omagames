@@ -12,13 +12,15 @@ class GameDefaults:
     eval_episodes: int
     # Steps after which an evaluation episode is cut short. A good Tetris
     # agent never tops out, so without a cap it would never finish.
+    # Omatris's 2,500 pieces are 1,000 lines if every one is cleared: about
+    # level 100, far enough for good agents to pull apart on score.
     eval_max_steps: int
     # Signals summed over an episode that `compare` shows beside the score.
     headline: tuple[str, ...]
 
 
 _DEFAULTS = {
-    "omatris": GameDefaults(eval_episodes=20, eval_max_steps=500, headline=("lines",)),
+    "omatris": GameDefaults(eval_episodes=20, eval_max_steps=2500, headline=("lines",)),
     "omasnake": GameDefaults(eval_episodes=50, eval_max_steps=3000, headline=("ate",)),
 }
 
