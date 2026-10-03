@@ -65,12 +65,15 @@ _DEFAULTS = {
         tests=(
             # Getting out of trouble: each game opens on a dealt mess of holes
             # and overhangs, and is won the moment its last dealt row clears.
-            # Fewer pieces is better; a game lost (or not won within the cap)
-            # counts as the whole cap. Learners never train on it, so it also
-            # shows whether what they learned carries over.
-            Test("challenge", "clear a dealt mess in as few pieces as possible", {"mode": "challenge"},
-                 episodes=20, max_steps=1000, metric="steps_to_win", lower_is_better=True,
-                 headline=("won", "topped_out")),
+            # Ranked by pieces to win per point of the deal's Difficulty (the
+            # number the app shows), so a hard deal is allowed more pieces and
+            # "best game" means best played, not easiest dealt. A game lost (or
+            # not won within the cap) counts as the whole cap. Learners never
+            # train on it, so it also shows whether what they learned carries
+            # over.
+            Test("challenge", "clear a dealt mess in as few pieces as possible, for its difficulty",
+                 {"mode": "challenge"}, episodes=20, max_steps=1000, metric="pieces_per_difficulty",
+                 lower_is_better=True, headline=("steps_to_win", "difficulty", "won", "topped_out")),
         ),
     ),
     "omasnake": GameDefaults(eval_episodes=50, eval_max_steps=3000, headline=("ate",)),

@@ -43,6 +43,9 @@ def play(agent: Agent, env: Env, seed: int, explore: bool = False) -> dict:
         "steps": steps,
         "reward": reward,
         "won": float(won),
+        # How hard the game was dealt, where the game says (a Challenge's
+        # Difficulty, 1 to 100); 0 where it doesn't.
+        "difficulty": float(info.get("dealt_difficulty", 0)),
         "ended": "terminated" if step.terminated else "cut short",
         **{f"sum_{k}": v for k, v in totals.items()},
     }
@@ -88,6 +91,10 @@ def evaluate(
         # How long it took to win, a loss counting as the whole cap: what
         # "fewer pieces is better" ranks by, without rewarding a quick loss.
         result["steps_to_win"] = result["steps"] if result["won"] else max_steps
+        # The same, per point of difficulty: a hard deal is allowed more pieces,
+        # so games of different difficulty can be held to one standard.
+        if result["difficulty"]:
+            result["pieces_per_difficulty"] = result["steps_to_win"] / result["difficulty"]
         results.append(result)
         if replays is not None:
             goodness = sign * result[best_by]

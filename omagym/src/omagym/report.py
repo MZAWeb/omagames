@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .comparison import Ranking
+from .comparison import metric_key as comparison_key
 from .games import defaults
 
 
@@ -68,7 +69,7 @@ def show(run: dict, curve: list[tuple[int, float]], patch_exists: bool, trained:
             continue
         s = run["summary"]
         keys = [test.metric, "score", *test.headline]
-        field = lambda k: k if k in ("score", "steps", "won", "steps_to_win") else f"sum_{k}"  # noqa: E731
+        field = comparison_key
         out += ["", f"{test.name} test, {test.about}: {number(s[prefix + 'episodes'])} games, "
                 f"{number(s.get(prefix + 'won_mean', 0) * 100)}% won"]
         out.append(table(["", "mean", "std", "min", "median", "max"],

@@ -49,7 +49,8 @@ class Ranking:
 
 def metric_key(metric: str) -> str:
     """The episode field a metric is read from: "lines" is the summed signal "sum_lines"."""
-    return metric if metric in ("score", "steps", "reward", "won", "steps_to_win") else f"sum_{metric}"
+    direct = ("score", "steps", "reward", "won", "steps_to_win", "difficulty", "pieces_per_difficulty")
+    return metric if metric in direct else f"sum_{metric}"
 
 
 def rank(runs: list[dict], episodes: dict[str, list[dict]], metric: str = "score",
