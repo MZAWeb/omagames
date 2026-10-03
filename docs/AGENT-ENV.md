@@ -192,54 +192,61 @@ here once.
 
 ## Omatris: the first env
 
-### Observation
+Built in steps 2 and 3. `games/omatris/README.md` ("Agent environment") is
+the spec: config keys, tensors, action spaces and signals. This section
+covers why it's shaped the way it is.
 
-| Tensor | dtype | shape | Content |
-|---|---|---|---|
-| `board` | u8 | 24 × 10 | 0 empty, 1–7 the piece that filled it; four hidden rows on top |
-| `piece` | i32 | 4 | type, rotation, x, y of the falling piece |
-| `queue` | u8 | 3 | the next three |
-| `hold` | u8 | 2 | held type (0 none), hold available |
-| `stats` | i32 | 8 | level, gravity level, lines, score, combo, back-to-back, lock ticks, lock resets |
-| `candidates` | i32 | K × 6 | placement action space only: rotation, x, y, uses hold, lines it clears, valid |
-| `afterstates` | u8 | K × 24 × 10 | placement action space only: the board after each candidate locks and clears |
+### Engine pieces it stands on
 
-### Action spaces (chosen in the config)
+| Piece | What it is |
+|---|---|
+| `Calls` (`src/calls.h`) | The engine inputs a player's keys come down to (`L R CW CCW SD+ SD- HD H`) plus a tick, applied through the same `Game` methods the bridge calls. The env makes every call through it, so its replay is exactly the game. |
+| `Placements` (`src/placements.h`) | Every distinct place the piece can come to rest, with the shortest calls to get there and what locking it would do: lines, top out, and the board left behind (the afterstate). |
+| `BoardMetrics` (`src/boardmetrics.h`) | Column heights, holes, bumpiness: for the signals, never for the rules. |
+| `Game::reseedHidden`, `Bag::reseedHidden` | Shuffle again everything the next queue doesn't show, within each 7-bag, so the bag guarantee still holds. |
 
-| Space | One step is | Size | For |
-|---|---|---|---|
-| `placement` | a whole piece: one of this piece's reachable resting places, hold included, executed with real engine calls, then hard-dropped and ticked until the next piece is in play | K = 256 slots, masked; the `candidates` and `afterstates` tensors describe each slot | afterstate value learning, heuristics, CEM. **Start here.** |
-| `drop` | hold or not × rotation × column, then hard drop | 80, masked | plain DQN/PPO with a fixed output head; cannot tuck or spin |
-| `raw` | one engine input, then `frame_skip` ticks | 8: none, left, right, rotate CW, rotate CCW, soft drop on/off, hard drop, hold | the "Trackmania" setting: hard credit assignment, real timing |
+The search runs breadth-first over **copies of the real `Game`**. Its moves
+are a shift, a turn either way, and a *sonic drop*: one tick of an instant
+soft drop, which is what a player with Instant soft drop does by tapping ↓.
+Wall kicks, the lock delay and its two resets, and T-spin detection are
+therefore the engine's own, with no second implementation to drift. No
+other time passes between moves, which models a player of infinite speed.
+That's exact at low gravity and generous near level 20; if it ever matters,
+the fix belongs in the search (tick between moves), not in a separate rule
+set. Because the search relies on sonic drops, the env always plays with
+an instant soft drop, and its replays record that
+(`config.soft_drop_factor = 0`).
 
-The `placement` search is a breadth-first search over copies of `Game`. From
-the spawned piece (and the held or next piece, when hold is available) it
-tries every move and rotation, keeps a state when the engine accepted the
-input, and records each distinct resting place with the shortest input path
-to it. Running on the real engine means wall kicks, T-spin detection and the
-two lock resets are respected without a second implementation. Executing a
-candidate replays its path with no ticks in between, which is what an
-infinitely fast finesse player would do. That's honest at low gravity and
-generous at level 15+. A `placement_timing = "realistic"` option replays the
-path at the default ARR, with ticks, for when that difference matters.
+Landings are distinct by the cells they fill and the spin they'd score,
+so an S turned twice is one landing, not two. On an empty board that
+gives 34 for a T, J or L, 17 for an S, Z or I, and 9 for an O.
 
-`Game` is already copyable (`Bag`, `Board`, `DealtStack` and `Scoring` are all
-values), so cloning is a copy. A test pins that down: copy mid-run, play the
-same actions on both, get the same game.
+### Speed
 
-### Engine changes
+The search copies the game about a thousand times per piece, so the copy
+must be cheap. Two changes made it so, neither altering a game (the same
+seeds play the same games, which the existing suite confirms):
 
-1. **`Placements`** (`src/placements.h/.cpp`): the reachable-placement
-   search above, plus tests (with no hold, an empty board yields 34
-   distinct resting places for a T, 17 for an S or an I, 9 for an O; a
-   T-slot yields its T-spin; nothing found
-   conflicts with `Board::fits`). It's engine code ("rules, generation, AI"),
-   and a future in-game hint or bot could use it too.
-2. **Copy test** for `Game`.
-3. **Board metrics** (`holes`, column heights, bumpiness) in a small
-   `BoardMetrics` helper for the signals, tested.
+- `Bag` keeps its queue in a fixed ring instead of a `std::deque`, so a
+  copy allocates nothing.
+- `Board::inside` and `Board::blocked` are inline. Collision checks were
+  most of the search's time.
 
-None of these change gameplay.
+Measured on one core of the dev container, a greedy player with hold
+went from 1,150 to about 4,000 pieces a second (0.25 ms per piece, search
+included). From Python, through ctypes and numpy, a four-feature greedy
+heuristic picking among the afterstates cleared 799 lines in 2,000 pieces
+at about 1,400 pieces a second. Each piece adds 4 cells and a line takes
+10, so 800 lines is the most 2,000 pieces can clear.
+
+### Hidden information
+
+The observation shows the board (hidden rows included: they're part of
+the well, just off screen), the falling piece, the next three and the hold
+box. The bag behind the queue isn't shown. A clone with `reseed_hidden`
+reshuffles it, so a planner's rollouts are samples of the future, not the
+future itself. A reseeded clone's replay is empty, because its seed no
+longer says what comes next.
 
 ## Watching an agent play
 
@@ -301,9 +308,10 @@ Every env follows the same pattern. Each game keeps its spec in its README.
 
 1. **Done.** `common`: `Env`, observation layout, config resolution, C ABI,
    `replay/v1`, `env.pri`, `bin/build-env`, CI. Tested over a toy env.
-2. `omatris`: `Game` copy test, `BoardMetrics`, `Placements`.
-3. `omatris`: `OmatrisEnv` with the three action spaces, plus env tests
-   (determinism, masks match `Placements`, replay round trip, no
+2. **Done.** `omatris`: `Game` copy test, `BoardMetrics`, `Placements`,
+   `Calls`, hidden reseeding.
+3. **Done.** `omatris`: `OmatrisEnv` with the three action spaces, plus env
+   tests (determinism, masks match `Placements`, replay round trip, no
    `QSettings` writes).
 4. `omatris`: `--replay` in the app and its README section.
 5. A second game (2048 or Snake) to prove the interface is generic before it
