@@ -21,8 +21,7 @@
 // search assumes; a raw soft drop is therefore a sonic drop too.
 class OmatrisEnv : public OmaGames::Env {
 public:
-    // Bumped whenever the same calls would play out differently.
-    static constexpr int kRulesVersion = 1;
+    static constexpr int kRulesVersion = Rules::kVersion;
 
     enum class Space { Placement, Drop, Raw };
     enum RawAction { None, Left, Right, RotateCW, RotateCCW, SoftDrop, HardDrop, Hold, kRawActions };
