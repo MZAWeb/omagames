@@ -254,7 +254,7 @@ QJsonObject OmatrisEnv::info() const {
     const QString phase = m_game->phase() == Phase::Playing ? QStringLiteral("playing")
                         : m_game->phase() == Phase::Finished ? QStringLiteral("finished")
                                                              : QStringLiteral("game_over");
-    return {
+    QJsonObject info {
         {QStringLiteral("mode"), Modes::id(m_mode)},
         {QStringLiteral("phase"), phase},
         {QStringLiteral("score"), m_game->score()},
@@ -264,4 +264,11 @@ QJsonObject OmatrisEnv::info() const {
         {QStringLiteral("landings"), int(m_landings.size())},
         {QStringLiteral("landings_not_offered"), m_unoffered},
     };
+    // A Challenge's Difficulty, 1 to 100, as the app shows it: how hard the
+    // dealt mess was to begin with, and how hard what is left of it is now.
+    if (m_game->dealtRows() > 0) {
+        info.insert(QStringLiteral("dealt_difficulty"), m_game->dealtDifficulty());
+        info.insert(QStringLiteral("difficulty"), m_game->difficulty());
+    }
+    return info;
 }

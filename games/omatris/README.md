@@ -239,6 +239,10 @@ Pieces are numbered 1–7 in the order I, J, L, O, S, T, Z; 0 is nothing.
 
 The bag behind the next three is never shown.
 
+In a Challenge, the env's info also has `dealt_difficulty` and
+`difficulty`: the deal's Difficulty (1–100) and what is left of it now, as
+the app shows them.
+
 ### Reward and signals
 
 The reward is the score gained, exactly as the game counts it. Each step

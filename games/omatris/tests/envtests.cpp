@@ -235,8 +235,15 @@ void EnvTests::aRunEndsWhenItTopsOut() {
 
 void EnvTests::theModeIsTheOneConfigured() {
     QCOMPARE(makeEnv({{QStringLiteral("mode"), QStringLiteral("sprint")}}).game().lineGoal(), Rules::kSprintLines);
-    QVERIFY(makeEnv({{QStringLiteral("mode"), QStringLiteral("challenge")}}).game().dealtRows() > 0);
+    OmatrisEnv challenge = makeEnv({{QStringLiteral("mode"), QStringLiteral("challenge")}});
+    QVERIFY(challenge.game().dealtRows() > 0);
+    // Its info says how hard the deal is, as the app's Difficulty does.
+    const QJsonObject info = challenge.info();
+    QCOMPARE(info.value(QStringLiteral("dealt_difficulty")).toInt(), challenge.game().dealtDifficulty());
+    QVERIFY(info.value(QStringLiteral("dealt_difficulty")).toInt() >= 1);
+    QCOMPARE(info.value(QStringLiteral("difficulty")).toInt(), challenge.game().difficulty());
     QCOMPARE(makeEnv().game().mode(), Mode::Marathon);
+    QVERIFY(!makeEnv().info().contains(QStringLiteral("dealt_difficulty")));
 }
 
 void EnvTests::theSameSeedAndActionsPlayTheSameGame() {
