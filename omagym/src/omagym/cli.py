@@ -86,6 +86,10 @@ def _parser() -> argparse.ArgumentParser:
     sub.add_argument("run")
     sub.add_argument("--worst", action="store_true")
 
+    sub = command("delete", _delete, "forget runs: their results, checkpoints and replays")
+    sub.add_argument("runs", nargs="+")
+    sub.add_argument("--yes", action="store_true", help="don't ask first")
+
     sub = command("note", _note, "name a run or write down what it was about")
     sub.add_argument("run")
     sub.add_argument("--name")
@@ -291,6 +295,31 @@ def _watch(args) -> int:
         raise ValueError(f"{run['id']} has no replays yet")
     print(f"watching {replay}")
     return subprocess.call([str(native.REPO_ROOT / "bin" / "run"), run["game"], "--replay", str(replay)])
+
+
+def _delete(args) -> int:
+    store = Store()
+    runs = {run["id"]: run for run in (store.run(ref) for ref in args.runs)}
+    for run_id in runs:
+        orphans = [e for e in store.evaluations_of(run_id) if e not in runs]
+        if orphans:
+            raise ValueError(f"{run_id}'s checkpoint was tested by {', '.join(orphans)}: delete those too, or keep it")
+    print("\n".join(f"  {run_id}" + (f"  ({run['name']})" if run["name"] else "") for run_id, run in runs.items()))
+    if not args.yes and not _confirm(f"delete {len(runs)} run(s) and their files? [y/N] "):
+        print("nothing deleted")
+        return 1
+    for run_id in runs:
+        store.delete(run_id)
+    print(f"deleted {len(runs)} run(s)")
+    return 0
+
+
+def _confirm(question: str) -> bool:
+    try:
+        return input(question).strip().lower() in ("y", "yes")
+    except EOFError:
+        # No one to ask (a script, a pipe): the safe answer.
+        return False
 
 
 def _note(args) -> None:

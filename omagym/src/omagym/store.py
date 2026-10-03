@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -119,6 +120,17 @@ class Store:
             self.db.execute("UPDATE runs SET notes = ? WHERE id = ?", (notes, run_id))
         self.db.commit()
 
+    def delete(self, run_id: str) -> None:
+        """Forgets a run: its rows, and its folder of checkpoints and replays."""
+        with self.db:
+            for table in ("metrics", "episodes", "summary"):
+                self.db.execute(f"DELETE FROM {table} WHERE run = ?", (run_id,))
+            row = self.db.execute("DELETE FROM runs WHERE id = ? RETURNING dir", (run_id,)).fetchone()
+        directory = Path(row["dir"]) if row else None
+        # Only ever a folder this store made, whatever the database says.
+        if directory and directory.parent == self.root / "runs" and directory.is_dir():
+            shutil.rmtree(directory)
+
     # -- reading --------------------------------------------------------------
 
     def run(self, ref: str) -> dict:
@@ -155,6 +167,10 @@ class Store:
             query += " LIMIT ?"
             params.append(limit)
         return [self.run(r["id"]) for r in self.db.execute(query, params)]
+
+    def evaluations_of(self, run_id: str) -> list[str]:
+        """Runs that tested this training run's checkpoint."""
+        return [r["id"] for r in self.db.execute("SELECT id FROM runs WHERE parent = ? ORDER BY id", (run_id,))]
 
     def summary(self, run_id: str) -> dict[str, float]:
         rows = self.db.execute("SELECT key, value FROM summary WHERE run = ?", (run_id,))
