@@ -269,11 +269,18 @@ agent that pressed keys in real time is shown in real time at 1×.
 | `1` `2` `3` `4` | Speed: ¼×, ½× (the default, three or four pieces a second), 1×, 8×. Above 1× the bonus popups are skipped |
 | `→` | On to the next piece, paused or not |
 | `R` | Watch again from the start |
+| `N` / `B` | The next / previous replay, given several |
 | `G` | Ghost piece on / off |
 | `Esc` | Leave for the start screen |
 
 The replay can end before its game does (an agent cut short after a set
 number of pieces); the overlay then says "End of the replay".
+
+Given several, `--replay a.json --replay b.json ...`, the app opens the
+first, the header says which it is ("3 of 10"), and `N` and `B` step between
+them at the speed picked. At the end of one, Enter goes on to the next.
+omagym uses this to show an agent at each stage of its training
+(`omagym watch R --training`). Every file is checked before anything opens.
 
 ## Build, test, run
 
