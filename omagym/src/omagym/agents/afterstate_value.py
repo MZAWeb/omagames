@@ -15,7 +15,6 @@ network (the *inputs*), and the network itself.
 from __future__ import annotations
 
 import numpy as np
-import torch
 from torch import nn
 
 from ..env import EnvSpec
@@ -29,18 +28,10 @@ from ..games import omatris
 #   singles and see wells and transitions.
 # - "board": every cell, 240 numbers, into a plain network. It has to find
 #   its own features, which takes longer, and nothing caps what it can learn.
-# - "cnn": every cell, into a convolutional network, which looks at small
-#   patches of the board wherever they are. A hole is a hole in any column,
-#   and a CNN knows that from the start; a plain network has to learn it
-#   once per column.
-# - "rich_hand", "cnn_hand": "rich" or "cnn", plus what is in hand after the
-#   landing: the held piece and the next one (omatris.hand_after()). Only
-#   these let the network value keeping an I in the hold for a Tetris.
-# - "hybrid": the cells through the CNN, with cem's fifteen features and the
-#   hand joined in after it. The features give it a running start (it plays
-#   like "rich_hand" from early on); the convolutions are there to find
-#   whatever the features miss, given the training to do it.
-INPUTS = ("features", "rich", "board", "cnn", "rich_hand", "cnn_hand", "hybrid")
+# - "rich_hand": "rich", plus what is in hand after the landing: the held
+#   piece and the next one (omatris.hand_after()). Only this one lets the
+#   network value keeping an I in the hold for a Tetris.
+INPUTS = ("features", "rich", "board", "rich_hand")
 _HAND = 2 * omatris.PIECE_KINDS
 
 # Rough sizes of the five features on a busy board, so the network sees
@@ -60,8 +51,6 @@ def _cells(spec: EnvSpec) -> int:
 
 def input_size(inputs: str, spec: EnvSpec) -> int:
     """How many numbers describe one board (and, with _hand, what's in hand)."""
-    if inputs == "hybrid":
-        return _cells(spec) + len(omatris.RICH) + _HAND
     base = {"features": len(omatris.FEATURES), "rich": len(omatris.RICH)}.get(inputs.removesuffix("_hand"))
     size = base if base is not None else _cells(spec)
     return size + (_HAND if inputs.endswith("_hand") else 0)
@@ -71,73 +60,26 @@ def inputs_for(inputs: str, obs: dict[str, np.ndarray], spec: EnvSpec, count: in
     """[count, input_size] floats: every landing on offer, as the network sees it."""
     if inputs == "features":
         return omatris.afterstate_features(obs, spec, count) / _FEATURE_SCALE
-    if inputs == "hybrid":
-        # The cells first, so the network can split them off for the CNN.
-        return np.concatenate([inputs_for("board", obs, spec, count), inputs_for("rich_hand", obs, spec, count)],
-                              axis=1)
     if inputs.endswith("_hand"):
         board = inputs_for(inputs.removesuffix("_hand"), obs, spec, count)
         return np.concatenate([board, omatris.hand_after(obs, spec, count)], axis=1)
     if inputs == "rich":
         return omatris.rich_features(obs, spec, count) / omatris.RICH_SCALE
-    # The cells themselves, 0 or 1, flattened; a CNN folds them back into a grid.
+    # The cells themselves, 0 or 1, flattened.
     return obs["afterstates"][:count].reshape(count, -1).astype(np.float32)
 
 
 def network(inputs: str, spec: EnvSpec, hidden: int, layers: int) -> nn.Module:
     """A network from one board's numbers to one number: how good the board is.
 
-    A plain one is `layers` fully connected layers of `hidden` units, each
-    followed by a ReLU (which lets the network bend: without it, any stack
-    of layers is just one weighted sum). A CNN puts two convolutions first.
+    `layers` fully connected layers of `hidden` units, each followed by a
+    ReLU (which lets the network bend: without it, any stack of layers is
+    just one weighted sum), then one output.
     """
-    if inputs in ("cnn_hand", "hybrid"):
-        return _BoardAndMore(spec, hidden, layers, input_size(inputs, spec) - _cells(spec))
     stack: list[nn.Module] = []
     width = input_size(inputs, spec)
-    if inputs == "cnn":
-        rows, cols = spec.tensors["afterstates"].shape[1:]
-        stack += [
-            nn.Unflatten(1, (1, rows, cols)),          # 240 numbers back into a 1 x 24 x 10 image
-            nn.Conv2d(1, 16, kernel_size=3, padding=1), nn.ReLU(),   # 16 detectors of 3x3 patterns
-            nn.Conv2d(16, 32, kernel_size=3, padding=1), nn.ReLU(),  # patterns of those patterns
-            nn.Flatten(),
-        ]
-        width = 32 * rows * cols
     for _ in range(layers):
         stack += [nn.Linear(width, hidden), nn.ReLU()]
         width = hidden
     stack.append(nn.Linear(width, 1))
     return nn.Sequential(*stack)
-
-
-class _BoardAndMore(nn.Module):
-    """The CNN for the board, with more numbers joined in after it.
-
-    The cells go through the convolutions, which look for shapes on the
-    board. What follows them in the input (the pieces in hand; for "hybrid",
-    the features too) isn't a picture, so it skips the convolutions and joins
-    their output on the way into the fully connected layers.
-    """
-
-    def __init__(self, spec: EnvSpec, hidden: int, layers: int, extra: int):
-        super().__init__()
-        self.cells = _cells(spec)
-        rows, cols = spec.tensors["afterstates"].shape[1:]
-        self.board = nn.Sequential(
-            nn.Unflatten(1, (1, rows, cols)),
-            nn.Conv2d(1, 16, kernel_size=3, padding=1), nn.ReLU(),
-            nn.Conv2d(16, 32, kernel_size=3, padding=1), nn.ReLU(),
-            nn.Flatten(),
-        )
-        stack: list[nn.Module] = []
-        width = 32 * rows * cols + extra
-        for _ in range(layers):
-            stack += [nn.Linear(width, hidden), nn.ReLU()]
-            width = hidden
-        stack.append(nn.Linear(width, 1))
-        self.rest = nn.Sequential(*stack)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        cells, more = x[:, : self.cells], x[:, self.cells:]
-        return self.rest(torch.cat([self.board(cells), more], dim=1))

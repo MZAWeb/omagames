@@ -138,9 +138,7 @@ Their settings are listed by `omagym agents` and changed with `--set`. For
 | `features` (default) | greedy's five numbers |
 | `rich` | cem's fifteen: which kind of clear and spin, holes, heights, wells, transitions |
 | `rich_hand` | `rich`, plus the held piece and the next piece after the landing |
-| `board`, `cnn` | every cell of the board, through a plain or a convolutional network |
-| `cnn_hand` | `cnn`, plus the held and next pieces |
-| `hybrid` | the cells through a CNN, beside the rich features and the hand |
+| `board` | every cell of the board, through a plain network |
 
 `dqn`'s reward is a sum of terms, each a setting to tweak, and what it is
 paid for is what it learns to do: `reward_piece` (per piece, so playing
@@ -167,7 +165,6 @@ messes, capped at 1,000 pieces, a loss counting as the whole cap.
 | `lookahead` | 6,244,006 | 999.0 | 20 | 20 | **0.8** | 7 min |
 | `lookahead-cem` | 4,453,274 | 569.8 | 6 | 11 | 15.9 | 4 min |
 | `cem` | 3,672,947 | 542.7 | 6 | 15 | 10.6 | 15 min |
-| `dqn-hybrid` | 818 | 3.6 | 0 | 0 | 28.9 | 8 min |
 | `ppo` | 435 | 0.5 | 0 | 0 | 28.9 | 10 min |
 | `random` | 291 | 0.1 | 0 | 0 | 28.9 | seconds |
 
@@ -192,9 +189,6 @@ What it shows:
   only one.
 - **Search on a learned value helps.** `mcts` on plain `dqn`'s network beats
   `dqn` itself on both tests, at three times the time.
-- **The CNNs haven't learned anything yet**, `hybrid` included: in 100,000
-  steps a network over raw cells gets nowhere. In `hybrid` the features may
-  be drowned out by the CNN's thousands of outputs.
 - **`cem` trains on short games** (300 pieces, never past level 12), so it
   never meets the speed of later levels and tops out there.
 - **`ppo` has barely started**: a million steps is little for a policy
@@ -1080,9 +1074,9 @@ the code (marked "code"). Run it with a `--name`,
 
 ### `dqn`
 
-1. **What it sees:** `--set inputs=rich_hand` or `cnn_hand`, so it can
-   value the held and next pieces. The runs `dqn-rich`, `dqn-rich-hand`,
-   `dqn-cnn` and `dqn-cnn-hand` are this experiment.
+1. **What it sees:** done: `rich_hand` (the rich features plus the held
+   and next pieces) beats `rich` and `features`. CNNs over the raw cells
+   learned nothing in 100,000 steps and were taken out for now.
 2. **Train longer, on more seeds:** `--steps 500000 --set
    epsilon_steps=200000`, with `--seed 1`, `2` and `3`. 100,000 steps is
    short, and one seed can't tell you much.
@@ -1183,7 +1177,8 @@ the code (marked "code"). Run it with a `--name`,
    best, Science, section 3): a little for each line, and a penalty that
    grows with the holes and height.
 3. **See the board as a picture** (code): a CNN over the well instead of
-   one-hot cells into a plain network, as `dqn`'s `cnn` does.
+   one-hot cells into a plain network. (Tried for `dqn` and taken out for
+   now: it learned nothing in 100,000 steps.)
 4. **The Trackmania rehearsal:** `--env actions=raw --env frame_skip=4`, a
    key press every few frames, and watch how much harder credit assignment
    gets.
