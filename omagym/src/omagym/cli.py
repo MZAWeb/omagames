@@ -16,7 +16,7 @@ from pathlib import Path
 from . import native, provenance, records, report
 from .agents import UNAVAILABLE, all_agents, make_config, resolve
 from .env import Env
-from .evaluation import evaluate
+from .evaluation import evaluate, other_tests
 from .games import defaults
 from .store import Store
 from .training import Schedule, train
@@ -74,7 +74,8 @@ def _parser() -> argparse.ArgumentParser:
     sub = command("compare", records.compare, "which runs played best, and whether the difference is real")
     sub.add_argument("runs", nargs="*", help="runs to rank (default: each agent's best run of --game)")
     sub.add_argument("--game", default="omatris", choices=native.games(), help="the game, when no runs are given")
-    sub.add_argument("--by", default="score", metavar="METRIC", help="what to rank by: score, steps, lines, ate...")
+    sub.add_argument("--test", help="which of the game's tests to rank on (default: its main one)")
+    sub.add_argument("--by", metavar="METRIC", help="what to rank by: score, steps, lines, ate... (default: the test's)")
     sub.add_argument("--lower", action="store_true", help="lower is better (holes, max_height...)")
 
     sub = command("diff", records.diff, "runs side by side, with the settings that differ between them")
@@ -84,6 +85,7 @@ def _parser() -> argparse.ArgumentParser:
     sub.add_argument("run")
     which = sub.add_mutually_exclusive_group()
     which.add_argument("--worst", action="store_true")
+    sub.add_argument("--test", help="a game from another of the game's tests, e.g. challenge")
     which.add_argument("--training", action="store_true",
                        help="a training run's snapshots in order, stepped through with N and B")
 
@@ -205,6 +207,9 @@ def _evaluate(store: Store, run: dict, agent) -> str:
                                  Path(run["dir"]) / "replays", run["name"] or run["id"], progress)
     store.add_episodes(run["id"], episodes)
     store.set_summary(run["id"], summary)
+    for test in defaults(run["game"]).tests:
+        print(f"then {test.episodes} games of the {test.name} test: {test.about}")
+    other_tests(agent, run, store, run["name"] or run["id"])
     store.finish(run["id"], "done")
     return "done"
 

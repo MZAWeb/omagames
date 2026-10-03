@@ -22,7 +22,7 @@ import numpy as np
 
 from .agents import Agent
 from .env import Env
-from .evaluation import EVAL_SEED_BASE, evaluate, play
+from .evaluation import EVAL_SEED_BASE, evaluate, other_tests, play
 from .store import Store
 
 
@@ -125,6 +125,7 @@ def train(store: Store, run: dict, agent: Agent, schedule: Schedule, echo=print)
     )
     store.add_episodes(run["id"], episodes)
     store.set_summary(run["id"], summary)
+    other_tests(agent, run, store, label)
     store.finish(run["id"], status)
     return status
 

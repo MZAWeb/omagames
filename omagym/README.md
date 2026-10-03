@@ -129,9 +129,9 @@ a result belongs to the code that produced it.
 | `omagym run --game G --agent A [--steps N]` | Trains the agent if it learns (for N steps, or its default), then plays the evaluation games; recorded as a run |
 | `omagym runs [--game G] [--agent A] [--trained]` | Lists runs, newest first, with how long they trained and their score |
 | `omagym show R` | Everything about a run: settings, code, results, learning curve, what it trained into |
-| `omagym compare [R1 R2 ...] [--by M] [--lower]` | Ranks runs by score (or `--by lines`, `ate`, `steps`...; `--lower` when less is better, as for `holes`) and says which beat which beyond doubt. With no runs, ranks each agent's best run of `--game` |
+| `omagym compare [R1 R2 ...] [--test T] [--by M] [--lower]` | Ranks runs on a test (default the main one) by its measure, or `--by lines`, `ate`, `steps`... (`--lower` when less is better, as for `holes`), and says which beat which beyond doubt. With no runs, ranks each agent's best run of `--game` |
 | `omagym diff R1 R2 ...` | Runs side by side, plus every setting that differs between them: for runs of one agent |
-| `omagym watch R [--worst \| --training]` | Plays the run's best (or worst) evaluation game in the app; `--training`, its snapshots in order, stepped through with `N` and `B` |
+| `omagym watch R [--test T] [--worst \| --training]` | Plays the run's best (or worst) game of a test in the app; `--training`, its snapshots in order, stepped through with `N` and `B` |
 | `omagym note R --name N --notes "..."` | Names a run, or writes down what it was about, afterwards |
 | `omagym delete R1 R2 ... [--yes]` | Forgets runs: their results, checkpoints and replays. Asks first |
 
@@ -199,6 +199,22 @@ For each run, the database keeps:
 It is plain SQLite, so anything the commands don't show is a query away:
 `sqlite3 experiments/experiments.sqlite "select id, value from summary
 where key = 'score_mean' order by value desc"`.
+
+### Tests
+
+Every run plays each of its game's tests, so one training is tested every
+way the game knows:
+
+| Game | Test | Games | Better is |
+|---|---|---|---|
+| Omatris | `marathon` (the main one) | 20 Marathon games cut at 2,500 pieces | more points |
+| Omatris | `challenge` | 20 Challenge games: a dealt mess of holes and overhangs, won when its last dealt row clears | fewer pieces to win, a loss counting as the whole cap of 1,000 |
+
+`challenge` is how well an agent gets out of trouble. Learners never train
+on it, so it also shows whether what they learned carries over to boards
+they never saw. `compare --test challenge` ranks by pieces to win, `show`
+prints every test, and `watch --test challenge` plays its best (or worst)
+game. A test is a few lines in `games/__init__.py`.
 
 ### Why the numbers are comparable
 

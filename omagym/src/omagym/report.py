@@ -35,7 +35,8 @@ def runs_table(runs: list[dict]) -> str:
     return table(["run", "agent", "name", "status", "trained", "code", "score"], rows)
 
 
-def show(run: dict, curve: list[tuple[int, float]], patch_exists: bool, trained: dict | None = None) -> str:
+def show(run: dict, curve: list[tuple[int, float]], patch_exists: bool, trained: dict | None = None,
+         tests: tuple = ()) -> str:
     out = [
         f"run       {run['id']}" + (f"  ({run['name']})" if run["name"] else ""),
         f"agent     {run['agent']} on {run['game']}, {run['status']}",
@@ -55,6 +56,18 @@ def show(run: dict, curve: list[tuple[int, float]], patch_exists: bool, trained:
                  number(s.get(f"{k}_min")), number(s.get(f"{k}_median")), number(s.get(f"{k}_max"))]
                 for k in headline_keys(run["game"]) if f"{k}_mean" in s]
         out.append(table(["", "mean", "std", "min", "median", "max"], rows))
+    for test in tests:
+        prefix = f"{test.name}/"
+        if f"{prefix}episodes" not in run["summary"]:
+            continue
+        s = run["summary"]
+        keys = [test.metric, "score", *test.headline]
+        field = lambda k: k if k in ("score", "steps", "won", "steps_to_win") else f"sum_{k}"  # noqa: E731
+        out += ["", f"{test.name} test, {test.about}: {number(s[prefix + 'episodes'])} games, "
+                f"{number(s.get(prefix + 'won_mean', 0) * 100)}% won"]
+        out.append(table(["", "mean", "std", "min", "median", "max"],
+                         [[k, *(number(s.get(f"{prefix}{field(k)}_{x}")) for x in ("mean", "std", "min", "median", "max"))]
+                          for k in keys if f"{prefix}{field(k)}_mean" in s]))
     if curve:
         out += ["", "learning curve (eval score by training steps):", _curve(curve)]
     if trained:
@@ -77,8 +90,9 @@ def ranking(result: Ranking) -> str:
     label = _labels([s.run for s in standings])
     metric = result.metric
     better = "lower" if result.lower_is_better else "higher"
-    out = [f"ranked by {metric}, {better} is better: the {len(result.seeds)} games of {first['game']} every run "
-           f"played, each cut at {first['eval_max_steps']} steps", ""]
+    test = f" in the {result.test} test" if result.test else ""
+    out = [f"ranked by {metric}, {better} is better: the {len(result.seeds)} games of {first['game']}{test} every "
+           f"run played, each cut at {result.cap} steps", ""]
     rows = []
     for place, s in enumerate(standings, 1):
         versus = ["", "", ""] if s.verdict == "best" else [

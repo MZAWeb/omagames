@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS runs (
 );
 CREATE TABLE IF NOT EXISTS metrics (run TEXT, step INTEGER, key TEXT, value REAL);
 CREATE INDEX IF NOT EXISTS metrics_run ON metrics (run, key);
-CREATE TABLE IF NOT EXISTS episodes (run TEXT, episode INTEGER, seed INTEGER, data TEXT);
+CREATE TABLE IF NOT EXISTS episodes (run TEXT, episode INTEGER, seed INTEGER, data TEXT, test TEXT DEFAULT '');
 CREATE TABLE IF NOT EXISTS summary (run TEXT, key TEXT, value REAL, PRIMARY KEY (run, key));
 """
 
@@ -66,6 +66,11 @@ class Store:
         self.db = sqlite3.connect(self.root / "experiments.sqlite", timeout=30)
         self.db.row_factory = sqlite3.Row
         self.db.executescript(_SCHEMA)
+        # Stores from before tests had names: their episodes are the main test's.
+        columns = [row[1] for row in self.db.execute("PRAGMA table_info(episodes)")]
+        if "test" not in columns:
+            self.db.execute("ALTER TABLE episodes ADD COLUMN test TEXT DEFAULT ''")
+            self.db.commit()
 
     # -- writing --------------------------------------------------------------
 
@@ -101,10 +106,10 @@ class Store:
         )
         self.db.commit()
 
-    def add_episodes(self, run_id: str, episodes: list[dict]) -> None:
+    def add_episodes(self, run_id: str, episodes: list[dict], test: str = "") -> None:
         self.db.executemany(
-            "INSERT INTO episodes VALUES (?, ?, ?, ?)",
-            [(run_id, e["episode"], e["seed"], json.dumps(e)) for e in episodes],
+            "INSERT INTO episodes (run, episode, seed, data, test) VALUES (?, ?, ?, ?, ?)",
+            [(run_id, e["episode"], e["seed"], json.dumps(e), test) for e in episodes],
         )
         self.db.commit()
 
@@ -177,8 +182,10 @@ class Store:
         rows = self.db.execute("SELECT key, value FROM summary WHERE run = ?", (run_id,))
         return {r["key"]: r["value"] for r in rows}
 
-    def episodes(self, run_id: str) -> list[dict]:
-        rows = self.db.execute("SELECT data FROM episodes WHERE run = ? ORDER BY episode", (run_id,))
+    def episodes(self, run_id: str, test: str = "") -> list[dict]:
+        """A run's evaluation games: the main test's, or another test's by name."""
+        rows = self.db.execute("SELECT data FROM episodes WHERE run = ? AND COALESCE(test, '') = ? ORDER BY episode",
+                               (run_id, test))
         return [json.loads(r["data"]) for r in rows]
 
     def trained_steps(self, run_id: str) -> int | None:

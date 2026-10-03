@@ -30,7 +30,7 @@ def details(store: Store, run: dict) -> str:
         trained = {"steps": store.trained_steps(run["id"]), "snapshots": len(snapshot_files(run)),
                    "checkpoints": [n for n in ("best.pt", "last.pt") if (Path(run["dir"]) / n).exists()]}
     return report.show(run, store.series(run["id"], "eval/score_mean"),
-                       (Path(run["dir"]) / "code.patch").exists(), trained)
+                       (Path(run["dir"]) / "code.patch").exists(), trained, defaults(run["game"]).tests)
 
 
 def show(args) -> None:
@@ -40,16 +40,22 @@ def show(args) -> None:
 
 def compare(args) -> None:
     store = Store()
-    runs = [store.run(ref) for ref in args.runs] if args.runs else _best_per_agent(store, args.game, args.by, args.lower)
+    game = store.run(args.runs[0])["game"] if args.runs else args.game
+    test = defaults(game).test(args.test)
+    # The test says what better means there, unless --by says otherwise.
+    metric = args.by or (test.metric if test else "score")
+    lower = args.lower or (test is not None and args.by is None and test.lower_is_better)
+    name = test.name if test else ""
+    runs = [store.run(ref) for ref in args.runs] if args.runs else _best_per_agent(store, game, metric, lower, name)
     for run in runs:
         run["trained_steps"] = _trained_steps(store, run)
-    episodes = {run["id"]: store.episodes(run["id"]) for run in runs}
-    print(report.ranking(comparison.rank(runs, episodes, args.by, args.lower)))
+    episodes = {run["id"]: store.episodes(run["id"], name) for run in runs}
+    print(report.ranking(comparison.rank(runs, episodes, metric, lower, name, test.max_steps if test else None)))
 
 
-def _best_per_agent(store: Store, game: str, metric: str, lower_is_better: bool) -> list[dict]:
+def _best_per_agent(store: Store, game: str, metric: str, lower_is_better: bool, test: str = "") -> list[dict]:
     """Each agent's best finished run on the game's default evaluation games."""
-    key = f"{comparison.metric_key(metric)}_mean"
+    key = (f"{test}/" if test else "") + f"{comparison.metric_key(metric)}_mean"
     sign = -1.0 if lower_is_better else 1.0
     standard = defaults(game)
     best: dict[str, dict] = {}
@@ -88,7 +94,9 @@ def watch(args) -> int:
             raise ValueError(f"{run['id']} recorded no snapshots (only training runs do)")
         print(f"watching {len(replays)} snapshots of {run['id']}: N and B step between them")
     else:
-        replays = [Path(run["dir"]) / "replays" / ("worst.json" if args.worst else "best.json")]
+        test = defaults(run["game"]).test(args.test)
+        folder = Path(run["dir"]) / "replays" / (test.name if test else "")
+        replays = [folder / ("worst.json" if args.worst else "best.json")]
         if not replays[0].exists():
             raise ValueError(f"{run['id']} has no replays yet")
         print(f"watching {replays[0]}")

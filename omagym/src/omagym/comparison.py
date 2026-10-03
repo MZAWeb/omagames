@@ -42,15 +42,18 @@ class Ranking:
     lower_is_better: bool
     seeds: list[int]
     standings: list[Standing]
+    # Which test, and where its games were cut.
+    test: str = ""
+    cap: int = 0
 
 
 def metric_key(metric: str) -> str:
     """The episode field a metric is read from: "lines" is the summed signal "sum_lines"."""
-    return metric if metric in ("score", "steps", "reward") else f"sum_{metric}"
+    return metric if metric in ("score", "steps", "reward", "won", "steps_to_win") else f"sum_{metric}"
 
 
 def rank(runs: list[dict], episodes: dict[str, list[dict]], metric: str = "score",
-         lower_is_better: bool = False) -> Ranking:
+         lower_is_better: bool = False, test: str = "", cap: int | None = None) -> Ranking:
     """Ranks `runs` by `metric` on the games all of them played."""
     if len({r["game"] for r in runs}) > 1:
         raise ValueError("those runs are of different games")
@@ -91,7 +94,7 @@ def rank(runs: list[dict], episodes: dict[str, list[dict]], metric: str = "score
             difference=float(gaps.mean()), low=low, high=high,
             verdict=_verdict(gaps, high if sign > 0 else -low),
         ))
-    return Ranking(metric, lower_is_better, seeds, standings)
+    return Ranking(metric, lower_is_better, seeds, standings, test, cap or runs[0]["eval_max_steps"])
 
 
 def _bootstrap(gaps: np.ndarray) -> tuple[float, float]:

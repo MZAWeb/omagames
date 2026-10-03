@@ -35,10 +35,14 @@ def play(agent: Agent, env: Env, seed: int, explore: bool = False) -> dict:
         if step.done:
             break
     info = env.info()
+    # Won: the game reached its goal (a Challenge cleared, a Sprint's forty
+    # lines), rather than being lost or cut short.
+    won = step.terminated and info.get("phase") == "finished"
     return {
         "score": info.get("score", reward),
         "steps": steps,
         "reward": reward,
+        "won": float(won),
         "ended": "terminated" if step.terminated else "cut short",
         **{f"sum_{k}": v for k, v in totals.items()},
     }
@@ -67,23 +71,30 @@ def evaluate(
     replays: Path | None = None,
     label: str = "",
     progress: Callable[[int, dict], None] | None = None,
+    best_by: str = "score",
+    lower_is_better: bool = False,
 ) -> tuple[list[dict], dict[str, float]]:
     """Plays `episodes` fixed games; their results and a summary.
 
-    With `replays`, the best and worst games by score are written there as
-    best.json and worst.json, for `omagym watch`.
+    With `replays`, the best and worst games by `best_by` are written there
+    as best.json and worst.json, for `omagym watch`.
     """
+    sign = -1.0 if lower_is_better else 1.0
     env = Env(game, **{**env_config, "max_steps": max_steps})
     results, best, worst = [], None, None
     for i in range(episodes):
         seed = EVAL_SEED_BASE + i
         result = {"episode": i, "seed": seed, **play(agent, env, seed)}
+        # How long it took to win, a loss counting as the whole cap: what
+        # "fewer pieces is better" ranks by, without rewarding a quick loss.
+        result["steps_to_win"] = result["steps"] if result["won"] else max_steps
         results.append(result)
         if replays is not None:
-            if best is None or result["score"] > best[0]:
-                best = (result["score"], env.replay())
-            if worst is None or result["score"] < worst[0]:
-                worst = (result["score"], env.replay())
+            goodness = sign * result[best_by]
+            if best is None or goodness > best[0]:
+                best = (goodness, env.replay())
+            if worst is None or goodness < worst[0]:
+                worst = (goodness, env.replay())
         if progress:
             progress(i, result)
     env.close()
@@ -93,3 +104,21 @@ def evaluate(
             replay["agent"] = label
             (replays / f"{which}.json").write_text(json.dumps(replay, indent=2) + "\n")
     return results, summarize(results)
+
+
+def other_tests(agent: Agent, run: dict, store, label: str, progress=None) -> None:
+    """Plays the game's other tests (games.defaults(game).tests) and records them.
+
+    Their games are stored under the test's name, their summary with its name
+    in front ("challenge/steps_to_win_mean"), their replays in replays/<name>/.
+    """
+    from .comparison import metric_key as comparison_key
+    from .games import defaults
+
+    for test in defaults(run["game"]).tests:
+        env_config = {**run["env_config"], **test.env}
+        episodes, summary = evaluate(agent, run["game"], env_config, test.episodes, test.max_steps,
+                                     Path(run["dir"]) / "replays" / test.name, label, progress,
+                                     comparison_key(test.metric), test.lower_is_better)
+        store.add_episodes(run["id"], episodes, test.name)
+        store.set_summary(run["id"], {f"{test.name}/{k}": v for k, v in summary.items()})
