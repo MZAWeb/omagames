@@ -18,6 +18,7 @@ private slots:
     void aCloneContinuesIdentically();
     void aReseededCloneRedrawsWhatIsHidden();
     void theReplayRecordsTheEpisode();
+    void aGameThatCannotDrawAReplaySaysSo();
     void aBatchStepsAndResetsInPlace();
     void aBatchChecksEveryActionFirst();
 };

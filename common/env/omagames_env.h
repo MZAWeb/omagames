@@ -84,6 +84,13 @@ OG_EXPORT const char *og_replay_json(OgEnv *env);
  * first reset. */
 OG_EXPORT const char *og_info_json(OgEnv *env);
 
+/* A replay (replay/v1 JSON) played back as what a viewer would draw: a JSON
+ * object of frames whose shape is the game's own (its README says). For a
+ * viewer outside the app, a browser say, that has no engine of its own. NULL
+ * and og_last_error() for a replay this game can't play, or a game that
+ * can't draw one. The text lives until the next call on this thread. */
+OG_EXPORT const char *og_replay_frames(const char *replay_json);
+
 /* Why the last call on this thread failed; "" when none has. */
 OG_EXPORT const char *og_last_error(void);
 

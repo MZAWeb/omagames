@@ -6,6 +6,7 @@
 #include <array>
 #include <cstddef>
 #include <memory>
+#include <optional>
 
 #include "observationlayout.h"
 #include "omagames_env.h"
@@ -53,6 +54,13 @@ public:
     virtual std::unique_ptr<Env> clone(bool reseedHidden, quint32 seed) const = 0;
     virtual Replay replay() const = 0;
     virtual QJsonObject info() const { return {}; }
+    // `replay` played back as frames for a viewer with no engine (see
+    // og_replay_frames()); nothing and `error` if the game can't draw one.
+    virtual std::optional<QJsonObject> frames(const Replay &replay, QString *error) const {
+        Q_UNUSED(replay);
+        *error = QStringLiteral("this game can't draw a replay outside the app");
+        return std::nullopt;
+    }
 };
 
 // Defined once in each env library: the game it plays.

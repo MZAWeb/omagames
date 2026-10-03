@@ -212,6 +212,20 @@ void EnvAbiTests::aReseededCloneRedrawsWhatIsHidden() {
     QVERIFY(moved);
 }
 
+void EnvAbiTests::aGameThatCannotDrawAReplaySaysSo() {
+    EnvPtr env = create(R"({"start": "left"})");
+    og_reset(env.get(), 21);
+    OgStepResult result {};
+    og_step(env.get(), kRight, &result);
+    // The walk game keeps the default: no frames, and a reason.
+    QVERIFY(!og_replay_frames(og_replay_json(env.get())));
+    QVERIFY(QByteArray(og_last_error()).contains("can't draw"));
+    QVERIFY(!og_replay_frames("[1, 2]"));
+    QCOMPARE(QByteArray(og_last_error()), QByteArray("a replay must be a JSON object"));
+    QVERIFY(!og_replay_frames(R"({"format": "replay/v1"})"));
+    QVERIFY(QByteArray(og_last_error()).contains("needs a game"));
+}
+
 void EnvAbiTests::theReplayRecordsTheEpisode() {
     EnvPtr env = create(R"({"start": "left"})");
     og_reset(env.get(), 21);

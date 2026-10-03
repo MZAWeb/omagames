@@ -206,6 +206,25 @@ const char *og_info_json(OgEnv *env) {
     return hold(env, env->started ? env->env->info() : QJsonObject());
 }
 
+const char *og_replay_frames(const char *replay_json) {
+    thread_local QByteArray text;
+    QJsonParseError parse;
+    const QJsonDocument doc = QJsonDocument::fromJson(QByteArray(replay_json ? replay_json : ""), &parse);
+    QString error;
+    const auto replay = doc.isObject() ? OmaGames::Replay::fromJson(doc.object(), &error) : std::nullopt;
+    if (!replay) {
+        fail(doc.isObject() ? error : QStringLiteral("a replay must be a JSON object"));
+        return nullptr;
+    }
+    const auto frames = OmaGames::createEnv()->frames(*replay, &error);
+    if (!frames) {
+        fail(error);
+        return nullptr;
+    }
+    text = QJsonDocument(*frames).toJson(QJsonDocument::Compact);
+    return text.constData();
+}
+
 const char *og_last_error(void) {
     return t_lastError.constData();
 }
