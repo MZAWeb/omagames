@@ -4,10 +4,6 @@ Board::Board() {
     clear();
 }
 
-bool Board::inside(QPoint p) {
-    return p.x() >= 0 && p.x() < kWidth && p.y() >= 0 && p.y() < kHeight;
-}
-
 void Board::clear() {
     m_cells.fill(PieceType::None);
 }
@@ -18,10 +14,6 @@ bool Board::empty() const {
             return false;
     }
     return true;
-}
-
-bool Board::blocked(QPoint p) const {
-    return !inside(p) || at(p) != PieceType::None;
 }
 
 bool Board::fits(const Placement &placement) const {
