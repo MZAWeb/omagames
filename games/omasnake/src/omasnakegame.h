@@ -3,10 +3,14 @@
 #include <QObject>
 #include <QVariantList>
 #include <QVariantMap>
+#include <functional>
 #include <memory>
+#include <optional>
 
 #include "game.h"
 #include "pacer.h"
+#include "replaypace.h"
+#include "replayplayer.h"
 #include "scoretable.h"
 
 // The only bridge between the engine and QML: state as properties, actions as
@@ -37,6 +41,15 @@ class OmasnakeGame : public QObject {
     // "wall" | "self" | "filled": what ended the run on screen now.
     Q_PROPERTY(QString gameOverReason READ gameOverReason NOTIFY phaseChanged)
     Q_PROPERTY(int stepInterval READ stepInterval WRITE setStepInterval NOTIFY stepIntervalChanged)
+    // Watching a recorded game (--replay) rather than playing one.
+    Q_PROPERTY(bool replaying READ replaying NOTIFY replayChanged)
+    Q_PROPERTY(QString replayAgent READ replayAgent NOTIFY replayChanged)
+    // 1 to 4, slowest first, as keys 1 to 4 pick it, and how fast that is
+    // against the clock the game was played on.
+    Q_PROPERTY(int replaySpeed READ replaySpeed NOTIFY replayChanged)
+    Q_PROPERTY(QString replaySpeedLabel READ replaySpeedLabel NOTIFY replayChanged)
+    // Every turn made: what is on screen is where the recording stops.
+    Q_PROPERTY(bool replayEnded READ replayEnded NOTIFY replayChanged)
 
 public:
     // One simulation tick per timer shot: 60 ticks a second.
@@ -76,6 +89,15 @@ public:
     int stepInterval() const { return m_pacer.interval(); }
     void setStepInterval(int interval);
 
+    bool replaying() const { return m_replay.has_value(); }
+    QString replayAgent() const { return m_replay ? m_replay->agent() : QString(); }
+    int replaySpeed() const { return m_pace.speed(); }
+    QString replaySpeedLabel() const { return m_pace.label(); }
+    bool replayEnded() const { return m_replay && m_replay->done(); }
+    // Starts watching the replay in `path`; false and the reason when it is
+    // not one this game can play.
+    bool loadReplay(const QString &path, QString *error);
+
     // Read-only view for the renderer; null on the start screen.
     const Game *engine() const { return m_game.get(); }
     // Scenario hooks for tests only.
@@ -92,6 +114,10 @@ public:
     Q_INVOKABLE void togglePause();
     Q_INVOKABLE void backToStart();
     Q_INVOKABLE void step();
+    Q_INVOKABLE void setReplaySpeed(int speed);
+    // Plays the replay on until the snake has moved once more, paused or not.
+    Q_INVOKABLE void replayNextMove();
+    Q_INVOKABLE void restartReplay();
 
     Q_INVOKABLE QVariantMap windowGeometry() const;
     Q_INVOKABLE void saveWindowGeometry(int x, int y, int width, int height, bool maximized);
@@ -108,6 +134,7 @@ signals:
     void difficultyChanged();
     void highScoresChanged();
     void stepIntervalChanged();
+    void replayChanged();
     // After every tick, for the renderer.
     void frameChanged();
     // A floating label at a field cell: what a dot was worth.
@@ -118,6 +145,18 @@ signals:
 
 private:
     static bool directionFromId(const QString &id, Direction *direction);
+    // The walls and speed of the game on screen, which a replay's need not
+    // be the player's last choice.
+    Mode shownMode() const { return m_game ? m_game->mode() : m_mode; }
+    Difficulty shownDifficulty() const { return m_game ? m_game->difficulty() : m_difficulty; }
+    // Puts `game` on screen, fresh, and tells QML everything changed.
+    void show(std::unique_ptr<Game> game);
+    // Makes `calls` on the game and tells QML what they changed.
+    void advance(const std::function<std::vector<Event>()> &calls);
+    void endReplay();
+    void replayFrame();
+    // Plays `calls` from the replay and, if that was the last of it, says so.
+    void playReplay(const std::function<std::vector<Event>()> &calls);
     void handle(const Event &event);
     void finishGame();
     void syncTimer();
@@ -129,4 +168,6 @@ private:
     Mode m_mode = Mode::Classic;
     Difficulty m_difficulty = Difficulty::Normal;
     int m_newHighScoreRank = -1;
+    std::optional<ReplayPlayer> m_replay;
+    OmaGames::ReplayPace m_pace;
 };

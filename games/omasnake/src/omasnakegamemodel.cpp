@@ -5,11 +5,11 @@
 #include "choices.h"
 
 QString OmasnakeGame::modeLabel() const {
-    return Modes::info(m_mode).label;
+    return Modes::info(shownMode()).label;
 }
 
 QString OmasnakeGame::difficultyLabel() const {
-    return Difficulties::info(m_difficulty).label;
+    return Difficulties::info(shownDifficulty()).label;
 }
 
 QVariantList OmasnakeGame::modes() {

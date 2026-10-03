@@ -101,6 +101,8 @@ There is no mouse control at all — the field is not clickable.
 | `Y` / `Enter`, `N` / `Esc` | Confirm / cancel a dialog |
 | `Ctrl+Q` | Quit |
 
+Watching a replay, the keys are the replay's own (see Watching a replay).
+
 ## Layout
 
 The field is painted by one `FieldView` item at a whole number of pixels per
@@ -156,9 +158,38 @@ for a bonus. Each step also reports `score`, `ate`, `bonus`, `length`,
 `died` and `filled` (the perfect game). The episode ends when the run does.
 
 The env reports `rules_version` 1 (`Rules::kVersion`), raised whenever the
-same turns would play out differently. Its replays write each turn as
-`U`, `D`, `L` or `R` between runs of ticks; the app has no replay viewer
-for Snake yet.
+same turns would play out differently; bumping it means recording the sample
+below again. Its replays write each turn as `U`, `D`, `L` or `R` between runs
+of ticks.
+
+### Watching a replay
+
+Every game the env plays is recorded as a replay: the seed and every turn,
+each on the tick it was made, which is the whole game. The app plays one
+back:
+
+```sh
+bin/run omasnake --replay games/omasnake/replays/greedy-classic.json
+```
+
+The sample is the greedy "head for the food" player's longest of twenty
+Classic games at Normal speed: 74 dots, 81 long, 3,090 points, until it
+boxed itself in. A test plays it to the end and checks it still does. A
+file that is not an Omasnake replay of these rules is refused on the
+command line, and nothing opens.
+
+The game on screen is the recorded one: the arrows don't steer it, it's
+never a high score, and the walls and speed shown are the recording's, not
+the player's last choice. A Snake agent decides once a move and the game
+runs on its own clock between, so 1× is the speed it was played at.
+
+| Key | Action |
+|---|---|
+| `P` or `Space` | Pause / play. Paused, the field stays in view |
+| `1` `2` `3` `4` | Speed: ¼×, ½×, 1× (the default), 8×. Above 1× the score popups are skipped |
+| `→` | On to the snake's next move, paused or not |
+| `R` | Watch again from the start |
+| `Esc` | Leave for the start screen |
 
 ## Build, test, run
 

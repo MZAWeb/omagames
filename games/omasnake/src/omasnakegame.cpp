@@ -40,15 +40,15 @@ OmasnakeGame::OmasnakeGame(QObject *parent)
 }
 
 int OmasnakeGame::best() const {
-    return m_scores.best(tableId(m_mode, m_difficulty));
+    return m_scores.best(tableId(shownMode(), shownDifficulty()));
 }
 
 QString OmasnakeGame::mode() const {
-    return Modes::id(m_mode);
+    return Modes::id(shownMode());
 }
 
 QString OmasnakeGame::difficulty() const {
-    return Difficulties::id(m_difficulty);
+    return Difficulties::id(shownDifficulty());
 }
 
 void OmasnakeGame::loadSettings() {
@@ -85,18 +85,23 @@ void OmasnakeGame::setStepInterval(int interval) {
     emit stepIntervalChanged();
 }
 
+// In a replay, the timer also stops once there is nothing left to show.
 void OmasnakeGame::syncTimer() {
-    m_pacer.setRunning(m_game && m_game->phase() == Phase::Playing && !m_game->paused());
+    m_pacer.setRunning(m_game && m_game->phase() == Phase::Playing && !m_game->paused() && !replayEnded());
 }
 
 void OmasnakeGame::startGame(Mode mode, Difficulty difficulty, quint32 seed) {
+    endReplay();
     m_mode = mode;
     m_difficulty = difficulty;
     QSettings settings;
     settings.setValue(kModeKey, Modes::id(mode));
     settings.setValue(kDifficultyKey, Difficulties::id(difficulty));
+    show(std::make_unique<Game>(mode, difficulty, seed));
+}
 
-    m_game = std::make_unique<Game>(mode, difficulty, seed);
+void OmasnakeGame::show(std::unique_ptr<Game> game) {
+    m_game = std::move(game);
     m_newHighScoreRank = -1;
     emit modeChanged();
     emit difficultyChanged();
@@ -118,6 +123,10 @@ void OmasnakeGame::newGame(const QString &difficulty) {
 }
 
 void OmasnakeGame::restart() {
+    if (m_replay) {
+        restartReplay();
+        return;
+    }
     if (!m_game)
         return;
     startGame(m_mode, m_difficulty, QRandomGenerator::global()->generate());
@@ -154,7 +163,7 @@ bool OmasnakeGame::directionFromId(const QString &id, Direction *direction) {
 
 void OmasnakeGame::turn(const QString &direction) {
     Direction heading = Direction::Right;
-    if (m_game && directionFromId(direction, &heading))
+    if (m_game && !m_replay && directionFromId(direction, &heading))
         m_game->turn(heading);
 }
 
@@ -186,6 +195,11 @@ void OmasnakeGame::backToStart() {
         return;
     m_game.reset();
     m_pacer.stop();
+    endReplay();
+    // The start screen shows the player's own choices again.
+    emit modeChanged();
+    emit difficultyChanged();
+    emit bestChanged();
     emit phaseChanged();
     emit pausedChanged();
     emit readyChanged();
@@ -196,14 +210,22 @@ void OmasnakeGame::backToStart() {
 }
 
 void OmasnakeGame::step() {
-    if (!m_game || m_game->phase() != Phase::Playing)
+    if (!m_game || m_game->phase() != Phase::Playing || m_game->paused())
         return;
+    if (m_replay) {
+        replayFrame();
+        return;
+    }
+    advance([this]() { return m_game->tick(); });
+}
+
+void OmasnakeGame::advance(const std::function<std::vector<Event>()> &calls) {
     const int score = m_game->score();
     const int length = m_game->length();
     const int moveTicks = m_game->moveTicks();
     const bool wasReady = m_game->ready();
 
-    for (const Event &event : m_game->tick())
+    for (const Event &event : calls())
         handle(event);
 
     if (m_game->score() != score)
@@ -219,10 +241,15 @@ void OmasnakeGame::step() {
 
 void OmasnakeGame::handle(const Event &event) {
     switch (event.type) {
+    // Past real speed a replay eats faster than a popup can rise and fade.
     case Event::Ate:
+        if (m_replay && m_pace.fasterThanReal())
+            break;
         emit scored(tr("+%1").arg(event.points), event.at.x(), event.at.y());
         break;
     case Event::BonusEaten:
+        if (m_replay && m_pace.fasterThanReal())
+            break;
         emit scored(tr("Bonus +%1").arg(event.points), event.at.x(), event.at.y());
         break;
     case Event::SpeedUp:
@@ -239,6 +266,12 @@ void OmasnakeGame::handle(const Event &event) {
 }
 
 void OmasnakeGame::finishGame() {
+    // Someone else's game is never the player's high score.
+    if (m_replay) {
+        emit phaseChanged();
+        syncTimer();
+        return;
+    }
     m_newHighScoreRank = m_scores.insert(
         tableId(m_mode, m_difficulty),
         {m_game->score(), QDate::currentDate(), {{QStringLiteral("length"), m_game->length()}}});
