@@ -11,6 +11,7 @@
 #include "inputtests.h"
 #include "persistencetests.h"
 #include "piecetests.h"
+#include "placementtests.h"
 #include "scoringtests.h"
 
 // One binary runs every suite so each area keeps its own small file.
@@ -42,5 +43,7 @@ int main(int argc, char *argv[]) {
     status |= QTest::qExec(&persistence, argc, argv);
     BoardMetricsTests metrics;
     status |= QTest::qExec(&metrics, argc, argv);
+    PlacementTests placements;
+    status |= QTest::qExec(&placements, argc, argv);
     return status;
 }

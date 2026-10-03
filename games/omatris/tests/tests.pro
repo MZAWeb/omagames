@@ -19,7 +19,9 @@ HEADERS += \
     ../src/dealtstack.h \
     ../src/lockdelay.h \
     ../src/game.h \
+    ../src/calls.h \
     ../src/boardmetrics.h \
+    ../src/placements.h \
     ../src/autoshift.h \
     ../src/handling.h \
     ../src/preferences.h \
@@ -36,7 +38,8 @@ HEADERS += \
     bridgefixture.h \
     inputtests.h \
     persistencetests.h \
-    boardmetricstests.h
+    boardmetricstests.h \
+    placementtests.h
 
 SOURCES += \
     ../src/piece.cpp \
@@ -51,7 +54,9 @@ SOURCES += \
     ../src/dealtstack.cpp \
     ../src/lockdelay.cpp \
     ../src/game.cpp \
+    ../src/calls.cpp \
     ../src/boardmetrics.cpp \
+    ../src/placements.cpp \
     ../src/autoshift.cpp \
     ../src/handling.cpp \
     ../src/preferences.cpp \
@@ -67,4 +72,5 @@ SOURCES += \
     inputtests.cpp \
     persistencetests.cpp \
     boardmetricstests.cpp \
+    placementtests.cpp \
     tst_omatris.cpp
