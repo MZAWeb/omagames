@@ -5,10 +5,16 @@ owns everything around it, the same for every agent: the step budget, a
 quick evaluation every so often (the learning curve), a checkpoint of the
 best and of the last, and a full evaluation at the end, so a training run
 ends with a summary comparable to any eval run's.
+
+It also records snapshots: the agent playing one game at evenly spaced
+points of its training, from before it learned anything to the end. Every
+snapshot plays the same game (the first evaluation game), so watching them
+in order shows the same deal handled better and better.
 """
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -16,7 +22,7 @@ import numpy as np
 
 from .agents import Agent
 from .env import Env
-from .evaluation import EVAL_SEED_BASE, evaluate
+from .evaluation import EVAL_SEED_BASE, evaluate, play
 from .store import Store
 
 
@@ -48,6 +54,15 @@ class Schedule:
     eval_episodes: int
     final_episodes: int
     max_steps: int
+    # Games recorded along the way, evenly spaced from step 0 to the end.
+    snapshots: int = 10
+
+    def snapshot_steps(self) -> list[int]:
+        if self.snapshots <= 0:
+            return []
+        if self.snapshots == 1:
+            return [self.steps]
+        return [round(i * self.steps / (self.snapshots - 1)) for i in range(self.snapshots)]
 
 
 def train(store: Store, run: dict, agent: Agent, schedule: Schedule, echo=print) -> str:
@@ -56,12 +71,25 @@ def train(store: Store, run: dict, agent: Agent, schedule: Schedule, echo=print)
     ctx = TrainContext(run["game"], run["env_config"], run["seed"], run["device"])
     label = run["name"] or run["id"]
     best_score, next_eval = float("-inf"), schedule.eval_every
+    upcoming, taken = schedule.snapshot_steps(), 0
+
+    def snapshot_due(steps: int) -> None:
+        nonlocal upcoming, taken
+        if upcoming and steps >= upcoming[0]:
+            taken += 1
+            _snapshot(store, run, agent, schedule, taken, steps, label)
+            # One game per yield: marks a long gap between yields jumped past
+            # are not made up with copies of the same moment.
+            upcoming = [s for s in upcoming if s > steps]
+
     status = "done"
+    snapshot_due(0)
     learning = agent.train(ctx)
     try:
         for progress in learning:
             steps = int(progress["steps"])
             store.log(run["id"], steps, {f"train/{k}": v for k, v in progress.items()})
+            snapshot_due(steps)
             if steps >= next_eval or steps >= schedule.steps:
                 next_eval += schedule.eval_every
                 _, summary = evaluate(agent, run["game"], run["env_config"], schedule.eval_episodes, schedule.max_steps)
@@ -91,6 +119,25 @@ def train(store: Store, run: dict, agent: Agent, schedule: Schedule, echo=print)
     store.set_summary(run["id"], summary)
     store.finish(run["id"], status)
     return status
+
+
+def _snapshot(store: Store, run: dict, agent: Agent, schedule: Schedule, index: int, steps: int,
+              label: str) -> None:
+    """Records the agent as it plays now, on the first evaluation game."""
+    with Env(run["game"], **{**run["env_config"], "max_steps": schedule.max_steps}) as env:
+        result = play(agent, env, EVAL_SEED_BASE)
+        replay = env.replay()
+    replay["agent"] = f"{label} after {steps:,} steps"
+    replay["training_steps"] = steps
+    folder = Path(run["dir"]) / "snapshots"
+    folder.mkdir(exist_ok=True)
+    (folder / f"{index:02d}.json").write_text(json.dumps(replay, indent=2) + "\n")
+    store.log(run["id"], steps, {"snapshot/score": result["score"]})
+
+
+def snapshot_files(run: dict) -> list[Path]:
+    """A training run's snapshots, earliest first."""
+    return sorted((Path(run["dir"]) / "snapshots").glob("*.json"))
 
 
 def _highlights(progress: dict) -> str:

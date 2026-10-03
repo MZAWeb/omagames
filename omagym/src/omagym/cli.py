@@ -20,7 +20,7 @@ from .env import Env
 from .evaluation import evaluate
 from .games import defaults
 from .store import Store
-from .training import Schedule, train
+from .training import Schedule, snapshot_files, train
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -62,6 +62,8 @@ def _parser() -> argparse.ArgumentParser:
     train_parser.add_argument("--steps", type=int, default=100_000, help="env steps to train for")
     train_parser.add_argument("--eval-every", type=int, help="steps between quick evaluations (default steps/10)")
     train_parser.add_argument("--eval-episodes", type=int, default=5, help="games in each quick evaluation")
+    train_parser.add_argument("--snapshots", type=int, default=10,
+                              help="games recorded along the way, from step 0 to the end, for `watch --training`")
     commands.choices["eval"].add_argument("--run", help="test the best checkpoint of this training run")
 
     sub = command("runs", _runs, "list recorded runs, newest first")
@@ -84,7 +86,10 @@ def _parser() -> argparse.ArgumentParser:
 
     sub = command("watch", _watch, "play a run's best (or worst) evaluation game in the real app")
     sub.add_argument("run")
-    sub.add_argument("--worst", action="store_true")
+    which = sub.add_mutually_exclusive_group()
+    which.add_argument("--worst", action="store_true")
+    which.add_argument("--training", action="store_true",
+                       help="a training run's snapshots in order, stepped through with N and B")
 
     sub = command("delete", _delete, "forget runs: their results, checkpoints and replays")
     sub.add_argument("runs", nargs="+")
@@ -181,6 +186,7 @@ def _train(args) -> int:
     schedule = Schedule(
         steps=args.steps, eval_every=args.eval_every or max(1, args.steps // 10),
         eval_episodes=args.eval_episodes, final_episodes=run["eval_episodes"], max_steps=run["eval_max_steps"],
+        snapshots=args.snapshots,
     )
     print(f"run {run['id']}: training {agent.name} on {args.game} for {args.steps:,} steps on {run['device']}")
     try:
@@ -189,7 +195,8 @@ def _train(args) -> int:
         store.finish(run["id"], "failed")
         raise
     print(f"\n{status}.\n")
-    print(report.show(store.run(run["id"]), store.series(run["id"], "eval/score_mean"), False))
+    trained = store.run(run["id"])
+    print(report.show(trained, store.series(run["id"], "eval/score_mean"), False, len(snapshot_files(trained))))
     return 0
 
 
@@ -242,7 +249,7 @@ def _show(args) -> None:
     store = Store()
     run = store.run(args.run)
     curve = store.series(run["id"], "eval/score_mean")
-    print(report.show(run, curve, (Path(run["dir"]) / "code.patch").exists()))
+    print(report.show(run, curve, (Path(run["dir"]) / "code.patch").exists(), len(snapshot_files(run))))
 
 
 def _compare(args) -> None:
@@ -290,11 +297,20 @@ def _diff(args) -> None:
 
 def _watch(args) -> int:
     run = Store().run(args.run)
-    replay = Path(run["dir"]) / "replays" / ("worst.json" if args.worst else "best.json")
-    if not replay.exists():
-        raise ValueError(f"{run['id']} has no replays yet")
-    print(f"watching {replay}")
-    return subprocess.call([str(native.REPO_ROOT / "bin" / "run"), run["game"], "--replay", str(replay)])
+    if args.training:
+        replays = snapshot_files(run)
+        if not replays:
+            raise ValueError(f"{run['id']} recorded no snapshots (only training runs do)")
+        print(f"watching {len(replays)} snapshots of {run['id']}: N and B step between them")
+    else:
+        replays = [Path(run["dir"]) / "replays" / ("worst.json" if args.worst else "best.json")]
+        if not replays[0].exists():
+            raise ValueError(f"{run['id']} has no replays yet")
+        print(f"watching {replays[0]}")
+    command = [str(native.REPO_ROOT / "bin" / "run"), run["game"]]
+    for replay in replays:
+        command += ["--replay", str(replay)]
+    return subprocess.call(command)
 
 
 def _delete(args) -> int:

@@ -39,7 +39,7 @@ def runs_table(runs: list[dict]) -> str:
     return table(["run", "kind", "agent", "name", "status", "code", "score"], rows)
 
 
-def show(run: dict, curve: list[tuple[int, float]], patch_exists: bool) -> str:
+def show(run: dict, curve: list[tuple[int, float]], patch_exists: bool, snapshots: int = 0) -> str:
     out = [
         f"run       {run['id']}" + (f"  ({run['name']})" if run["name"] else ""),
         f"kind      {run['kind']} of {run['agent']} on {run['game']}, {run['status']}",
@@ -63,6 +63,8 @@ def show(run: dict, curve: list[tuple[int, float]], patch_exists: bool) -> str:
         out.append(table(["", "mean", "std", "min", "median", "max"], rows))
     if curve:
         out += ["", "learning curve (eval score by training steps):", _curve(curve)]
+    if snapshots:
+        out += ["", f"{snapshots} snapshots of it playing as it learned: omagym watch {run['id']} --training"]
     return "\n".join(out)
 
 

@@ -70,6 +70,9 @@ uv run omagym compare --game omatris        # every agent's best run, ranked
 
 # Watch the trained agent's best game in the real app.
 uv run omagym watch dqn-first
+
+# Or watch it learn: the same game at ten points of its training, N for the next.
+uv run omagym watch dqn-first --training
 ```
 
 ## Commands
@@ -87,7 +90,7 @@ of its id, its `--name`, or `last`.
 | `omagym show R` | Everything about a run: settings, code, results, learning curve |
 | `omagym compare [R1 R2 ...] [--by M] [--lower]` | Ranks runs by score (or `--by lines`, `ate`, `steps`...; `--lower` when less is better, as for `holes`) and says which beat which beyond doubt. With no runs, ranks each agent's best run of `--game` |
 | `omagym diff R1 R2 ...` | Runs side by side, plus every setting that differs between them: for runs of one agent |
-| `omagym watch R [--worst]` | Plays the run's best (or worst) evaluation game in the app |
+| `omagym watch R [--worst \| --training]` | Plays the run's best (or worst) evaluation game in the app; `--training`, its snapshots in order, stepped through with `N` and `B` |
 | `omagym note R --name N --notes "..."` | Names a run, or writes down what it was about, afterwards |
 | `omagym delete R1 R2 ... [--yes]` | Forgets runs: their results, checkpoints and replays. Asks first. A training run goes only together with the tests of its checkpoint |
 
@@ -107,6 +110,12 @@ a tenth of the run) and `--eval-episodes N` (games in each quick one,
 default 5). Ctrl+C stops a training run early; what it learned so far is
 still evaluated and recorded, as `interrupted`.
 
+A training run also records `--snapshots N` games (default 10) evenly
+spaced from step 0, before it learned anything, to the end. Every snapshot
+plays the same game, the first evaluation game with exploration off, so
+`watch R --training` shows that one deal played better and better. The
+header says how far into training each was taken.
+
 ## How experiments are kept
 
 Everything is local, under `omagym/experiments/` (git ignores it; set
@@ -120,6 +129,7 @@ experiments/
     best.pt, last.pt         checkpoints, for agents that learn
     replays/best.json        the best and worst evaluation games,
     replays/worst.json       playable with `omagym watch` or `bin/run <game> --replay`
+    snapshots/01.json ...    a training run playing the same game as it learned
 ```
 
 For each run, the database keeps:
