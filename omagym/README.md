@@ -28,16 +28,20 @@ Each with its default training, on the standard games: 20 games of Tetris
 cut at 2,500 pieces (1,000 lines if every one is cleared, about level 100),
 placed at ten key presses a second:
 
-| Agent | Trained | Score | Lines | Games survived (of 20) |
-|---|---|---|---|---|
-| `mcts`, from `dqn`'s network | 20,000 steps, ~6 min | **9,384,719** | 996.6 | 20 |
-| `dqn` | 100,000 steps, ~6 min | 8,462,525 | 977.9 | 19 |
-| `greedy` | none | 6,390,662 | 998.5 | 20 |
-| `lookahead` (greedy's judgement) | none | 6,244,006 | 999.0 | 20 |
-| `lookahead`, judged by `cem`'s weights | none | 4,453,274 | 569.8 | 6 |
-| `cem` | 520,000 steps, ~12 min | 3,672,947 | 542.7 | 6 |
-| `ppo` | 1,000,000 steps, ~10 min | 435 | 0.5 | 0 |
-| `random` | none | 291 | 0.1 | 0 |
+| Agent | Trained | Whole run | Score | Lines | Games survived (of 20) |
+|---|---|---|---|---|---|
+| `mcts`, from `dqn`'s network | 20,000 steps | 24 min | **9,384,719** | 996.6 | 20 |
+| `dqn` | 100,000 steps | 5 min | 8,462,525 | 977.9 | 19 |
+| `greedy` | none | under a minute | 6,390,662 | 998.5 | 20 |
+| `lookahead` (greedy's judgement) | none | 6 min | 6,244,006 | 999.0 | 20 |
+| `lookahead`, judged by `cem`'s weights | none | 3 min | 4,453,274 | 569.8 | 6 |
+| `cem` | 520,000 steps | 13 min | 3,672,947 | 542.7 | 6 |
+| `ppo` | 1,000,000 steps | 7 min | 435 | 0.5 | 0 |
+| `random` | none | seconds | 291 | 0.1 | 0 |
+
+"Whole run" is training plus the 20 games, on a 20-core machine with an
+RTX 4090, several runs at once. The planners spend most of theirs playing:
+`mcts` searches every move, 50,000 of them in the final games alone.
 
 What it shows:
 
