@@ -88,15 +88,30 @@ class Lookahead(Agent):
             raise ValueError("depth and beam must be at least 1")
         self.rng = np.random.default_rng(config.seed)
         self.judge = _judge(config.model, spec, device)
+        # Lines cleared at the last move, and the Tetrises in a row so far.
+        self._lines, self._streak = -1, 0
 
     def act(self, obs, mask, explore=False) -> int:
         raise TypeError("lookahead plans with the game itself; the framework calls decide(env, ...)")
 
+    def _real_streak(self, obs) -> int:
+        """The real game's Tetris streak, from the lines cleared since the last move."""
+        cleared = int(obs["stats"][self.spec.tensors["stats"].column("lines")])
+        gained = cleared - self._lines
+        if gained < 0 or self._lines < 0:
+            self._streak = 0          # a new game
+        elif gained == 4:
+            self._streak += 1
+        elif gained:
+            self._streak = 0
+        self._lines = cleared
+        return self._streak
+
     def decide(self, env: Env, obs, mask, explore=False) -> int:
         c = self.config
         # The lines of play being considered. The search starts with one, the
-        # empty line: no move made yet, on the real game.
-        lines = [_Line(env=None, obs=obs, mask=mask, first=None, earned=0.0)]
+        # empty line: no move made yet, on the real game, at its streak.
+        lines = [_Line(env=None, obs=obs, mask=mask, first=None, earned=0.0, streak=self._real_streak(obs))]
         for depth in range(1, c.depth + 1):
             # Every way to extend every line by one landing, with its value.
             options = []
@@ -129,10 +144,11 @@ class Lookahead(Agent):
             source = line.env or env
             copy = source.clone(reseed_hidden=True, seed=int(self.rng.integers(2**31)))
             step = copy.step(landing)
+            earned, streak = self.judge.earned(step, line.obs, line.streak)
             extended.append(_Line(
                 env=copy, obs=step.obs, mask=copy.mask(),
                 first=landing if line.first is None else line.first,
-                earned=line.earned + self.judge.earned(step), ended=step.done,
+                earned=line.earned + earned, ended=step.done, streak=streak,
             ))
         for line in lines:
             if line not in extended:
@@ -150,6 +166,7 @@ class _Line:
     first: int | None      # the first landing of the line: what would actually be played
     earned: float
     ended: bool = False    # topped out (or cut short): nothing more to place
+    streak: int = 0        # Tetrises in a row along this line, for a judge that pays streaks
 
     def close(self) -> None:
         if self.env is not None:
@@ -161,7 +178,9 @@ class _Line:
 # A judge answers two questions, in the same units:
 # - rate(obs, count): for each landing on offer, what it earns plus how good
 #   the board it leaves is;
-# - earned(step): what a landing that was just made earned.
+# - earned(step, before, streak): what a landing that was just made earned,
+#   given the observation it was made from and the Tetris streak before it;
+#   and the streak after it.
 
 
 class _Weights:
@@ -174,8 +193,9 @@ class _Weights:
     def rate(self, obs, count: int) -> np.ndarray:
         return (omatris.rich_features(obs, self.spec, count) / omatris.RICH_SCALE) @ self.w
 
-    def earned(self, step) -> float:
-        # The earned features, rebuilt from what the step reports.
+    def earned(self, step, before, streak: int) -> tuple[float, int]:
+        # The earned features, rebuilt from what the step reports. Weights
+        # have no notion of a streak, so it passes through unchanged.
         made = dict.fromkeys(omatris.EARNED, 0.0)
         lines = int(step.signals["lines"])
         if lines:
@@ -183,7 +203,7 @@ class _Weights:
         if step.signals["tspin"]:
             made["spin_full" if step.signals["tspin"] == 2 else "spin_mini"] = 1.0
         made["topped_out"] = float(step.signals["topped_out"] > 0)
-        return float(sum(self.w[omatris.RICH.index(name)] * value for name, value in made.items()))
+        return float(sum(self.w[omatris.RICH.index(name)] * value for name, value in made.items())), streak
 
 
 class _Network:
@@ -197,9 +217,10 @@ class _Network:
         mask[:count] = True
         return self.agent.values(self.agent._inputs(obs, mask))
 
-    def earned(self, step) -> float:
-        # The reward the network was trained on, so both answers are in its units.
-        return self.agent._reward(step)
+    def earned(self, step, before, streak: int) -> tuple[float, int]:
+        # The reward the network was trained on, streak bonus included, so
+        # both answers are in its units.
+        return self.agent.reward_for(step, before, streak)
 
 
 def _judge(model: str, spec, device: str):

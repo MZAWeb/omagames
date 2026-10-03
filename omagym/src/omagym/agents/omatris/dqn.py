@@ -153,38 +153,43 @@ class AfterstateDQN(Agent):
 
     # -- learning -------------------------------------------------------------
 
-    def _reward(self, step, before: dict | None = None) -> float:
-        """What the move just made earned, from the env's signals.
+    def reward_for(self, step, before: dict, streak: int) -> tuple[float, int]:
+        """What a move earned, given the observation it was made from and the
+        Tetris streak before it; and the streak after it.
 
-        `before` is the observation the move was made from; without it (a
-        planner asking) the terms that compare before and after are left out.
+        It changes nothing, so a planner can ask about moves it only tries
+        (lookahead does, carrying a streak along each line of play). Shaping
+        is left out: it needs the board before, which a planner's line may
+        not have, and it can't change what the best play is anyway.
         """
         c, s = self.config, step.signals
-        topped_out = s["topped_out"] > 0
         # Each move places one piece in the placement space.
         reward = c.reward_piece + c.reward_line * s["lines"] ** 2 + c.reward_tspin * (s["tspin"] > 0)
-        if topped_out:
+        if s["topped_out"] > 0:
             reward += c.reward_top_out
         elif step.terminated:
             reward += c.reward_win   # it ended without topping out: the goal was reached
-        if before is not None:
-            lines = int(s["lines"])
-            if lines == 4:
-                self._streak += 1
-                power = min(self._streak, c.tetris_streak_cap) - 1
-                reward += c.reward_tetris_streak * c.tetris_streak_base ** power
-            elif lines:
-                self._streak = 0
-            if step.done:
-                self._streak = 0
-            stats = self.spec.tensors["stats"].column("dealt_rows_left")
-            reward += c.reward_dealt_row * float(before["stats"][stats] - step.obs["stats"][stats])
-            # Potential-based shaping: Phi(board) = -(holes * a + height * b);
-            # the reward is gamma * Phi(after) - Phi(before).
-            if self._shape_before is not None:
-                after = -(c.shaping_holes * s["holes"] + c.shaping_height * s["max_height"])
-                reward += c.gamma * after - self._shape_before
-        self._shape_before = None if step.done else -(c.shaping_holes * s["holes"] + c.shaping_height * s["max_height"])
+        lines = int(s["lines"])
+        if lines == 4:
+            streak += 1
+            reward += c.reward_tetris_streak * c.tetris_streak_base ** (min(streak, c.tetris_streak_cap) - 1)
+        elif lines:
+            streak = 0
+        stats = self.spec.tensors["stats"].column("dealt_rows_left")
+        reward += c.reward_dealt_row * float(before["stats"][stats] - step.obs["stats"][stats])
+        return reward, 0 if step.done else streak
+
+    def _reward(self, step, before: dict) -> float:
+        """What the move just made earned, in training: reward_for() with the
+        game's own streak, plus the shaping, which needs the board before."""
+        c, s = self.config, step.signals
+        reward, self._streak = self.reward_for(step, before, self._streak)
+        # Potential-based shaping: Phi(board) = -(holes * a + height * b);
+        # the reward is gamma * Phi(after) - Phi(before).
+        potential = -(c.shaping_holes * s["holes"] + c.shaping_height * s["max_height"])
+        if self._shape_before is not None:
+            reward += c.gamma * potential - self._shape_before
+        self._shape_before = None if step.done else potential
         return reward
 
     def train(self, ctx):
