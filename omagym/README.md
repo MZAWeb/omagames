@@ -233,7 +233,8 @@ src/omagym/
   provenance.py          which code a run ran
   comparison.py          which run played better, game by game, and how sure that is
   report.py              the tables `runs`, `show`, `diff` and `compare` print
-  cli.py                 the `omagym` command
+  cli.py                 the `omagym` command: its options, training and testing
+  records.py             the commands on recorded runs: runs, show, compare, watch, delete...
 tests/                   `uv run pytest`
 experiments/             your runs (not in git)
 ```
