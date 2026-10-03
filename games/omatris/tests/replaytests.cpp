@@ -62,7 +62,10 @@ QString write(const QJsonObject &json) {
     static int count = 0;
     const QString path = dir.filePath(QStringLiteral("replay-%1.json").arg(++count));
     QFile file(path);
-    file.open(QIODevice::WriteOnly);
+    // A file that could not be written comes back empty, and the load that
+    // follows fails on it rather than on whatever was there before.
+    if (!file.open(QIODevice::WriteOnly))
+        return {};
     file.write(QJsonDocument(json).toJson());
     return path;
 }
