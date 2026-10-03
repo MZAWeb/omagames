@@ -62,7 +62,8 @@ class Store:
     def __init__(self, root: Path | None = None):
         self.root = root or home()
         self.root.mkdir(parents=True, exist_ok=True)
-        self.db = sqlite3.connect(self.root / "experiments.sqlite")
+        # A generous timeout: several runs at once take turns writing.
+        self.db = sqlite3.connect(self.root / "experiments.sqlite", timeout=30)
         self.db.row_factory = sqlite3.Row
         self.db.executescript(_SCHEMA)
 
@@ -70,23 +71,27 @@ class Store:
 
     def new_run(self, kind: str, game: str, agent: str, **fields) -> dict:
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        run_id = f"{stamp}-{game}-{agent}"
-        suffix = 1
-        while self.db.execute("SELECT 1 FROM runs WHERE id = ?", (run_id,)).fetchone():
-            suffix += 1
-            run_id = f"{stamp}-{game}-{agent}-{suffix}"
-        directory = self.root / "runs" / run_id
-        directory.mkdir(parents=True)
-        row = {
-            "id": run_id, "kind": kind, "game": game, "agent": agent, "started": now(),
-            "status": "running", "dir": str(directory), **fields,
-        }
         for key in ("agent_config", "env_config", "versions"):
-            if isinstance(row.get(key), dict):
-                row[key] = json.dumps(row[key], sort_keys=True)
-        columns = ", ".join(row)
-        self.db.execute(f"INSERT INTO runs ({columns}) VALUES ({', '.join('?' * len(row))})", list(row.values()))
-        self.db.commit()
+            if isinstance(fields.get(key), dict):
+                fields[key] = json.dumps(fields[key], sort_keys=True)
+        # Runs started in the same second (several trainings launched at once)
+        # want the same id. The insert is what claims one: whoever loses the
+        # race takes the next suffix, rather than both checking first and
+        # then colliding.
+        suffix = 1
+        while True:
+            run_id = f"{stamp}-{game}-{agent}" + (f"-{suffix}" if suffix > 1 else "")
+            directory = self.root / "runs" / run_id
+            row = {"id": run_id, "kind": kind, "game": game, "agent": agent, "started": now(),
+                   "status": "running", "dir": str(directory), **fields}
+            try:
+                with self.db:
+                    self.db.execute(f"INSERT INTO runs ({', '.join(row)}) VALUES ({', '.join('?' * len(row))})",
+                                    list(row.values()))
+                break
+            except sqlite3.IntegrityError:
+                suffix += 1
+        directory.mkdir(parents=True, exist_ok=True)
         return self.run(run_id)
 
     def log(self, run_id: str, step: int, metrics: dict[str, float]) -> None:
