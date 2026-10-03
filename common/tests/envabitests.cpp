@@ -124,6 +124,9 @@ void EnvAbiTests::nothingIsSteppedBeforeAReset() {
     QCOMPARE(og_step(env.get(), kStay, &result), -1);
     QVERIFY(QByteArray(og_last_error()).contains("reset"));
     QCOMPARE(mask(env.get()), (std::vector<quint8>{0, 0, 0}));
+    const Observation empty = observe(env.get());
+    QVERIFY(std::all_of(empty.bytes.begin(), empty.bytes.end(), [](std::byte b) { return b == std::byte(0); }));
+    QCOMPARE(QByteArray(og_info_json(env.get())), QByteArray("{}"));
     og_reset(env.get(), 1);
     QCOMPARE(og_step(env.get(), kStay, &result), 0);
 }

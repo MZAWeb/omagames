@@ -85,9 +85,12 @@ void stepChecked(OgEnv *env, int action, OgStepResult *out) {
     std::memcpy(out->signal_values, step.signalValues.data(), sizeof(out->signal_values));
 }
 
+// All zeros before the first reset: there is no game to show yet, and the
+// game's Env never has to wonder whether it has one.
 void observeInto(const OgEnv *env, void *buffer) {
     std::memset(buffer, 0, size_t(env->env->observationLayout().size()));
-    env->env->observe(static_cast<std::byte *>(buffer));
+    if (env->started)
+        env->env->observe(static_cast<std::byte *>(buffer));
 }
 
 }  // namespace
@@ -185,7 +188,8 @@ void og_action_mask(const OgEnv *env, uint8_t *mask) {
 
 OgEnv *og_clone(const OgEnv *env, int reseed_hidden, uint32_t seed) {
     auto copy = std::make_unique<OgEnv>();
-    copy->env = env->env->clone(reseed_hidden != 0, seed);
+    // Before a reset there is nothing hidden to redraw yet.
+    copy->env = env->env->clone(reseed_hidden != 0 && env->started, seed);
     copy->config = env->config;
     copy->maxSteps = env->maxSteps;
     copy->steps = env->steps;
@@ -199,7 +203,7 @@ const char *og_replay_json(OgEnv *env) {
 }
 
 const char *og_info_json(OgEnv *env) {
-    return hold(env, env->env->info());
+    return hold(env, env->started ? env->env->info() : QJsonObject());
 }
 
 const char *og_last_error(void) {

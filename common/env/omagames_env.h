@@ -64,7 +64,8 @@ OG_EXPORT void og_reset(OgEnv *env, uint32_t seed);
  * or the episode has not started or is over. */
 OG_EXPORT int og_step(OgEnv *env, int32_t action, OgStepResult *out);
 
-/* Writes the observation: `size` bytes laid out as the spec says. */
+/* Writes the observation: `size` bytes laid out as the spec says; all zero
+ * before the first reset. */
 OG_EXPORT void og_observe(const OgEnv *env, void *buffer);
 
 /* Writes `count` bytes, 1 for every action og_step would accept. All zero
@@ -79,7 +80,8 @@ OG_EXPORT OgEnv *og_clone(const OgEnv *env, int reseed_hidden, uint32_t seed);
 /* The episode so far as replay/v1 (common/env/replay.h). */
 OG_EXPORT const char *og_replay_json(OgEnv *env);
 
-/* Whatever the game finds worth printing about its state. */
+/* Whatever the game finds worth printing about its state; {} before the
+ * first reset. */
 OG_EXPORT const char *og_info_json(OgEnv *env);
 
 /* Why the last call on this thread failed; "" when none has. */

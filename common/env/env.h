@@ -28,7 +28,8 @@ struct EnvStep {
 //
 // The ABI checks everything before it calls in: configure() only sees a
 // config resolved against the game's schema, step() only actions the mask
-// allows, and nothing is stepped before a reset or after the episode ends.
+// allows, and nothing but configure(), the spec and a plain clone() is
+// asked for before the first reset.
 class Env {
 public:
     virtual ~Env() = default;
