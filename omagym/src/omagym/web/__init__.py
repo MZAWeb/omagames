@@ -124,7 +124,8 @@ def _results(run: dict) -> dict:
             "mean": s.get(f"{p}{key}_mean"), "std": s.get(f"{p}{key}_std"),
             "games": s[f"{p}episodes"], "won": s.get(f"{p}won_mean", 0) * s[f"{p}episodes"],
             "survived": s.get(f"{p}cut_short"), "lines": s.get(f"{p}sum_lines_mean"),
-            "score": s.get(f"{p}score_mean"),
+            "score": s.get(f"{p}score_mean"), "tetrises": s.get(f"{p}clears_4_mean"),
+            "tetris_share": s.get(f"{p}tetris_share_mean"),
         }
     return out
 

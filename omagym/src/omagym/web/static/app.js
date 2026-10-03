@@ -114,45 +114,76 @@ function wirePicks(root) {
 
 // -- rankings ---------------------------------------------------------------------
 
+// One table, every run, a column per thing worth ranking by; a heading sorts
+// by it (best first, then the other way), and the rank follows the sort.
+const rankSort = load("rankSort", {key: "marathon.mean", dir: -1});
 async function rankings() {
   const all = await runs();
   const groupList = await groups();
-  view.innerHTML = `<h1>Rankings</h1><p class="muted">Every run on every test, best first. Tick runs to compare them.</p>`;
+  view.innerHTML = `<h1>Rankings</h1><p class="muted">Every run on every test. Click a heading to rank by it; click again to reverse. Tick runs to compare them.</p>`;
   const body = document.createElement("div");
   view.appendChild(filterBar(all, () => draw()));
   view.appendChild(body);
   function draw() {
     const list = applyFilters(all.filter((r) => r.status !== "running"), groupList);
     const tests = testsOf(list);
-    const tables = tests.map((test) => {
-      const ranked = list.filter((r) => mainValue(r, test) !== null);
-      const lower = ranked[0]?.results[test].lower;
-      ranked.sort((a, b) => (lower ? 1 : -1) * (mainValue(a, test) - mainValue(b, test)));
-      const metric = ranked[0]?.results[test].metric;
-      return `<div class="card"><h2>${test} <span class="muted">· ${metric}, ${lower ? "lower" : "higher"} is better</span></h2>
-        <table><thead><tr><th></th><th class="rank">#</th><th>run</th><th>agent</th><th>trained</th>
-          <th class="num">${metric}</th><th class="num">won / survived</th></tr></thead><tbody>
-        ${ranked.map((r, i) => {
-          const t = r.results[test];
-          const kept = test === tests[0] ? `${fmt(t.survived)} survived` : `${fmt(t.won)} won`;
-          return `<tr><td>${pickBox(r)}</td><td class="rank">${i + 1}</td>
-            <td><a href="${href(r)}">${esc(label(r))}</a> ${seedsBadge(r)} ${mixBadge(r)} ${tagBadges(r)}</td><td>${r.agent}</td><td class="num">${trained(r)}</td>
-            <td class="num">${fmt(t.mean, 2)} <span class="muted">± ${fmt(isGroup(r) ? r.seed_spread[test] : t.std, 1)}${isGroup(r) ? " across seeds" : ""}</span></td>
-            <td class="num">${kept} <span class="muted">/ ${fmt(t.games)}</span></td></tr>`;
-        }).join("")}</tbody></table></div>`;
-    }).join("");
-    body.innerHTML = `<div class="card"><h2>${tests[0] || ""} against ${tests[1] || ""}</h2>
-      <p class="muted">Right is a higher ${tests[0]} score; up is fewer pieces per point of difficulty on ${tests[1]}. Both scales are logarithmic. Click a run to open it.</p>
-      <div id="map"></div></div><div class="grid2">${tables}</div>`;
+    const [main, other] = tests;
+    const metricOf = (test) => list.find((r) => r.results[test])?.results[test];
+    // [key, heading, how to read it from a run, lower is better, how to show it]
+    const columns = [];
+    if (main) {
+      columns.push([`${main}.mean`, `${main} ${metricOf(main).metric}`, (r) => r.results[main]?.mean, metricOf(main).lower,
+                    (r) => `${fmt(r.results[main].mean, 2)} <span class="muted">± ${fmt(isGroup(r) ? r.seed_spread[main] : r.results[main].std, 1)}</span>`]);
+      columns.push([`${main}.lines`, "lines", (r) => r.results[main]?.lines, false, (r) => fmt(r.results[main].lines, 1)]);
+      columns.push([`${main}.tetrises`, "Tetrises", (r) => r.results[main]?.tetrises, false, (r) => fmt(r.results[main].tetrises, 1)]);
+      columns.push([`${main}.survived`, "survived", (r) => r.results[main]?.survived, false,
+                    (r) => `${fmt(r.results[main].survived)} <span class="muted">/ ${fmt(r.results[main].games)}</span>`]);
+    }
+    if (other) {
+      columns.push([`${other}.mean`, `${other} ${metricOf(other).metric}`, (r) => r.results[other]?.mean, metricOf(other).lower,
+                    (r) => `${fmt(r.results[other].mean, 2)} <span class="muted">± ${fmt(isGroup(r) ? r.seed_spread[other] : r.results[other].std, 1)}</span>`]);
+      columns.push([`${other}.won`, `${other} won`, (r) => r.results[other]?.won, false,
+                    (r) => `${fmt(r.results[other].won)} <span class="muted">/ ${fmt(r.results[other].games)}</span>`]);
+    }
+    columns.push(["trained", "trained", (r) => r.trained_steps, false, (r) => trained(r)]);
+    const column = columns.find((c) => c[0] === rankSort.key) || columns[0];
+    const [, , value] = column;
+    const ranked = [...list].sort((a, b) => {
+      const va = value(a), vb = value(b);
+      if (va === vb) return 0;
+      if (va === null || va === undefined) return 1;   // no value: last, whichever way
+      if (vb === null || vb === undefined) return -1;
+      return (va > vb ? 1 : -1) * rankSort.dir;
+    });
+    body.innerHTML = `<div class="card"><h2>${main || ""} against ${other || ""}</h2>
+      <p class="muted">Right is a higher ${main} score; up is fewer pieces per point of difficulty on ${other}. Both scales are logarithmic. Click a run to open it.</p>
+      <div id="map"></div></div>
+      <div class="card"><table><thead><tr><th></th><th class="rank">#</th><th>run</th><th>agent</th>
+        ${columns.map(([key, heading, , lower]) => `<th class="sort num" data-sort="${key}" title="${lower ? "lower is better" : "higher is better"}">${heading}${key === column[0] ? (rankSort.dir < 0 ? " ↓" : " ↑") : ""}</th>`).join("")}
+        <th>notes</th></tr></thead><tbody>
+      ${ranked.map((r, i) => `<tr><td>${pickBox(r)}</td><td class="rank">${value(r) === null || value(r) === undefined ? "" : i + 1}</td>
+        <td><a href="${href(r)}">${esc(label(r))}</a> ${seedsBadge(r)} ${mixBadge(r)} ${tagBadges(r)}</td><td>${r.agent}</td>
+        ${columns.map(([, , read, , show]) => `<td class="num">${read(r) === null || read(r) === undefined ? '<span class="muted">–</span>' : show(r)}</td>`).join("")}
+        <td class="notes">${esc(r.notes)}</td></tr>`).join("")}
+      </tbody></table></div>`;
     wirePicks(body);
-    if (tests.length >= 2) {
-      const points = list.filter((r) => mainValue(r, tests[0]) > 0 && mainValue(r, tests[1]) > 0).map((r) => ({
-        x: mainValue(r, tests[0]), y: mainValue(r, tests[1]), label: label(r), href: href(r),
+    body.querySelectorAll("[data-sort]").forEach((th) => {
+      th.onclick = () => {
+        const [key, , , lower] = columns.find((c) => c[0] === th.dataset.sort);
+        // First click: best first. Again: the other way.
+        rankSort.dir = rankSort.key === key ? -rankSort.dir : (lower ? 1 : -1);
+        rankSort.key = key;
+        save("rankSort", rankSort); draw();
+      };
+    });
+    if (main && other) {
+      const points = list.filter((r) => mainValue(r, main) > 0 && mainValue(r, other) > 0).map((r) => ({
+        x: mainValue(r, main), y: mainValue(r, other), label: label(r), href: href(r),
         tip: `<b>${esc(label(r))}</b><div class="muted">${esc(r.notes || r.agent)}</div>
-              <div>${tests[0]}: <b>${fmt(mainValue(r, tests[0]))}</b></div><div>${tests[1]}: <b>${fmt(mainValue(r, tests[1]), 2)}</b></div>`,
+              <div>${main}: <b>${fmt(mainValue(r, main))}</b></div><div>${other}: <b>${fmt(mainValue(r, other), 2)}</b></div>`,
       }));
       scatter(body.querySelector("#map"), points, {logX: true, logY: true, invertY: true,
-        xLabel: `${tests[0]} score →`, yLabel: `↑ ${tests[1]}: fewer pieces per difficulty`});
+        xLabel: `${main} score →`, yLabel: `↑ ${other}: fewer pieces per difficulty`});
     }
   }
   draw();

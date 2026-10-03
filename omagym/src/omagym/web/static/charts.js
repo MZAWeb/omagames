@@ -137,8 +137,10 @@ export function scatter(container, points, opts = {}) {
   // read leftward so they stay in the chart.
   const taken = [];
   const free = (r) => taken.every((t) => r.x2 < t.x1 || r.x1 > t.x2 || r.y2 < t.y1 || r.y1 > t.y2);
+  // Labels go on a layer of their own, above every dot, so no dot covers one.
+  const dots = el("g", {}, svg), labels = el("g", {}, svg);
   for (const p of points) {
-    const g = el("g", {}, svg);
+    const g = el("g", {}, dots);
     if (p.href) g.style.cursor = "pointer";
     el("circle", {cx: x(p.x), cy: y(p.y), r: 6, fill: "var(--series-1)", stroke: "var(--surface)", "stroke-width": 2}, g);
     el("circle", {cx: x(p.x), cy: y(p.y), r: 14, fill: "transparent"}, g);
@@ -147,7 +149,8 @@ export function scatter(container, points, opts = {}) {
     rect.x2 = rect.x1 + width;
     if (free(rect)) {
       taken.push(rect);
-      el("text", {x: left ? x(p.x) - 9 : x(p.x) + 9, y: y(p.y) - 7, class: "label", "text-anchor": left ? "end" : "start"}, g).textContent = p.label;
+      el("text", {x: left ? x(p.x) - 9 : x(p.x) + 9, y: y(p.y) - 7, class: "label", "text-anchor": left ? "end" : "start",
+                  "pointer-events": "none"}, labels).textContent = p.label;
     }
     g.addEventListener("mousemove", (event) => showTip(event, p.tip));
     g.addEventListener("mouseleave", hideTip);
