@@ -38,6 +38,14 @@ async function runs() {
   runsCache ??= await api("runs");
   return runsCache;
 }
+// The games that have runs: their tests, their measures, what Rankings shows.
+let gamesCache = null;
+async function games() {
+  gamesCache ??= await api("games");
+  return gamesCache;
+}
+const gameOf = (name) => (gamesCache || []).find((g) => g.name === name);
+const measureLabel = (game, key) => gameOf(game)?.measures.find((m) => m.key === key)?.label || key.replace(/^sum_/, "");
 // Groups of seeds (`run --seeds`), each as one row: its seeds' mean results.
 async function groups() {
   groupsCache ??= await api("groups");
@@ -56,13 +64,23 @@ const mainValue = (r, test) => r.results[test]?.mean ?? null;
 
 // -- filters shared by the list views -------------------------------------------
 
-const filters = {agents: [], mix: "any", text: "", tags: [], combine: false, ...load("filters", {})};
+const filters = {game: "", agents: [], mix: "any", text: "", tags: [], combine: false, ...load("filters", {})};
+// The game the lists show: the one picked, else the one with most runs.
+function currentGame(list) {
+  const counts = {};
+  for (const r of list) counts[r.game] = (counts[r.game] || 0) + 1;
+  if (filters.game && counts[filters.game]) return filters.game;
+  return Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0] || "";
+}
 function filterBar(list, onChange) {
-  const agents = [...new Set(list.map((r) => r.agent))].sort();
+  const game = currentGame(list);
+  const gameNames = [...new Set(list.map((r) => r.game))].sort();
+  const agents = [...new Set(list.filter((r) => r.game === game).map((r) => r.agent))].sort();
   const bar = document.createElement("div");
   bar.className = "filters";
   const tags = [...new Set(list.flatMap((r) => r.tags || []))].sort();
-  bar.innerHTML = `<label>agent</label>` + agents.map((a) =>
+  bar.innerHTML = (gameNames.length > 1 ? `<label>game</label>` + gameNames.map((g) =>
+      `<span class="chip ${g === game ? "on" : ""}" data-game="${g}">${g}</span>`).join("") + `<label style="margin-left:12px">agent</label>` : `<label>agent</label>`) + agents.map((a) =>
       `<span class="chip ${filters.agents.includes(a) ? "on" : ""}" data-agent="${a}">${a}</span>`).join("") +
     `<label style="margin-left:12px">training</label>
      <select data-mix><option value="any">any</option><option value="mix">on a mix</option><option value="plain">main test only</option></select>
@@ -73,6 +91,14 @@ function filterBar(list, onChange) {
        <input type="checkbox" data-combine ${filters.combine ? "checked" : ""}> combine seeds</label>`;
   bar.querySelector("[data-mix]").value = filters.mix;
   bar.addEventListener("click", (e) => {
+    const pickGame = e.target.closest("[data-game]");
+    if (pickGame) {
+      // Another game: its own agents, tests and columns, so the page starts over.
+      filters.game = pickGame.dataset.game;
+      filters.agents = [];
+      save("filters", filters); route();
+      return;
+    }
     const tag = e.target.closest("[data-tag]");
     if (tag) {
       const t = tag.dataset.tag;
@@ -95,6 +121,9 @@ function filterBar(list, onChange) {
 }
 function applyFilters(list, groupList = []) {
   const text = filters.text.toLowerCase();
+  const game = currentGame(list);
+  list = list.filter((r) => r.game === game);
+  groupList = groupList.filter((r) => r.game === game);
   // Combined, a group's seeds give way to the group's own row.
   if (filters.combine) list = [...list.filter((r) => !r.group), ...groupList];
   return list.filter((r) =>
@@ -120,12 +149,14 @@ const rankSort = load("rankSort", {key: "marathon.mean", dir: -1});
 async function rankings() {
   const all = await runs();
   const groupList = await groups();
+  await games();
   view.innerHTML = `<h1>Rankings</h1><p class="muted">Every run on every test. Click a heading to rank by it; click again to reverse. Tick runs to compare them.</p>`;
   const body = document.createElement("div");
   view.appendChild(filterBar(all, () => draw()));
   view.appendChild(body);
   function draw() {
     const list = applyFilters(all.filter((r) => r.status !== "running"), groupList);
+    const game = gameOf(currentGame(all));
     const tests = testsOf(list);
     const [main, other] = tests;
     const metricOf = (test) => list.find((r) => r.results[test])?.results[test];
@@ -134,8 +165,12 @@ async function rankings() {
     if (main) {
       columns.push([`${main}.mean`, `${main} ${metricOf(main).metric}`, (r) => r.results[main]?.mean, metricOf(main).lower,
                     (r) => `${fmt(r.results[main].mean, 2)} <span class="muted">± ${fmt(isGroup(r) ? r.seed_spread[main] : r.results[main].std, 1)}</span>`]);
-      columns.push([`${main}.lines`, "lines", (r) => r.results[main]?.lines, false, (r) => fmt(r.results[main].lines, 1)]);
-      columns.push([`${main}.tetrises`, "Tetrises", (r) => r.results[main]?.tetrises, false, (r) => fmt(r.results[main].tetrises, 1)]);
+      // The game's own measures worth a column (Tetris: lines, Tetrises; 2048: highest tile).
+      for (const key of game?.ranking || []) {
+        const lower = game.measures.find((m) => m.key === key)?.lower;
+        columns.push([`${main}.${key}`, measureLabel(game.name, key), (r) => r.results[main]?.measures?.[key], lower,
+                      (r) => fmt(r.results[main].measures[key], 2)]);
+      }
       columns.push([`${main}.survived`, "survived", (r) => r.results[main]?.survived, false,
                     (r) => `${fmt(r.results[main].survived)} <span class="muted">/ ${fmt(r.results[main].games)}</span>`]);
     }
@@ -155,9 +190,10 @@ async function rankings() {
       if (vb === null || vb === undefined) return -1;
       return (va > vb ? 1 : -1) * rankSort.dir;
     });
-    body.innerHTML = `<div class="card"><h2>${main || ""} against ${other || ""}</h2>
-      <p class="muted">Right is a higher ${main} score; up is fewer pieces per point of difficulty on ${other}. Both scales are logarithmic. Click a run to open it.</p>
-      <div id="map"></div></div>
+    const otherMetric = other ? metricOf(other) : null;
+    body.innerHTML = (other ? `<div class="card"><h2>${main} against ${other}</h2>
+      <p class="muted">Right is a higher ${main} score; up is ${otherMetric.lower ? "a lower" : "a higher"} ${otherMetric.metric} on ${other}. Both scales are logarithmic. Click a run to open it.</p>
+      <div id="map"></div></div>` : "") + `
       <div class="card"><table><thead><tr><th></th><th class="rank">#</th><th>run</th><th>agent</th>
         ${columns.map(([key, heading, , lower]) => `<th class="sort num" data-sort="${key}" title="${lower ? "lower is better" : "higher is better"}">${heading}${key === column[0] ? (rankSort.dir < 0 ? " ↓" : " ↑") : ""}</th>`).join("")}
         <th>notes</th></tr></thead><tbody>
@@ -182,8 +218,8 @@ async function rankings() {
         tip: `<b>${esc(label(r))}</b><div class="muted">${esc(r.notes || r.agent)}</div>
               <div>${main}: <b>${fmt(mainValue(r, main))}</b></div><div>${other}: <b>${fmt(mainValue(r, other), 2)}</b></div>`,
       }));
-      scatter(body.querySelector("#map"), points, {logX: true, logY: true, invertY: true,
-        xLabel: `${main} score →`, yLabel: `↑ ${other}: fewer pieces per difficulty`});
+      scatter(body.querySelector("#map"), points, {logX: true, logY: true, invertY: otherMetric.lower,
+        xLabel: `${main} score →`, yLabel: `↑ ${other}: ${otherMetric.lower ? "lower" : "higher"} ${otherMetric.metric}`});
     }
   }
   draw();
@@ -195,6 +231,7 @@ const sort = load("sort", {key: "started", dir: -1});
 async function runList() {
   const all = await runs();
   const groupList = await groups();
+  await games();
   view.innerHTML = `<div class="row spread"><h1>Runs</h1><button class="primary" data-compare>Compare picked</button></div>`;
   view.querySelector("[data-compare]").onclick = () => { location.hash = `#/compare?runs=${[...picked].join(",")}`; };
   const card = document.createElement("div");
@@ -251,6 +288,7 @@ function patchHtml(text) {
 
 async function runPage(id, query = new URLSearchParams()) {
   const run = await api(`run/${id}`);
+  await games();
   const tests = run.tests.filter((t) => run.results[t.name]);
   view.innerHTML = `
     <div class="row spread"><div><h1>${esc(label(run))} ${mixBadge(run)} ${tagBadges(run)}</h1>
@@ -277,6 +315,8 @@ async function runPage(id, query = new URLSearchParams()) {
     ${Object.keys(run.curves).length ? `<div class="card"><div class="row spread"><h2>Training</h2>
       <select id="curve-key">${Object.keys(run.curves).sort().map((k) => `<option ${k === "eval/score_mean" ? "selected" : ""}>${k}</option>`).join("")}</select></div>
       <div id="curve"></div></div>` : ""}
+    <div class="card"><h2>How it played</h2><p class="muted">The game's own measures over each test's games, beyond the score.</p>
+      <div class="grid2">${tests.map((t) => playedTable(run, t)).join("")}</div></div>
     ${tests.map((t) => `<div class="card"><h2>${t.name}: every game</h2>${gamesTable(run, t)}</div>`).join("")}`;
   wirePicks(view);
   if (Object.keys(run.curves).length) {
@@ -305,11 +345,29 @@ async function runPage(id, query = new URLSearchParams()) {
   view.querySelectorAll("[data-watch]").forEach((b) => { b.onclick = () => watch(run, [b.dataset.watch]); });
 }
 
+// One test's measures for one run: mean, spread, worst, median and best over its games.
+function playedTable(run, test) {
+  const g = gameOf(run.game);
+  const rows = [["score", "score", false], [test.metric, test.metric, test.lower],
+                ...(g?.measures.map((m) => [m.key, m.label, m.lower]) || [])];
+  const seen = new Set();
+  const cells = rows.filter(([key]) => !seen.has(key) && seen.add(key) && run.summary[`${test.prefix}${key}_mean`] !== undefined)
+    .map(([key, label, lower]) => {
+      const get = (stat) => run.summary[`${test.prefix}${key}_${stat}`];
+      return `<tr><td>${esc(label)}${lower ? ' <span class="muted">(lower is better)</span>' : ""}</td>
+        ${["mean", "std", "min", "median", "max"].map((stat) => `<td class="num">${fmt(get(stat), 2)}</td>`).join("")}</tr>`;
+    }).join("");
+  return `<div><h3>${test.name}</h3><table><thead><tr><th></th><th class="num">mean</th><th class="num">±</th>
+    <th class="num">min</th><th class="num">median</th><th class="num">max</th></tr></thead><tbody>${cells}</tbody></table></div>`;
+}
+
 function gamesTable(run, test) {
   const episodes = run.episodes[test.name] || [];
   const files = run.games[test.name] || [];
-  const keys = ["score", "steps", "sum_lines", ...(test.prefix ? ["won", "difficulty", "steps_to_win", "pieces_per_difficulty"] : [])];
-  return `<table><thead><tr><th>game</th>${keys.map((k) => `<th class="num">${k.replace("sum_", "")}</th>`).join("")}<th></th></tr></thead><tbody>
+  // The score, the test's own measure, and the game's measures.
+  const keys = [...new Set(["score", test.metric, "steps", ...(gameOf(run.game)?.measures.map((m) => m.key) || [])])]
+    .filter((k) => episodes.some((e) => e[k] !== undefined));
+  return `<table><thead><tr><th>game</th>${keys.map((k) => `<th class="num">${esc(measureLabel(run.game, k))}</th>`).join("")}<th></th></tr></thead><tbody>
     ${episodes.map((e, i) => `<tr><td>${i + 1}</td>${keys.map((k) => `<td class="num">${fmt(e[k], 2)}</td>`).join("")}
       <td>${files[i] ? `<button data-watch="${files[i]}">watch</button>` : ""}</td></tr>`).join("")}</tbody></table>`;
 }
@@ -343,6 +401,7 @@ async function watchMany(run, files) {
 
 async function comparePage(query) {
   const all = [...await runs(), ...await groups()];
+  await games();
   // Runs by id or by name, as everywhere in omagym.
   const refs = (query.get("runs") || [...picked].join(",")).split(",").filter(Boolean);
   const chosen = refs.map((ref) => all.find((r) => r.id === ref) || all.find((r) => r.name === ref && !isGroup(r))
@@ -358,7 +417,7 @@ async function comparePage(query) {
         <optgroup label="runs">${all.filter((r) => !isGroup(r) && !ids.includes(r.id)).map((r) => `<option value="${r.id}">${esc(label(r))} (${r.agent})</option>`).join("")}</optgroup></select>
       <label style="margin-left:12px">test</label><select data-test>${tests.map((t) => `<option ${t === test ? "selected" : ""}>${t}</option>`).join("")}</select>
       <label>rank by</label><select data-by><option value="">the test's measure</option>
-        ${["score", "sum_lines", "steps", "won", "steps_to_win", "pieces_per_difficulty", "sum_holes", "sum_max_height"].map((m) => `<option value="${m.replace("sum_", "")}" ${query.get("by") === m.replace("sum_", "") ? "selected" : ""}>${m.replace("sum_", "")}</option>`).join("")}</select>
+        ${rankByOptions(chosen[0]?.game || currentGame(all), query.get("by"))}</select>
       <label><input type="checkbox" data-lower ${query.get("lower") === "1" ? "checked" : ""}> lower is better</label></div></div>
     <div id="compare-body">${chosen.length < 2 ? '<p class="empty">Pick two runs or more: tick them in Rankings or Runs, or add them above.</p>' : '<p class="muted">Comparing…</p>'}</div>`;
   const go = (changes) => {
@@ -410,6 +469,16 @@ async function comparePage(query) {
     .slice(0, 8).map((id) => api(`run/${id}`)));
   lineChart(body.querySelector("#curves"), details.filter((d) => d.curves["eval/score_mean"]).map((d) => ({
     name: label(d), color: colorOf[d.id], points: d.curves["eval/score_mean"]})), {xLabel: "training steps", yLabel: "quick evaluation score", empty: "None of these runs trained."});
+}
+
+// What a comparison can rank by: the score, each test's measure, the game's own.
+function rankByOptions(game, current) {
+  const g = gameOf(game);
+  const options = [["score", "score"], ...(g?.tests.slice(1).map((t) => [t.metric, t.metric]) || []),
+                   ...(g?.measures.map((m) => [m.key, m.label]) || [])];
+  const seen = new Set();
+  return options.filter(([k]) => !seen.has(k) && seen.add(k))
+    .map(([k, label]) => `<option value="${esc(k)}" ${current === k ? "selected" : ""}>${esc(label)}</option>`).join("");
 }
 
 // How they played, beyond the ranked measure: one row per measure, the best
@@ -480,7 +549,8 @@ async function sideBySide(result, game, all) {
   const holder = document.querySelector("#side-by-side");
   holder.innerHTML = `<p class="muted">Drawing game ${game + 1}…</p>`;
   holder.scrollIntoView({behavior: "smooth", block: "nearest"});
-  const prefix = result.test === testsOf(all)[0] ? "replays/games" : `replays/${result.test}/games`;
+  const played = gameOf(all.find((r) => r.id === result.runs[0])?.game);
+  const prefix = result.test === played?.main_test ? "replays/games" : `replays/${result.test}/games`;
   const file = `${prefix}/${String(game).padStart(2, "0")}.json`;
   const replays = [], missing = [];
   for (const id of result.runs.slice(0, 4)) {

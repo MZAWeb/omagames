@@ -1,4 +1,4 @@
-// The Tetris replay viewer. The frames come from the game's own engine
+// The replay viewer. The frames come from the game's own engine
 // (og_replay_frames, through /api/frames): the well after the deal and after
 // every piece that locks, so the browser only draws, it never plays.
 //
@@ -79,6 +79,54 @@ function mini(ctx, letters, resolve) {
   });
 }
 
+// A 2048 board: 4 x 4 tiles, shaded by size on the sequential ramp (bigger
+// is darker), each with its number.
+const TILE = 64;
+const RAMP = ["--seq-0", "--seq-1", "--seq-2", "--seq-3", "--seq-4", "--seq-5"];
+class Grid2048 {
+  constructor(container, data, title) {
+    this.data = data;
+    const side = data.size * TILE;
+    container.insertAdjacentHTML("beforeend", `
+      <div class="viewer">
+        <canvas class="well" width="${side}" height="${side}"></canvas>
+        <div class="side"><div class="title">${title}</div><div class="muted">${data.ended}</div>
+          <h3>Game</h3><div data-stats></div></div>
+      </div>`);
+    const root = container.lastElementChild;
+    this.ctx = root.querySelector("canvas").getContext("2d");
+    this.stats = root.querySelector("[data-stats]");
+  }
+
+  get length() { return this.data.frames.length; }
+
+  draw(index) {
+    const frame = this.data.frames[Math.min(index, this.length - 1)];
+    const css = getComputedStyle(document.body);
+    const ctx = this.ctx, n = this.data.size;
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    frame.board.forEach((value, i) => {
+      if (!value) return;
+      const power = Math.log2(value);
+      const step = Math.min(RAMP.length - 1, Math.floor((power - 1) / 2));
+      const x = (i % n) * TILE, y = Math.floor(i / n) * TILE;
+      ctx.fillStyle = css.getPropertyValue(RAMP[step]).trim();
+      ctx.fillRect(x + 3, y + 3, TILE - 6, TILE - 6);
+      ctx.fillStyle = step >= 3 ? "#fff" : css.getPropertyValue("--ink").trim();
+      ctx.font = `600 ${value >= 1024 ? 16 : 20}px system-ui, sans-serif`;
+      ctx.fillText(String(value), x + TILE / 2, y + TILE / 2);
+    });
+    const rows = [["move", `${Math.min(index, this.length - 1)} / ${this.length - 1}`], ["last", frame.move || "–"],
+                  ["score", frame.score.toLocaleString()], ["highest", frame.highest]];
+    this.stats.innerHTML = rows.map(([k, v]) => `<div class="stat"><span class="muted">${k}</span><span>${v}</span></div>`).join("");
+  }
+}
+
+// Which board draws which game's frames.
+const BOARDS = {omatris: Board, oma2048: Grid2048};
+
 export class Player {
   // replays: [{title, data}] (data from /api/frames)
   constructor(container, replays) {
@@ -90,12 +138,16 @@ export class Player {
         <button data-act="next" title="Next piece (→)">▶|</button>
         <input type="range" min="0" value="0" data-act="seek" aria-label="piece">
         <label class="muted">speed <select data-act="speed">
-          <option value="2">2 pieces/s</option><option value="4" selected>4 pieces/s</option>
-          <option value="10">10 pieces/s</option><option value="40">40 pieces/s</option></select></label>
+          <option value="2">2 moves/s</option><option value="4" selected>4 moves/s</option>
+          <option value="10">10 moves/s</option><option value="40">40 moves/s</option></select></label>
       </div>
       <div class="viewers"></div>`;
     const boards = container.querySelector(".viewers");
-    this.boards = replays.map((r) => new Board(boards, r.data, r.title));
+    this.boards = replays.map((r) => {
+      const Kind = BOARDS[r.data.game];
+      if (!Kind) throw new Error(`this page can't draw ${r.data.game} yet`);
+      return new Kind(boards, r.data, r.title);
+    });
     this.length = Math.max(...this.boards.map((b) => b.length));
     this.index = 0;
     this.timer = null;

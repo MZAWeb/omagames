@@ -46,6 +46,9 @@ class GameDefaults:
     # How a game was played, for `compare` to show beside the ranking: (the
     # episode field, its label, whether lower is better), means over the games.
     style: tuple[tuple[str, str, bool], ...] = ()
+    # The few of those worth a column in the web Rankings, beside each
+    # test's measure (all of them would be too wide).
+    ranking: tuple[str, ...] = ()
     # Makes, for each game played, what counts the game's own measures as it
     # goes (step(signals) each move, result(episode) at the end).
     tracker: Callable | None = None
@@ -71,7 +74,7 @@ _DEFAULTS = {
     # pace, frame_skip, and ignore it.
     "omatris": GameDefaults(
         eval_episodes=20, eval_max_steps=2500, headline=("lines",), env={"input_rate": 10}, main_test="marathon",
-        tracker=omatris.Tracker,
+        tracker=omatris.Tracker, ranking=("sum_lines", "clears_4", "tetris_share"),
         style=(("sum_lines", "lines", False), ("points_per_line", "points per line", False),
                ("clears_1", "singles", False), ("clears_2", "doubles", False), ("clears_3", "triples", False),
                ("clears_4", "Tetrises", False), ("tetris_share", "share of lines in Tetrises", False),
@@ -93,7 +96,7 @@ _DEFAULTS = {
     ),
     "omasnake": GameDefaults(eval_episodes=50, eval_max_steps=3000, headline=("ate",),
                              style=(("sum_ate", "dots eaten", False), ("max_length", "longest", False),
-                                    ("steps", "moves", False))),
+                                    ("steps", "moves", False)), ranking=("sum_ate", "max_length")),
     # 2048: games played to the end (a cap only so a game can't run forever),
     # and the same games stopped at the first 2048 tile, ranked by how few
     # moves that took; a game that never gets there counts as the whole cap.
@@ -101,6 +104,7 @@ _DEFAULTS = {
         eval_episodes=20, eval_max_steps=20000, headline=("merges",), main_test="standard",
         style=(("max_highest", "highest tile", False), ("sum_merges", "merges", False), ("steps", "moves", False),
                ("sum_won", "share that reached 2048", False)),
+        ranking=("max_highest", "sum_won"),
         tests=(
             Test("reach2048", "reach a 2048 tile in as few moves as possible", {"goal": 2048},
                  episodes=20, max_steps=3000, metric="steps_to_win", lower_is_better=True,

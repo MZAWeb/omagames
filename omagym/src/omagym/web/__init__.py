@@ -90,6 +90,8 @@ def _route(path: str, query: dict):
         return [_listing(store, run) for run in store.runs(limit=None)]
     if path == "groups":
         return [_group(store, name) for name in store.groups()]
+    if path == "games":
+        return _games(store)
     if path.startswith("run/"):
         return _details(store, store.run(path.removeprefix("run/")))
     if path == "compare":
@@ -123,10 +125,23 @@ def _results(run: dict) -> dict:
             "metric": test["metric"], "lower": test["lower"],
             "mean": s.get(f"{p}{key}_mean"), "std": s.get(f"{p}{key}_std"),
             "games": s[f"{p}episodes"], "won": s.get(f"{p}won_mean", 0) * s[f"{p}episodes"],
-            "survived": s.get(f"{p}cut_short"), "lines": s.get(f"{p}sum_lines_mean"),
-            "score": s.get(f"{p}score_mean"), "tetrises": s.get(f"{p}clears_4_mean"),
-            "tetris_share": s.get(f"{p}tetris_share_mean"),
+            "survived": s.get(f"{p}cut_short"), "score": s.get(f"{p}score_mean"),
+            # The game's own measures, as the means over the test's games.
+            "measures": {k: s.get(f"{p}{k}_mean") for k, _, _ in defaults(run["game"]).style},
         }
+    return out
+
+
+def _games(store: Store) -> list[dict]:
+    """The games that have runs, with what the page needs to show them:
+    their tests, their measures, and which of those Rankings has a column for."""
+    names = sorted({r[0] for r in store.db.execute("SELECT DISTINCT game FROM runs")})
+    out = []
+    for name in names:
+        d = defaults(name)
+        out.append({"name": name, "main_test": d.main_test, "tests": _tests(name),
+                    "measures": [{"key": k, "label": label, "lower": lower} for k, label, lower in d.style],
+                    "ranking": list(d.ranking)})
     return out
 
 
