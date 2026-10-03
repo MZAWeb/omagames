@@ -71,6 +71,17 @@ jobs:
       - name: Test ${{ matrix.game }}
         run: bin/test ${{ matrix.game }}
 
+      # The agent environment library (docs/AGENT-ENV.md), for the games
+      # that have one. It is not packaged, but it must keep building.
+      - name: Build ${{ matrix.game }} env library
+        run: |
+          set -eu
+          if [ -f games/${{ matrix.game }}/env/env.pro ]; then
+            bin/build-env ${{ matrix.game }}
+          else
+            echo "${{ matrix.game }} has no env/."
+          fi
+
   shared-test:
     name: test (${{ matrix.suite }})
     needs: discover
@@ -157,6 +168,11 @@ jobs:
             suite="$(basename "$(dirname "$(dirname "$pro")")")"
             echo "== $suite tests"
             build "$pro" "build-strict/tests-$suite"
+          done
+          for pro in $(find games -path '*/env/env.pro' | sort); do
+            game="$(basename "$(dirname "$(dirname "$pro")")")"
+            echo "== $game env"
+            build "$pro" "build-strict/env-$game"
           done
 
   package:

@@ -1,6 +1,7 @@
 /build/
 /build-tests/
 /build-strict/
+/build-env/
 /pkg/
 /pkgbuild/pkg/
 /pkgbuild/src/
