@@ -31,6 +31,9 @@ Snake games):
 The `cautious` example under "Adding a strategy" clears about 30 lines
 before it tops out: a fair first agent to beat.
 
+New to the field? `SCIENCE.md` maps it: the families of algorithms, the
+techniques they share, how to compare them fairly, and which suit which game.
+
 ## Setup
 
 You need [uv](https://docs.astral.sh/uv/) (`pacman -S uv`) and what the
@@ -165,6 +168,7 @@ you put side by side were not tested alike.
 
 ```
 pyproject.toml           dependencies and the `omagym` command (uv)
+SCIENCE.md               the field: which algorithms exist, and what to try where
 src/omagym/
   native.py              loads lib<game>_env.so through ctypes, building it first
   env.py                 Env: reset / step / observe / mask, any game
